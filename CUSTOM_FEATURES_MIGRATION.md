@@ -2,23 +2,50 @@
 
 Updated: 2026-10-01
 
-## Purpose
+## Start here: agent workflow
 
-This guide records the product requirements and intentional differences from upstream for Flow on
-the Polestar 3's large automotive display. Use it as the acceptance checklist for every upstream
-merge: retain the behavior described here, but port it into the current upstream architecture
-rather than copying old fork code or replaying old commits.
+This guide is the acceptance checklist for work on the Flow AAOS fork. Before editing code,
+merging upstream, or updating project configuration:
+
+1. Read this guide and check the live branch, remotes, worktree, and build configuration. Values
+   in the migration snapshot and validation record are historical; verify them before relying on
+   them.
+2. Preserve the AAOS and product requirements below while porting behavior into the current
+   upstream architecture. Do not replay old fork commits wholesale.
+3. Keep `my-custom-features` as the historical reference/rollback branch.
+4. Validate the affected build and device paths, then update this guide with the change and
+   evidence. Clearly distinguish builds/tests from emulator or vehicle verification.
 
 The target is Android Automotive OS (AAOS), with the UI tuned for legibility and touch on a large
 vehicle display across supported window sizes and orientations. Preserve AAOS driver-distraction
 requirements; larger controls do not imply that every app action is appropriate while driving.
-The emulator used for previous checks was `Automotive_Large_Portrait` at 1280 x 1606; this is not
-the same as verifying every supported Polestar 3 software or hardware configuration.
+The `Automotive_Large_Portrait` emulator at 1280 x 1606 was used for earlier checks, but that does
+not verify every Polestar 3 hardware or software configuration.
 
-`my-custom-features` is the historical reference/rollback branch and must remain untouched. This
-document is the durable record of intent; branch names, upstream revisions, build versions, and
-validation results below are dated snapshots and must be rechecked before relying on them.
 Do not commit, push, publish, or create a release unless explicitly asked.
+
+## README preservation contract
+
+`README.md` is part of the fork's product identity, not disposable upstream documentation. Every
+upstream merge, README refresh, or branding change must preserve and re-check these requirements:
+
+- Keep the **🚗 Android Automotive OS (AAOS) Fork** notice at the top.
+- Keep the Flow-for-AAOS identity, attribution/link to the upstream Flow project, and the
+  explanation that this is an AAOS-focused fork for the Polestar 3.
+- Retain the existing Flow logo artwork when it is present and valid.
+- Keep the feature summary accurate to this guide, including the AAOS-specific changes and their
+  constraints; update it when implemented behavior changes.
+- Explain the intended Google Play Internal testing distribution path. Do not advertise public
+  GitHub releases or direct downloads as the official distribution channel.
+- Keep the direct link to this guide so users and future agents can find the rationale and full
+  customization inventory.
+- Retain only branding artwork and screenshots that exist and are accurate. Do not add or restore
+  unrepresentative app screenshots; only use current, verified captures of this fork and label
+  them accurately.
+
+Before accepting a README change, compare it with this contract and the live build/distribution
+configuration. Preserve correct content across upstream README conflicts rather than blindly
+accepting either side.
 
 ## Product requirements
 
@@ -32,7 +59,7 @@ These are the behaviors to preserve when the corresponding upstream code changes
 | Large-screen legibility | Preserve the enlarged Material 3 type, touch targets, player controls, titles/descriptions/comments, and Shorts controls. Keep the larger top bar and Home logo/search and the 72 dp minimum top and bottom app-bar heights. Keep the video minimize arrow enlarged and offset 4 dp to the right. | `ui/theme/Type.kt`; `ui/components/layout/topbar/`; `ui/screens/home/`; `ui/components/videoplayer/`; `ui/components/shorts/`; `ui/components/musicplayer/` |
 | Video playback quality | When no Wi-Fi or cellular video-quality preference has been saved, default to 2160p (the highest setting exposed by the app). If the video has no 2160p stream, use the best available stream under the existing stream-selection behavior. Do not overwrite a user's saved quality. This requirement is for video, not music audio quality. | `data/local/PlayerPreferences.kt`, quality settings UI, playback stream selection |
 | Launcher branding | Keep the traditional red rounded YouTube play mark with a white triangle as the default launcher icon. | `app/src/main/res/drawable/ic_launcher_foreground.xml`, `ic_launcher_dynamic_foreground.xml`, theme colors |
-| README AAOS banner | Preserve the Android Automotive OS (AAOS) Notice badge at the top of README.md (`🚗 Android Automotive OS (AAOS) Fork`). | `README.md` |
+| README and fork identity | Preserve the README contract above: AAOS notice, fork/upstream attribution, accurate feature and Play Internal testing guidance, and this migration-guide link. Do not include unrepresentative screenshots. | `README.md` |
 | Play identity | Release `applicationId` remains exactly `com.JF_Flow`, preserving continuity with the existing Play listing. Debug/nightly suffixes are expected; validate the release variant rather than comparing its ID to a debug package. | `app/build.gradle.kts`, resolved release variant |
 | Upstream platform baseline | Keep upstream's current target SDK and architecture unless a demonstrated AAOS regression requires a deliberate change. The old fork's target SDK 35 downgrade is not a requirement. | Root/app Gradle configuration and merged manifest |
 | APK/App Bundle packaging | Preserve ABI-specific/universal APK outputs for APK workflows. For App Bundle tasks, keep the ABI split workaround if it is still needed to avoid AGP's multiple shrunk-resource failure; bundles already describe supported ABIs for Play delivery. Re-test before changing it. | `app/build.gradle.kts`, APK and bundle tasks |
@@ -44,7 +71,7 @@ does not rewrite a preference that was previously saved, including a value saved
 1080p/480p defaults. To change an existing installation, the user can select a new quality in
 settings; do not silently migrate saved values unless the owner explicitly requests that behavior.
 
-## Upstream merge procedure
+## Upstream merge and verification procedure
 
 1. Identify the exact upstream commit intended for the merge and record its full SHA below before
    integrating it. Confirm the working branch and worktree; do not overwrite `my-custom-features`.
@@ -68,7 +95,10 @@ settings; do not silently migrate saved values unless the owner explicitly reque
 7. Exercise the affected AAOS flow on an emulator/device when available: launch/onboarding,
    bottom navigation, Home/search, video playback and controls, Shorts, and any manifest or
    background-playback path touched by the merge. Record device/emulator and exact outcomes.
-8. Update this guide's migration record and validation notes. Clearly separate code/build/test
+8. Review `README.md` against the README preservation contract. Resolve upstream conflicts without
+   losing the AAOS notice, fork attribution, accurate Play Internal testing guidance, or this
+   guide's link. Do not add unrepresentative screenshots.
+9. Update this guide's migration record and validation notes. Clearly separate code/build/test
    evidence from on-device verification and list blocked checks. Do not claim device verification
    from compilation alone.
 
@@ -115,10 +145,10 @@ surface without treating these paths as a patch to apply blindly.
 - The default launcher foreground assets use the red play mark. Keep adaptive/dynamic icon assets
   consistent with the default identity.
 
-## Migration snapshot
+## Historical migration snapshot — verify before use
 
-This section records the state of the current migration and is historical, not a substitute for
-checking the live refs or worktree.
+This dated section records one migration checkpoint. It is not the current branch or release
+status; check live refs, configuration, and Play Console before acting on these values.
 
 - Working branch: `aaos-upstream-migration`, based on `upstream/main`. At the last check, HEAD and
   `upstream/main` both resolved to `10f588961d3467a2210a302d3698e9262c3ea201`.
