@@ -1,6 +1,15 @@
 <div align="center">
   <img src="Assets/logo.png" alt="Flow Logo" width="140" height="140">
   <br><br>
+
+  <!-- AAOS Notice -->
+  <p align="center">
+    <img src="https://img.shields.io/badge/Platform-Android_Automotive_OS_(AAOS)-informational?style=for-the-badge&logo=androidauto&logoColor=white" alt="AAOS Support">
+  </p>
+  <blockquote align="center">
+    <h3>🚗 <b>Android Automotive OS (AAOS) Fork</b></h3>
+    <p><b>This fork is specifically modified to run seamlessly on AAOS, featuring tailored UI tweaks and usability improvements optimized for in-car displays.</b></p>
+  </blockquote>
   
   <div align="center">
   
