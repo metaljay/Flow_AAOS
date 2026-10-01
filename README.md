@@ -81,14 +81,6 @@ For the full change inventory, implementation locations, rationale and upstream-
 requirements, see **[CUSTOM_FEATURES_MIGRATION.md](CUSTOM_FEATURES_MIGRATION.md)**. That guide is
 the reference for understanding which AAOS behaviors are intentional and must be preserved.
 
-## 📸 Screenshots
-
-<div align="center">
-<img src="Assets/Home.jpeg" alt="Flow home screen" width="31%">
-<img src="Assets/Music.jpeg" alt="Flow music screen" width="31%">
-<img src="Assets/VideoPlayer.jpeg" alt="Flow video player" width="31%">
-</div>
-
 ## 📄 License
 
 Flow is distributed under the [GNU General Public License v3.0](License). See the license file for
