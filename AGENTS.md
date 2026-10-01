@@ -455,9 +455,25 @@ rows, bespoke empty/error states, bespoke badges, bespoke formatters, or a secon
 
 ## Upstream Sync & Custom Branch Maintenance
 
-1. **Preserve AAOS Modifications**: This repository is a specialized Android Automotive OS (AAOS) fork. When performing upstream pulls, merges, or migrations from the parent `A-EDev/Flow` repository, always ensure that AAOS-specific customizations are preserved:
-   - **`README.md`**: Must retain the Android Automotive OS (AAOS) Notice banner at the top (`🚗 Android Automotive OS (AAOS) Fork`).
-   - **Polestar 3 & AAOS Customizations**: Keep Polestar 3 / AAOS UI tweaks, manifest/target settings, and automotive adaptations intact.
+1. **Active Working Branch**: `my-custom-features` is the single maintained, stable branch on GitHub (`origin/my-custom-features`).
+2. **Upstream Remote**: `upstream` (`https://github.com/A-EDev/Flow.git`) is the official parent repository (read-only). **NEVER** push directly to `upstream`.
+3. **Origin Remote**: `origin` (`https://github.com/metaljay/Flow_AAOS.git`) is your custom fork. Always push custom updates to `origin/my-custom-features`.
+4. **Upstream Update Workflow**:
+   - When pulling new updates from the parent repo (`A-EDev/Flow`):
+     1. Create a temporary migration branch (e.g. `temp/upstream-update-<version>`).
+     2. Merge/port the upstream changes into the temporary branch.
+     3. Assess and re-verify all custom AAOS features, branding, and invariants against [`CUSTOM_FEATURES_MIGRATION.md`](CUSTOM_FEATURES_MIGRATION.md).
+     4. Build and verify target compilation (`./gradlew :app:assembleGithubDebug`).
+     5. Once verified stable, update `my-custom-features` with the clean build and push to `origin/my-custom-features`.
+     6. Delete the temporary migration branch locally and on `origin`. Never leave temporary migration branches behind.
+5. **Preserve Custom Invariants**:
+   - Custom Release Application ID: `com.JF_Flow` (preserving Play Store continuity)
+   - Target vehicle: Polestar 3 running Android Automotive OS (AAOS)
+   - Bottom navigation forced at all window sizes (`FlowNavigationChrome.kt`)
+   - AAOS enlarged touch targets, 72 dp app bars, and large typography scaling
+   - 2160p default video playback quality when unset (`PlayerPreferences.kt`)
+   - Traditional red rounded YouTube play mark launcher icon
+   - `README.md` AAOS notice banner (`🚗 Android Automotive OS (AAOS) Fork`)
 
 ## AI-only guidelines
 
