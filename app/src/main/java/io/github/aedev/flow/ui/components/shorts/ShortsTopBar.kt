@@ -20,8 +20,8 @@ import io.github.aedev.flow.ui.components.videoplayer.controls.PlayerPillIconBut
 import io.github.aedev.flow.ui.theme.PlayerScrimContent
 
 private val TopBarHorizontalPadding = 16.dp
-private val BackButtonSize = 40.dp
-private val BackIconSize = 24.dp
+private val BackButtonSize = 52.dp
+private val BackIconSize = 30.dp
 
 /**
  * The strip over the top of the reel: a back pill when the queue was opened from somewhere, the

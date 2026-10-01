@@ -225,7 +225,7 @@ fun FlowDescriptionBottomSheet(
                 modifier = dragModifier,
                 titleStyle =
                     MaterialTheme.typography.titleLarge.copy(
-                        fontSize = 20.sp,
+                        fontSize = 24.sp,
                         fontWeight = FontWeight.Bold,
                     ),
                 actions = {
@@ -260,7 +260,7 @@ fun FlowDescriptionBottomSheet(
         ) {
             Text(
                 text = video.title,
-                style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
+                style = MaterialTheme.typography.titleMedium.copy(fontSize = 22.sp),
                 fontWeight = FontWeight.Bold,
                 color = MaterialTheme.colorScheme.onSurface,
             )
@@ -492,8 +492,8 @@ private fun DescriptionBody(
                     style =
                         MaterialTheme.typography.bodyMedium.copy(
                             color = tint.onContainer,
-                            lineHeight = 24.sp,
-                            fontSize = 15.sp,
+                            lineHeight = 28.sp,
+                            fontSize = 19.sp,
                         ),
                     maxLines = if (expanded) Int.MAX_VALUE else COLLAPSED_BODY_LINES,
                     overflow = TextOverflow.Ellipsis,

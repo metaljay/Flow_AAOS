@@ -138,6 +138,20 @@ class ServicePlaybackStreamSelectorTest {
     }
 
     @Test
+    fun `the highest quality preference picks the best available stream`() {
+        val streams = listOf(video("v1080", "1080p"), video("v2160", "2160p"), video("v1440", "1440p"))
+
+        val picked =
+            select(
+                videos = streams,
+                audio = listOf(audio("a", trackType = AudioTrackType.ORIGINAL)),
+                quality = VideoQuality.Q_2160P,
+            ).first
+
+        assertEquals("v2160", picked?.id)
+    }
+
+    @Test
     fun `with no audio at all a muxed stream is preferred so playback still has sound`() {
         val muxed = video("muxed", "360p", videoOnly = false)
         val videoOnly = video("vonly", "1080p", videoOnly = true)

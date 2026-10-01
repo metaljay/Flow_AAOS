@@ -24,12 +24,12 @@ import io.github.aedev.flow.player.EnhancedPlayerManager
 import io.github.aedev.flow.ui.theme.PlayerScrim
 import io.github.aedev.flow.utils.formatMultiplierLabel
 
-private val OverlayActionButtonSize = 40.dp
-private val OverlayActionIconSize = 24.dp
-private val OverlayActionSpacing = 8.dp
-internal val OverlayPillHeight = 28.dp
-private val OverlayExpandIconSize = 18.dp
-private val OverlayControlRowMinHeight = 44.dp
+private val OverlayActionButtonSize = 52.dp
+private val OverlayActionIconSize = 30.dp
+private val OverlayActionSpacing = 12.dp
+internal val OverlayPillHeight = 40.dp
+private val OverlayExpandIconSize = 24.dp
+private val OverlayControlRowMinHeight = 56.dp
 private val OverlayActionIconInset = (OverlayActionButtonSize - OverlayActionIconSize) / 2f
 
 /** Tint over the video while the controls are up; the loading state blacks it out entirely. */

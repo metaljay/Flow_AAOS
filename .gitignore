@@ -47,5 +47,8 @@ Flow-desktop/
 /app/src/test/resources/explore/
 /app/src/test/resources/shorts/
 
+# Local release bundles
+/app/github/release/
+
 # macOS Finder metadata
 .DS_Store

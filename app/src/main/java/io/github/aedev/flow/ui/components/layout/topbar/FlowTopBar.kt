@@ -3,6 +3,8 @@ package io.github.aedev.flow.ui.components.layout.topbar
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
 import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.heightIn
+import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -15,6 +17,7 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
+import androidx.compose.ui.unit.dp
 import io.github.aedev.flow.R
 
 /**
@@ -90,7 +93,7 @@ fun FlowTopBar(
         }
 
     TopAppBar(
-        modifier = modifier,
+        modifier = modifier.heightIn(min = FlowTopBarDefaults.BarHeight),
         title = title,
         navigationIcon = {
             when {
@@ -99,10 +102,14 @@ fun FlowTopBar(
                 }
 
                 onBack != null -> {
-                    IconButton(onClick = onBack) {
+                    IconButton(
+                        onClick = onBack,
+                        modifier = Modifier.size(56.dp),
+                    ) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.btn_back),
+                            modifier = Modifier.size(32.dp),
                         )
                     }
                 }

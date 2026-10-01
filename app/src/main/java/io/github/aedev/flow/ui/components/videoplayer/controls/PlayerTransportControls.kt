@@ -46,11 +46,11 @@ import io.github.aedev.flow.ui.theme.PlayerScrimContentDisabled
 
 private enum class TransportIcon { Buffering, Replay, Pause, Play }
 
-private val PlayPauseButtonSize = 62.dp
-private val PlayPauseIconSize = 54.dp
-private val BufferingIndicatorSlot = 48.dp
-private val SkipButtonSize = 48.dp
-private val SkipIconSize = 36.dp
+private val PlayPauseButtonSize = 80.dp
+private val PlayPauseIconSize = 64.dp
+private val BufferingIndicatorSlot = 56.dp
+private val SkipButtonSize = 60.dp
+private val SkipIconSize = 44.dp
 
 /** Breathing room kept at each end, so the outer button never touches the player edge. */
 private val TransportEdgeInset = 8.dp

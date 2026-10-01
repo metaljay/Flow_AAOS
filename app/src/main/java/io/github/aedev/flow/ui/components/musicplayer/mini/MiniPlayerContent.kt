@@ -62,7 +62,7 @@ import io.github.aedev.flow.ui.theme.ArtworkScrimNowPlaying
 private val ArtworkRingSize = 52.dp
 private val ArtworkSize = 43.dp
 private val ProgressRingStroke = 2.5.dp
-private val PlayButtonSize = 48.dp
+private val PlayButtonSize = 52.dp
 private val PlayButtonPressedWidth = 60.dp
 private val PlayButtonPlayingCorner = 14.dp
 
@@ -198,14 +198,18 @@ internal fun MiniPlayerContent(
         }
 
         Row(
-            horizontalArrangement = Arrangement.spacedBy(2.dp),
+            horizontalArrangement = Arrangement.spacedBy(8.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (showPrevious) {
-                IconButton(onClick = { EnhancedMusicPlayerManager.playPrevious() }) {
+                IconButton(
+                    onClick = { EnhancedMusicPlayerManager.playPrevious() },
+                    modifier = Modifier.size(48.dp),
+                ) {
                     Icon(
                         imageVector = Icons.Rounded.SkipPrevious,
                         contentDescription = stringResource(R.string.previous),
+                        modifier = Modifier.size(28.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -218,10 +222,14 @@ internal fun MiniPlayerContent(
                     EnhancedMusicPlayerManager.togglePlayPause()
                 },
             )
-            IconButton(onClick = { EnhancedMusicPlayerManager.playNext() }) {
+            IconButton(
+                onClick = { EnhancedMusicPlayerManager.playNext() },
+                modifier = Modifier.size(48.dp),
+            ) {
                 Icon(
                     imageVector = Icons.Rounded.SkipNext,
                     contentDescription = stringResource(R.string.next),
+                    modifier = Modifier.size(28.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }
@@ -267,6 +275,7 @@ private fun MiniPlayPauseButton(
             Icon(
                 imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                 contentDescription = stringResource(if (isPlaying) R.string.pause else R.string.play),
+                modifier = Modifier.size(30.dp),
             )
         }
     }

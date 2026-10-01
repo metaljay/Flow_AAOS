@@ -92,8 +92,8 @@ fun TvQualitySettingsPane(
     modifier: Modifier = Modifier,
 ) {
     val scope = rememberCoroutineScope()
-    val wifiQuality by playerPreferences.defaultQualityWifi.collectAsStateWithLifecycle(initialValue = VideoQuality.AUTO)
-    val cellularQuality by playerPreferences.defaultQualityCellular.collectAsStateWithLifecycle(initialValue = VideoQuality.AUTO)
+    val wifiQuality by playerPreferences.defaultQualityWifi.collectAsStateWithLifecycle(initialValue = VideoQuality.Q_2160P)
+    val cellularQuality by playerPreferences.defaultQualityCellular.collectAsStateWithLifecycle(initialValue = VideoQuality.Q_2160P)
     val codec by playerPreferences.defaultVideoCodec.collectAsStateWithLifecycle(initialValue = VideoCodec.AUTO)
 
     LazyColumn(

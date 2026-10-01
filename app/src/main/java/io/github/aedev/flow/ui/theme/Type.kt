@@ -17,16 +17,16 @@ private val BaseTypography =
             TextStyle(
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.Bold,
-                fontSize = 34.sp,
-                lineHeight = 40.sp,
+                fontSize = 38.sp,
+                lineHeight = 44.sp,
                 letterSpacing = 0.sp,
             ),
         displayMedium =
             TextStyle(
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.Bold,
-                fontSize = 28.sp,
-                lineHeight = 36.sp,
+                fontSize = 34.sp,
+                lineHeight = 42.sp,
                 letterSpacing = 0.sp,
             ),
         // Headline - Screen titles
@@ -34,16 +34,16 @@ private val BaseTypography =
             TextStyle(
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 24.sp,
-                lineHeight = 32.sp,
+                fontSize = 30.sp,
+                lineHeight = 38.sp,
                 letterSpacing = 0.sp,
             ),
         headlineMedium =
             TextStyle(
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 20.sp,
-                lineHeight = 28.sp,
+                fontSize = 26.sp,
+                lineHeight = 34.sp,
                 letterSpacing = 0.sp,
             ),
         // Title - Card titles, section headers
@@ -51,24 +51,24 @@ private val BaseTypography =
             TextStyle(
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.Medium,
-                fontSize = 18.sp,
-                lineHeight = 24.sp,
+                fontSize = 24.sp,
+                lineHeight = 32.sp,
                 letterSpacing = 0.sp,
             ),
         titleMedium =
             TextStyle(
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.Medium,
-                fontSize = 16.sp,
-                lineHeight = 22.sp,
+                fontSize = 22.sp,
+                lineHeight = 30.sp,
                 letterSpacing = 0.1.sp,
             ),
         titleSmall =
             TextStyle(
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.Medium,
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
+                fontSize = 20.sp,
+                lineHeight = 28.sp,
                 letterSpacing = 0.1.sp,
             ),
         // Body - Main content
@@ -76,24 +76,24 @@ private val BaseTypography =
             TextStyle(
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.Normal,
-                fontSize = 16.sp,
-                lineHeight = 24.sp,
+                fontSize = 22.sp,
+                lineHeight = 30.sp,
                 letterSpacing = 0.5.sp,
             ),
         bodyMedium =
             TextStyle(
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.Normal,
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
+                fontSize = 20.sp,
+                lineHeight = 28.sp,
                 letterSpacing = 0.25.sp,
             ),
         bodySmall =
             TextStyle(
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.Normal,
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
+                fontSize = 18.sp,
+                lineHeight = 26.sp,
                 letterSpacing = 0.4.sp,
             ),
         // Label - Buttons, tabs
@@ -101,24 +101,24 @@ private val BaseTypography =
             TextStyle(
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.Medium,
-                fontSize = 14.sp,
-                lineHeight = 20.sp,
+                fontSize = 20.sp,
+                lineHeight = 28.sp,
                 letterSpacing = 0.1.sp,
             ),
         labelMedium =
             TextStyle(
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.Medium,
-                fontSize = 12.sp,
-                lineHeight = 16.sp,
+                fontSize = 18.sp,
+                lineHeight = 26.sp,
                 letterSpacing = 0.5.sp,
             ),
         labelSmall =
             TextStyle(
                 fontFamily = InterFontFamily,
                 fontWeight = FontWeight.Medium,
-                fontSize = 11.sp,
-                lineHeight = 16.sp,
+                fontSize = 16.sp,
+                lineHeight = 24.sp,
                 letterSpacing = 0.5.sp,
             ),
     )

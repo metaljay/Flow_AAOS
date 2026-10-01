@@ -1215,13 +1215,13 @@ class PlayerPreferences(
     val defaultQualityWifi: Flow<VideoQuality> =
         context.playerPreferencesDataStore.data
             .map { preferences ->
-                VideoQuality.fromString(preferences[Keys.DEFAULT_QUALITY_WIFI] ?: "1080p")
+                VideoQuality.fromString(preferences[Keys.DEFAULT_QUALITY_WIFI] ?: VideoQuality.Q_2160P.label)
             }
 
     val defaultQualityCellular: Flow<VideoQuality> =
         context.playerPreferencesDataStore.data
             .map { preferences ->
-                VideoQuality.fromString(preferences[Keys.DEFAULT_QUALITY_CELLULAR] ?: "480p")
+                VideoQuality.fromString(preferences[Keys.DEFAULT_QUALITY_CELLULAR] ?: VideoQuality.Q_2160P.label)
             }
 
     suspend fun setDefaultQualityWifi(quality: VideoQuality) {

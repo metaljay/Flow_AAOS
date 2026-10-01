@@ -4,6 +4,17 @@
 
     <uses-feature android:name="android.software.leanback" android:required="false" />
     <uses-feature android:name="android.hardware.touchscreen" android:required="false" />
+    <uses-feature android:name="android.hardware.faketouch" android:required="false" />
+    <uses-feature android:name="android.hardware.type.automotive" android:required="false" />
+    <uses-feature android:name="com.android.car.background_audio_while_driving" android:required="false" />
+
+    <uses-feature android:name="android.hardware.telephony" android:required="false" />
+    <uses-feature android:name="android.hardware.bluetooth" android:required="false" />
+    <uses-feature android:name="android.hardware.nfc" android:required="false" />
+    <uses-feature android:name="android.hardware.gps" android:required="false" />
+    <uses-feature android:name="android.hardware.wifi" android:required="false" />
+    <uses-feature android:name="android.hardware.screen.portrait" android:required="false" />
+    <uses-feature android:name="android.hardware.screen.landscape" android:required="false" />
 
     <uses-permission android:name="android.permission.INTERNET" />
     <uses-permission android:name="android.permission.ACCESS_NETWORK_STATE" />
@@ -53,6 +64,7 @@
     <uses-permission android:name="android.permission.ACCESS_WIFI_STATE" />
     <!-- Device Sync: scan the peer's QR code to receive the session key out-of-band. -->
     <uses-permission android:name="android.permission.CAMERA" />
+    <uses-feature android:name="android.hardware.camera" android:required="false" />
     <uses-feature android:name="android.hardware.camera.any" android:required="false" />
 
     <!-- Lets the equalizer page offer an installed system or third-party equalizer panel. -->
@@ -74,7 +86,8 @@
         android:usesCleartextTraffic="true"
         android:resizeableActivity="true"
         android:requestLegacyExternalStorage="true"
-        android:enableOnBackInvokedCallback="true">
+        android:enableOnBackInvokedCallback="true"
+        android:appCategory="video">
 
         <!--
             Samsung keep-alive hints (same as NewPipe).
@@ -96,9 +109,10 @@
             android:name="com.samsung.android.multidisplay.keep_process_alive"
             android:value="true" />
         <meta-data
-            android:name="com.google.android.gms.car.application"
+            android:name="com.android.automotive"
             android:resource="@xml/automotive_app_desc" />
 
+        <!-- KEEP for this AAOS build: retain distractionOptimized metadata on the main and TV activities and every launcher alias when syncing upstream. -->
         <activity
             android:name=".TvActivity"
             android:banner="@drawable/tv_banner"
@@ -110,6 +124,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LEANBACK_LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
         </activity>
 
         <!-- singleTask: a share or link from another app must reach this instance through
@@ -123,7 +138,12 @@
             android:supportsPictureInPicture="true"
             android:theme="@style/Theme.Flow.Starting"
             android:windowSoftInputMode="adjustResize"
-            android:windowLayoutInDisplayCutoutMode="shortEdges">
+            android:windowLayoutInDisplayCutoutMode="never">
+
+            <intent-filter>
+                <action android:name="android.intent.action.MAIN" />
+                <category android:name="android.intent.category.CAR_LAUNCHER" />
+            </intent-filter>
 
             <!-- Deep Links for YouTube URLs -->
             <intent-filter android:autoVerify="true">
@@ -202,6 +222,7 @@
                 <category android:name="android.intent.category.DEFAULT" />
                 <data android:mimeType="application/json" />
             </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
         </activity>
         
         <!-- Media3 Music Service -->
@@ -402,6 +423,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
         </activity-alias>
 
         <!-- Flow Light -->
@@ -416,6 +438,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
         </activity-alias>
 
         <!-- Flow Play (white background, red video frame + play mark) -->
@@ -430,6 +453,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
         </activity-alias>
 
         <!-- AMOLED Dark -->
@@ -444,6 +468,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
         </activity-alias>
 
         <!-- Monochrome (white background, dark F letter; Material You compatible) -->
@@ -458,6 +483,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
         </activity-alias>
 
         <!-- Ghost / Outline (dark background, white squircle border + white F) -->
@@ -472,6 +498,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
         </activity-alias>
 
         <!-- Dynamic / Material You (neutral bg + monochrome layer; system tints on Android 13+) -->
@@ -486,6 +513,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
         </activity-alias>
 
         <!-- Material Sky -->
@@ -500,6 +528,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
         </activity-alias>
 
         <!-- Material Mint -->
@@ -514,6 +543,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
         </activity-alias>
 
         <!-- Scallop (Expressive) -->
@@ -528,6 +558,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
         </activity-alias>
 
         <!-- Segmented F (Expressive) -->
@@ -542,6 +573,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
         </activity-alias>
 
         <!-- Sunny Play (Expressive) -->
@@ -556,6 +588,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
         </activity-alias>
 
         <!-- Sky Clover (Expressive) -->
@@ -570,6 +603,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
         </activity-alias>
 
         <!-- Mint Flower (Expressive) -->
@@ -584,6 +618,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
         </activity-alias>
 
         <!-- Night Cookie (Expressive) -->
@@ -598,6 +633,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
         </activity-alias>
 
         <!-- Oval (Expressive) -->
@@ -612,6 +648,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
         </activity-alias>
 
         <!-- Pill (Expressive) -->
@@ -626,6 +663,7 @@
                 <action android:name="android.intent.action.MAIN" />
                 <category android:name="android.intent.category.LAUNCHER" />
             </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
         </activity-alias>
 
 
@@ -642,4 +680,3 @@
     </application>
 
 </manifest>
-

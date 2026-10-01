@@ -46,10 +46,14 @@ internal fun FlowGlobalActionsRow() {
         unreadCount = unreadCount,
         onClick = actions.onOpenNotifications,
     )
-    IconButton(onClick = actions.onOpenSettings) {
+    IconButton(
+        onClick = actions.onOpenSettings,
+        modifier = Modifier.size(56.dp),
+    ) {
         Icon(
             imageVector = Icons.Outlined.Settings,
             contentDescription = stringResource(R.string.settings),
+            modifier = Modifier.size(32.dp),
         )
     }
 }
@@ -59,19 +63,23 @@ private fun FlowNotificationsAction(
     unreadCount: Int,
     onClick: () -> Unit,
 ) {
-    IconButton(onClick = onClick) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.size(56.dp),
+    ) {
         Box(contentAlignment = Alignment.TopEnd) {
             Icon(
                 imageVector = Icons.Outlined.Notifications,
                 contentDescription = stringResource(R.string.notifications),
+                modifier = Modifier.size(32.dp),
             )
             if (unreadCount > 0) {
                 Box(
                     modifier =
                         Modifier
-                            .offset(x = 6.dp, y = (-4).dp)
+                            .offset(x = 8.dp, y = (-4).dp)
                             .background(MaterialTheme.colorScheme.primary, shape = CircleShape)
-                            .size(16.dp),
+                            .size(18.dp),
                     contentAlignment = Alignment.Center,
                 ) {
                     Text(
@@ -84,9 +92,9 @@ private fun FlowNotificationsAction(
                         color = MaterialTheme.colorScheme.onPrimary,
                         style =
                             MaterialTheme.typography.labelSmall.copy(
-                                fontSize = 9.sp,
+                                fontSize = 10.sp,
                                 fontWeight = FontWeight.Bold,
-                                lineHeight = 9.sp,
+                                lineHeight = 10.sp,
                             ),
                     )
                 }
@@ -120,10 +128,14 @@ fun FlowTopBarOverflow(
     var expanded by remember { mutableStateOf(false) }
 
     Box(modifier = modifier) {
-        IconButton(onClick = { expanded = true }) {
+        IconButton(
+            onClick = { expanded = true },
+            modifier = Modifier.size(56.dp),
+        ) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
                 contentDescription = contentDescription,
+                modifier = Modifier.size(32.dp),
             )
         }
         DropdownMenu(
@@ -132,11 +144,22 @@ fun FlowTopBarOverflow(
         ) {
             items.forEach { item ->
                 DropdownMenuItem(
-                    text = { Text(item.label) },
+                    text = {
+                        Text(
+                            text = item.label,
+                            style = MaterialTheme.typography.titleMedium,
+                        )
+                    },
                     enabled = item.enabled,
                     leadingIcon =
                         item.icon?.let { icon ->
-                            { Icon(imageVector = icon, contentDescription = null) }
+                            {
+                                Icon(
+                                    imageVector = icon,
+                                    contentDescription = null,
+                                    modifier = Modifier.size(32.dp),
+                                )
+                            }
                         },
                     onClick = {
                         expanded = false

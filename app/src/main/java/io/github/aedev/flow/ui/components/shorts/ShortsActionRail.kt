@@ -46,8 +46,8 @@ import io.github.aedev.flow.ui.theme.PlayerScrimPanel
 
 private const val DISC_SPIN_MS = 4_000
 private val RailSpacing = 16.dp
-private val RailButtonSize = 44.dp
-private val RailIconSize = 24.dp
+private val RailButtonSize = 52.dp
+private val RailIconSize = 30.dp
 private val RailLabelSpacing = 2.dp
 private val SoundDiscSize = 36.dp
 private val SoundDiscRim = 3.dp

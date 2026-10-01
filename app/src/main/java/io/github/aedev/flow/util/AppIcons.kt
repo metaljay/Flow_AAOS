@@ -12,7 +12,7 @@ data class LauncherIcon(
 )
 
 object AppIcons {
-    /** Component name prefix shared by every alias (the application id namespace). */
+    /** Kotlin and manifest component namespace, distinct from the installed application ID. */
     const val NAMESPACE = "io.github.aedev.flow"
 
     /** The alias enabled by default in the manifest. Used as a safe fallback. */

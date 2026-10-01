@@ -21,16 +21,25 @@ val localProperties =
             ?.use { load(it) }
     }
 
+// ABI APK splits and an App Bundle use separate delivery mechanisms. AGP's bundle resource
+// shrinker rejects the per-ABI intermediate resources produced when both are enabled together.
+val buildingAppBundle =
+    gradle.startParameter.taskNames.any { taskName ->
+        taskName.contains("bundle", ignoreCase = true)
+    }
+
 android {
     namespace = "io.github.aedev.flow"
     compileSdk = 37
 
     defaultConfig {
-        applicationId = "io.github.aedev.flow"
+        // KEEP: this ID identifies the Play internal-testing app. Changing it creates a different listing.
+        applicationId = "com.JF_Flow"
         minSdk = 26
         targetSdk = 36
-        versionCode = 18
-        versionName = "2.2.1"
+        // Increment versionCode for every Play upload; Play rejects a code already used by a track.
+        versionCode = 31
+        versionName = "2.2.12"
 
         buildConfigField("int", "NIGHTLY_RUN", "0")
 
@@ -54,7 +63,7 @@ android {
 
     splits {
         abi {
-            isEnable = true
+            isEnable = !buildingAppBundle
             reset()
             include("armeabi-v7a", "arm64-v8a", "x86", "x86_64")
             isUniversalApk = true

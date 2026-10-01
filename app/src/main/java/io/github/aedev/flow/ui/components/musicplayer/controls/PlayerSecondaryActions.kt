@@ -32,8 +32,8 @@ import io.github.aedev.flow.R
 import io.github.aedev.flow.player.RepeatMode
 import io.github.aedev.flow.ui.components.musicplayer.common.readableAccentOn
 
-private val SegmentFullRadius = 21.dp
-private val SegmentEdgeRadius = 8.dp
+private val SegmentFullRadius = 27.dp
+private val SegmentEdgeRadius = 10.dp
 
 @OptIn(ExperimentalMaterial3ExpressiveApi::class)
 @Composable
@@ -52,8 +52,8 @@ fun PlayerSecondaryActions(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(42.dp),
-        horizontalArrangement = Arrangement.spacedBy(4.dp),
+                .height(54.dp),
+        horizontalArrangement = Arrangement.spacedBy(6.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         PlayerToggleButton(
@@ -147,7 +147,7 @@ private fun RowScope.PlayerToggleButton(
         Icon(
             imageVector = icon,
             contentDescription = contentDescription,
-            modifier = Modifier.size(20.dp),
+            modifier = Modifier.size(26.dp),
         )
     }
 }
@@ -238,7 +238,7 @@ private fun SplitCapsuleButton(
     Box(
         modifier =
             Modifier
-                .size(width = 50.dp, height = 42.dp)
+                .size(width = 64.dp, height = 52.dp)
                 .clip(shape)
                 .background(containerColor)
                 .combinedClickable(
@@ -251,7 +251,7 @@ private fun SplitCapsuleButton(
             imageVector = icon,
             contentDescription = contentDescription,
             tint = contentColor,
-            modifier = Modifier.size(22.dp),
+            modifier = Modifier.size(28.dp),
         )
     }
 }

@@ -9,6 +9,7 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.fillMaxSize
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.layout.size
 import androidx.compose.foundation.lazy.grid.rememberLazyGridState
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.Sort
@@ -211,17 +212,25 @@ fun SubscriptionsScreen(
                 FlowTopBar(
                     title = stringResource(R.string.top_bar_subscriptions_title),
                     actions = {
-                        IconButton(onClick = { viewModel.toggleViewMode() }) {
+                        IconButton(
+                            onClick = { viewModel.toggleViewMode() },
+                            modifier = Modifier.size(52.dp),
+                        ) {
                             Icon(
                                 imageVector =
                                     if (uiState.isFullWidthView) Icons.AutoMirrored.Filled.ViewList else Icons.Default.GridView,
                                 contentDescription = stringResource(R.string.toggle_view_mode),
+                                modifier = Modifier.size(28.dp),
                             )
                         }
-                        IconButton(onClick = { isManagingSubs = true }) {
+                        IconButton(
+                            onClick = { isManagingSubs = true },
+                            modifier = Modifier.size(52.dp),
+                        ) {
                             Icon(
                                 imageVector = Icons.Outlined.Search,
                                 contentDescription = stringResource(R.string.search_subscriptions),
+                                modifier = Modifier.size(28.dp),
                             )
                         }
                     },

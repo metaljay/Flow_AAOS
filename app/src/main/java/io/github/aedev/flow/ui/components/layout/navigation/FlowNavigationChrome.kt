@@ -12,6 +12,7 @@ import androidx.compose.foundation.layout.WindowInsetsSides
 import androidx.compose.foundation.layout.consumeWindowInsets
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxSize
+import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.only
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.ShortNavigationBarDefaults
@@ -24,9 +25,6 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.testTag
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
-import io.github.aedev.flow.ui.utils.LocalWindowSizeClass
-import io.github.aedev.flow.ui.utils.isExpandedWidth
-import io.github.aedev.flow.ui.utils.isMediumHeight
 
 const val FLOW_NAV_BAR_TAG = "flow_nav_bar"
 const val FLOW_NAV_RAIL_TAG = "flow_nav_rail"
@@ -36,20 +34,15 @@ object FlowNavigationDefaults {
      * The bar's height above the system navigation inset: Material's short navigation bar
      * container. The bar reports its real height, which grows past this at large font scales.
      */
-    val BarHeight: Dp = 64.dp
+    val BarHeight: Dp = 72.dp
 }
 
-/**
- * Whether this window is wide enough to navigate from the start edge instead of the bottom. The
- * decision belongs to the window's size class, so a phone in a narrow split window keeps the bar
- * even on a large display.
- */
+/** Keep the app's primary navigation at the bottom at every window size. */
 @Composable
-fun flowUsesNavigationRail(): Boolean = LocalWindowSizeClass.current.let { it.isExpandedWidth && it.isMediumHeight }
+fun flowUsesNavigationRail(): Boolean = false
 
 /**
- * The app's primary navigation around [content]: the bottom bar over it on compact and medium
- * windows, the wide navigation rail beside it once the window is expanded.
+ * The app's primary navigation around [content], using the bottom bar at every window size.
  *
  * The bar overlays the content, so callers reserve [onBarHeightChanged] themselves. The rail takes
  * its own column; [onRailWidthChanged] is only for overlays drawn outside this layout.
@@ -120,6 +113,7 @@ private fun BoxScope.NavigationBarSlot(
 ) {
     val density = LocalDensity.current
     val bottomInsetPx = ShortNavigationBarDefaults.windowInsets.getBottom(density)
+    val minimumBarHeight = FlowNavigationDefaults.BarHeight + with(density) { bottomInsetPx.toDp() }
     val motion = MaterialTheme.motionScheme
     AnimatedVisibility(
         visible = visible,
@@ -133,6 +127,7 @@ private fun BoxScope.NavigationBarSlot(
             onTabSelected = onTabSelected,
             modifier =
                 Modifier
+                    .heightIn(min = minimumBarHeight)
                     .testTag(FLOW_NAV_BAR_TAG)
                     .onSizeChanged { onHeightChanged(with(density) { (it.height - bottomInsetPx).toDp() }) },
         )

@@ -144,7 +144,7 @@ fun HomeScreen(
                     Text(
                         stringResource(R.string.app_name_uppercase),
                         style =
-                            MaterialTheme.typography.titleLarge.copy(
+                            MaterialTheme.typography.headlineMedium.copy(
                                 fontWeight = FontWeight.ExtraBold,
                                 letterSpacing = 1.sp,
                             ),
@@ -160,17 +160,21 @@ fun HomeScreen(
                                         DeepFlowManager.toggle(context)
                                     }
                                 },
-                                modifier = Modifier.size(32.dp),
+                                modifier = Modifier.size(44.dp),
                             )
                         }
                     } else {
                         null
                     },
                 actions = {
-                    IconButton(onClick = onSearchClick) {
+                    IconButton(
+                        onClick = onSearchClick,
+                        modifier = Modifier.size(56.dp),
+                    ) {
                         Icon(
                             Icons.Outlined.Search,
                             contentDescription = stringResource(R.string.search),
+                            modifier = Modifier.size(32.dp),
                         )
                     }
                 },

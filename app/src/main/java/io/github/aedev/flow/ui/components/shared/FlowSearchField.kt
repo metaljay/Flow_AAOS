@@ -126,6 +126,7 @@ fun FlowSearchField(
                     Icon(
                         imageVector = Icons.Rounded.Close,
                         contentDescription = stringResource(R.string.clear),
+                        modifier = Modifier.size(28.dp),
                     )
                 }
             }
@@ -199,4 +200,4 @@ private val PillStartPadding = 16.dp
 private val PillLeadingPadding = 12.dp
 private val PillEndPadding = 4.dp
 private val PillItemSpacing = 8.dp
-private val ClearButtonSize = 32.dp
+private val ClearButtonSize = 52.dp

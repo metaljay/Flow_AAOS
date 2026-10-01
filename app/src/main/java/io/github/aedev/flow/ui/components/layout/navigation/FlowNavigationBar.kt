@@ -22,9 +22,12 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontWeight
+import androidx.compose.ui.unit.dp
 import io.github.aedev.flow.R
 import io.github.aedev.flow.ui.utils.LocalWindowSizeClass
 import io.github.aedev.flow.ui.utils.isMediumWidth
+import io.github.aedev.flow.ui.utils.rememberIsAutomotiveDevice
 
 private const val MAX_BAR_TABS = 5
 
@@ -39,6 +42,7 @@ internal fun FlowNavigationBar(
     onTabSelected: (FlowTab) -> Unit,
     modifier: Modifier = Modifier,
 ) {
+    val isAutomotiveDevice = rememberIsAutomotiveDevice()
     val horizontalItems = LocalWindowSizeClass.current.isMediumWidth
     val iconPosition = if (horizontalItems) NavigationItemIconPosition.Start else NavigationItemIconPosition.Top
     val barTabs = if (tabs.size <= MAX_BAR_TABS) tabs else tabs.take(MAX_BAR_TABS - 1)
@@ -55,8 +59,20 @@ internal fun FlowNavigationBar(
             ShortNavigationBarItem(
                 selected = selected,
                 onClick = { onTabSelected(tab) },
-                icon = { Icon(imageVector = tab.icon(selected), contentDescription = null) },
-                label = { Text(text = stringResource(tab.labelRes)) },
+                icon = {
+                    Icon(
+                        imageVector = tab.icon(selected),
+                        contentDescription = null,
+                        modifier = Modifier.size(if (isAutomotiveDevice) 36.dp else 28.dp),
+                    )
+                },
+                label = {
+                    Text(
+                        text = stringResource(tab.labelRes),
+                        style = MaterialTheme.typography.labelLarge,
+                        fontWeight = if (selected) FontWeight.Bold else FontWeight.Medium,
+                    )
+                },
                 iconPosition = iconPosition,
             )
         }
@@ -79,14 +95,30 @@ private fun OverflowItem(
     iconPosition: NavigationItemIconPosition,
 ) {
     var expanded by remember { mutableStateOf(false) }
+    val isAutomotiveDevice = rememberIsAutomotiveDevice()
     // One Box per bar slot: the bar measures every direct child as an item, and the menu's
     // popup anchor would otherwise count as one.
     Box(propagateMinConstraints = true) {
         ShortNavigationBarItem(
             selected = selectedTab in tabs,
             onClick = { expanded = true },
-            icon = { Icon(imageVector = Icons.Filled.MoreHoriz, contentDescription = null) },
-            label = { Text(text = stringResource(R.string.nav_more)) },
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.MoreHoriz,
+                    contentDescription = null,
+                    modifier = Modifier.size(if (isAutomotiveDevice) 36.dp else 28.dp),
+                )
+            },
+            label = {
+                if (isAutomotiveDevice) {
+                    Text(
+                        text = stringResource(R.string.nav_more),
+                        style = MaterialTheme.typography.labelLarge,
+                    )
+                } else {
+                    Text(text = stringResource(R.string.nav_more))
+                }
+            },
             iconPosition = iconPosition,
         )
         DropdownMenuPopup(expanded = expanded, onDismissRequest = { expanded = false }) {
@@ -98,20 +130,25 @@ private fun OverflowItem(
                             expanded = false
                             onTabSelected(tab)
                         },
-                        text = { Text(text = stringResource(tab.labelRes)) },
+                        text = {
+                            Text(
+                                text = stringResource(tab.labelRes),
+                                style = MaterialTheme.typography.titleMedium,
+                            )
+                        },
                         shapes = MenuDefaults.itemShape(index = index, count = tabs.size),
                         leadingIcon = {
                             Icon(
                                 imageVector = tab.icon(selected = false),
                                 contentDescription = null,
-                                modifier = Modifier.size(MenuDefaults.LeadingIconSize),
+                                modifier = Modifier.size(32.dp),
                             )
                         },
                         selectedLeadingIcon = {
                             Icon(
                                 imageVector = tab.icon(selected = true),
                                 contentDescription = null,
-                                modifier = Modifier.size(MenuDefaults.LeadingIconSize),
+                                modifier = Modifier.size(32.dp),
                             )
                         },
                     )

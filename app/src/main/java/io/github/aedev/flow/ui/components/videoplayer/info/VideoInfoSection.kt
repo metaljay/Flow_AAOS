@@ -125,8 +125,8 @@ internal fun VideoInfoSection(
                 style =
                     MaterialTheme.typography.titleLarge.copy(
                         fontWeight = FontWeight.Bold,
-                        fontSize = 20.sp,
-                        lineHeight = 28.sp,
+                        fontSize = 24.sp,
+                        lineHeight = 32.sp,
                     ),
                 color = MaterialTheme.colorScheme.onBackground,
                 maxLines = titleMaxLines,
@@ -213,7 +213,7 @@ internal fun VideoInfoSection(
                         style =
                             MaterialTheme.typography.titleMedium.copy(
                                 fontWeight = FontWeight.SemiBold,
-                                fontSize = 16.sp,
+                                fontSize = 20.sp,
                             ),
                         color = MaterialTheme.colorScheme.onBackground,
                         maxLines = 1,

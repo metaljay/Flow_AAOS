@@ -135,8 +135,8 @@ fun PlayerPlaybackControls(
         modifier =
             modifier
                 .fillMaxWidth()
-                .height(68.dp),
-        horizontalArrangement = Arrangement.spacedBy(10.dp),
+                .height(84.dp),
+        horizontalArrangement = Arrangement.spacedBy(12.dp),
         verticalAlignment = Alignment.CenterVertically,
     ) {
         ElasticControlButton(
@@ -154,7 +154,7 @@ fun PlayerPlaybackControls(
             onPressedChange = { isPreviousPressed = it },
             containerColor = MaterialTheme.colorScheme.secondaryContainer,
             contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-            iconSize = 30.dp,
+            iconSize = 38.dp,
             onLongPressStart = { onPreviewDirectionChange(SkipDirection.PREVIOUS) },
             onLongPressEnd = { onPreviewDirectionChange(null) },
         )
@@ -173,7 +173,7 @@ fun PlayerPlaybackControls(
             onPressedChange = { isPressed = it },
             containerColor = MaterialTheme.colorScheme.primary,
             contentColor = MaterialTheme.colorScheme.onPrimary,
-            iconSize = 36.dp,
+            iconSize = 48.dp,
             cornerRadius = playPauseCorner,
             isBuffering = isBuffering,
         )
@@ -193,7 +193,7 @@ fun PlayerPlaybackControls(
             onPressedChange = { isNextPressed = it },
             containerColor = MaterialTheme.colorScheme.secondaryContainer,
             contentColor = MaterialTheme.colorScheme.onSecondaryContainer,
-            iconSize = 30.dp,
+            iconSize = 38.dp,
             onLongPressStart = { onPreviewDirectionChange(SkipDirection.NEXT) },
             onLongPressEnd = { onPreviewDirectionChange(null) },
         )

@@ -174,7 +174,7 @@ fun FlowCommentItem(
                             style =
                                 MaterialTheme.typography.bodyMedium.copy(
                                     color = MaterialTheme.colorScheme.onSurface,
-                                    lineHeight = 20.sp,
+                                    lineHeight = 28.sp,
                                 ),
                             maxLines = if (isExpanded) Int.MAX_VALUE else 4,
                             overflow = TextOverflow.Ellipsis,
@@ -494,7 +494,7 @@ private fun CommentAuthorName(
         ) {
             Text(
                 text = name,
-                style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
+                style = MaterialTheme.typography.labelMedium.copy(fontSize = 18.sp),
                 fontWeight = FontWeight.SemiBold,
                 maxLines = 1,
                 overflow = TextOverflow.Ellipsis,
@@ -505,7 +505,7 @@ private fun CommentAuthorName(
     }
     Text(
         text = name,
-        style = MaterialTheme.typography.labelMedium.copy(fontSize = 13.sp),
+        style = MaterialTheme.typography.labelMedium.copy(fontSize = 18.sp),
         fontWeight = FontWeight.SemiBold,
         color = MaterialTheme.colorScheme.primary,
         maxLines = 1,
