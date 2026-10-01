@@ -4,6 +4,8 @@ Flow (`io.github.aedev.flow`) is an Android music/video app written in Kotlin wi
 
 Product flavors: `github` (default, in-app updater enabled) and `foss` (no updater). Always use flavor-prefixed Gradle tasks — e.g. `assembleGithubDebug`, `compileFossDebugKotlin` — never bare `assembleDebug`/`compileDebugKotlin`.
 
+> 📌 **AAOS & Polestar 3 Customizations**: Before performing any work, code edits, or upstream merges/pulls, always consult [`CUSTOM_FEATURES_MIGRATION.md`](CUSTOM_FEATURES_MIGRATION.md) for the authoritative list of required behaviors, display settings, and custom feature checklists that must be preserved.
+
 ## graphify
 
 This project has a knowledge graph at graphify-out/ with god nodes, community structure, and cross-file relationships.
