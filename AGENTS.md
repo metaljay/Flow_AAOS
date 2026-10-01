@@ -451,6 +451,12 @@ rows, bespoke empty/error states, bespoke badges, bespoke formatters, or a secon
 4. DO NOT edit the app's Room database schema without explicit instruction (schema changes require a version bump and migration, handled deliberately).
 5. DO NOT bump the app version in any file — version bumps are done manually by the project owner.
 
+## Upstream Sync & Custom Branch Maintenance
+
+1. **Preserve AAOS Modifications**: This repository is a specialized Android Automotive OS (AAOS) fork. When performing upstream pulls, merges, or migrations from the parent `A-EDev/Flow` repository, always ensure that AAOS-specific customizations are preserved:
+   - **`README.md`**: Must retain the Android Automotive OS (AAOS) Notice banner at the top (`🚗 Android Automotive OS (AAOS) Fork`).
+   - **Polestar 3 & AAOS Customizations**: Keep Polestar 3 / AAOS UI tweaks, manifest/target settings, and automotive adaptations intact.
+
 ## AI-only guidelines
 
 1. Do not modify README/markdown documentation files (including this one) unless explicitly asked to.
