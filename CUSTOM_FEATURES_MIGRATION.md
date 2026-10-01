@@ -12,7 +12,7 @@ merging upstream, or updating project configuration:
    them.
 2. Preserve the AAOS and product requirements below while porting behavior into the current
    upstream architecture. Do not replay old fork commits wholesale.
-3. Keep `my-custom-features` as the historical reference/rollback branch.
+3. `main` is the primary active custom branch on `origin`.
 4. Validate the affected build and device paths, then update this guide with the change and
    evidence. Clearly distinguish builds/tests from emulator or vehicle verification.
 

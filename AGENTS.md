@@ -455,16 +455,16 @@ rows, bespoke empty/error states, bespoke badges, bespoke formatters, or a secon
 
 ## Upstream Sync & Custom Branch Maintenance
 
-1. **Active Working Branch**: `my-custom-features` is the single maintained, stable branch on GitHub (`origin/my-custom-features`).
+1. **Active Working Branch**: `main` is the single maintained, stable branch on GitHub (`origin/main`).
 2. **Upstream Remote**: `upstream` (`https://github.com/A-EDev/Flow.git`) is the official parent repository (read-only). **NEVER** push directly to `upstream`.
-3. **Origin Remote**: `origin` (`https://github.com/metaljay/Flow_AAOS.git`) is your custom fork. Always push custom updates to `origin/my-custom-features`.
+3. **Origin Remote**: `origin` (`https://github.com/metaljay/Flow_AAOS.git`) is your custom fork. Always push custom updates to `origin/main`.
 4. **Upstream Update Workflow**:
    - When pulling new updates from the parent repo (`A-EDev/Flow`):
      1. Create a temporary migration branch (e.g. `temp/upstream-update-<version>`).
      2. Merge/port the upstream changes into the temporary branch.
      3. Assess and re-verify all custom AAOS features, branding, and invariants against [`CUSTOM_FEATURES_MIGRATION.md`](CUSTOM_FEATURES_MIGRATION.md).
      4. Build and verify target compilation (`./gradlew :app:assembleGithubDebug`).
-     5. Once verified stable, update `my-custom-features` with the clean build and push to `origin/my-custom-features`.
+     5. Once verified stable, update `main` with the clean build and push to `origin/main`.
      6. Delete the temporary migration branch locally and on `origin`. Never leave temporary migration branches behind.
 5. **Preserve Custom Invariants**:
    - Custom Release Application ID: `com.JF_Flow` (preserving Play Store continuity)
