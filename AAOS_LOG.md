@@ -17,7 +17,7 @@ Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`
 - Owner-confirmed from Play Console: last uploaded 31 (2.2.12); the repo is at 32 (2.2.13) for the next upload.
 - Owner-confirmed: the app runs on the Polestar 3 from Play Internal testing. Not re-verified by an agent.
 - Branch policy: `main` only, with temporary `sync/upstream-<date>` branches for upstream updates.
-- Video quality: the owner confirmed a maximum-resolution default is unsuitable for the car display. Upstream defaults (1080p / 480p) apply; the README row claiming 2160p is being removed.
+- Video quality: the owner confirmed a maximum-resolution default is unsuitable for the car display. Upstream defaults (1080p / 480p) apply; the README row claiming 2160p was removed.
 - Signing finding: Gradle expects `release.keystore` in the repo, which does not exist, so Gradle bundles are unsigned. Releases are signed with the Android Studio wizard using `Key.jks`.
 
 ## Archived history
@@ -29,7 +29,7 @@ status; check live refs, configuration, and Play Console before acting on these 
 
 - Working branch: `aaos-upstream-migration`, based on `upstream/main`. At the last check, HEAD and
   `upstream/main` both resolved to `10f588961d3467a2210a302d3698e9262c3ea201`.
-- `my-custom-features` remains the separate reference branch.
+- `my-custom-features` no longer exists (retired 2026-10-02; main is the only branch).
 - Common base recorded for the original comparison:
   `79937a30ce64fcf7649cd83c368d787b1bce3c04`.
 - Historical custom commits: `25ce9fbe` (`My custom tweaks and features`) and `6cac82a4`
@@ -50,7 +50,6 @@ status; check live refs, configuration, and Play Console before acting on these 
 ## Known decisions
 
 - Android Auto: resolved — AAOS only; do not add Android Auto metadata.
-- GitHub default branch switched to `main` on 2026-10-02; the `cmp-rewrite` branch is intentionally kept for now rather than removed.
 - Re-evaluate whether each existing AAOS launch intent/metadata entry remains required when
   upstream changes the app's activities or launch structure. Do not remove required entries based
   only on a successful compile.
