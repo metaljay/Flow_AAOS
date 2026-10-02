@@ -21,7 +21,7 @@ vehicle display.
 
 <br>
 
-[AAOS changes](CUSTOM_FEATURES_MIGRATION.md) · [Upstream project](https://github.com/A-EDev/Flow) · [License](License)
+[AAOS rules](AAOS_FORK.md) · [Release steps](AAOS_RELEASE.md) · [Upstream project](https://github.com/A-EDev/Flow) · [License](License)
 
 </div>
 
@@ -43,7 +43,6 @@ vehicles. It is not an Android Auto version.
 | 🧭 | **Navigation stays at the bottom** at every window size, keeping the main destinations in a consistent place. |
 | 👀 | **More legible on a large display**, with enlarged Material 3 typography, icons, touch targets and player controls. |
 | 📐 | **Larger app bars**, with a 72 dp minimum height for top and bottom bars. |
-| 🎬 | **2160p default video quality** when no quality preference has been saved; existing choices and available video streams are respected. |
 | 🚗 | **AAOS system integration**, including automotive app metadata, a car-launcher entry and media browsing support. |
 | 📷 | **Camera features remain optional**, so a camera is not required for device compatibility. |
 | ▶️ | **Traditional red play-mark launcher icon** and the fork’s dedicated Play application identity. |
@@ -75,11 +74,13 @@ Uploading to Play requires the authorized release-signing configuration and acce
 Console internal testing track. Do not distribute an unsigned or locally signed build as an
 official test release.
 
-## 📚 AAOS customization notes
+## 📚 AAOS rules and fork inventory
 
-For the full change inventory, implementation locations, rationale and upstream-migration
-requirements, see **[CUSTOM_FEATURES_MIGRATION.md](CUSTOM_FEATURES_MIGRATION.md)**. That guide is
-the reference for understanding which AAOS behaviors are intentional and must be preserved.
+For the fork rules, invariant list, implementation locations, rationale and upstream-migration
+requirements, see **[AAOS_FORK.md](AAOS_FORK.md)**. It is the reference for understanding which
+AAOS behaviors are intentional and must be preserved.
+
+For release procedure and Play version rules, see **[AAOS_RELEASE.md](AAOS_RELEASE.md)**.
 
 ## 📄 License
 

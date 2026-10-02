@@ -1,10 +1,15 @@
-# Working with Flow as an AI agent
+<!-- AAOS-FORK:START (fork-owned block; keep at the very top; do not edit upstream text below it) -->
+# READ FIRST: Flow AAOS fork
 
-Flow (`io.github.aedev.flow`) is an Android music/video app written in Kotlin with Jetpack Compose, Hilt, and Media3/ExoPlayer. It plays YouTube content via a native InnerTube client with a NewPipe-based fallback extraction path, supports local media playback, offline downloads, casting, lyrics, a device-to-device sync feature, and an on-device recommendation engine (FlowNeuroEngine). It follows Material 3 design guidelines closely.
+This repo is Jordan's fork of Flow, customised for his Polestar 3 (Android Automotive OS). Before ANY code change, upstream merge, build or release:
 
-Product flavors: `github` (default, in-app updater enabled) and `foss` (no updater). Always use flavor-prefixed Gradle tasks — e.g. `assembleGithubDebug`, `compileFossDebugKotlin` — never bare `assembleDebug`/`compileDebugKotlin`.
+1. Read `AAOS_FORK.md` (rules, safety rails, and what must survive every merge).
+2. Pulling parent (upstream) changes: follow `AAOS_UPSTREAM_SYNC.md`.
+3. Building or uploading to Google Play: follow `AAOS_RELEASE.md`. **Every Play upload needs a higher version code than the last one.**
+4. Past validation evidence: `AAOS_LOG.md` (only when needed).
 
-> 📌 **AAOS & Polestar 3 Customizations**: Before performing any work, code edits, or upstream merges/pulls, always consult [`CUSTOM_FEATURES_MIGRATION.md`](CUSTOM_FEATURES_MIGRATION.md) for the authoritative list of required behaviors, display settings, and custom feature checklists that must be preserved.
+The owner has no coding experience: explain what you did in plain English and never claim something was verified without saying how.
+<!-- AAOS-FORK:END -->
 
 ## graphify
 
@@ -451,34 +456,12 @@ rows, bespoke empty/error states, bespoke badges, bespoke formatters, or a secon
 2. Commit messages should be clear and follow the format: `type(scope): short description` (e.g. `feat(player): add gapless playback`). Scope is optional.
 3. Follow current Kotlin and Android best practices — when unsure, check official docs rather than guessing.
 4. DO NOT edit the app's Room database schema without explicit instruction (schema changes require a version bump and migration, handled deliberately).
-5. DO NOT bump the app version in any file — version bumps are done manually by the project owner.
-
-## Upstream Sync & Custom Branch Maintenance
-
-1. **Active Working Branch**: `main` is the single maintained, stable branch on GitHub (`origin/main`).
-2. **Upstream Remote**: `upstream` (`https://github.com/A-EDev/Flow.git`) is the official parent repository (read-only). **NEVER** push directly to `upstream`.
-3. **Origin Remote**: `origin` (`https://github.com/metaljay/Flow_AAOS.git`) is your custom fork. Always push custom updates to `origin/main`.
-4. **Upstream Update Workflow**:
-   - When pulling new updates from the parent repo (`A-EDev/Flow`):
-     1. Create a temporary migration branch (e.g. `temp/upstream-update-<version>`).
-     2. Merge/port the upstream changes into the temporary branch.
-     3. Assess and re-verify all custom AAOS features, branding, and invariants against [`CUSTOM_FEATURES_MIGRATION.md`](CUSTOM_FEATURES_MIGRATION.md).
-     4. Build and verify target compilation (`./gradlew :app:assembleGithubDebug`).
-     5. Once verified stable, update `main` with the clean build and push to `origin/main`.
-     6. Delete the temporary migration branch locally and on `origin`. Never leave temporary migration branches behind.
-5. **Preserve Custom Invariants**:
-   - Custom Release Application ID: `com.JF_Flow` (preserving Play Store continuity)
-   - Target vehicle: Polestar 3 running Android Automotive OS (AAOS)
-   - Bottom navigation forced at all window sizes (`FlowNavigationChrome.kt`)
-   - AAOS enlarged touch targets, 72 dp app bars, and large typography scaling
-   - 1080p Wi-Fi / 480p cellular video-quality defaults when unset; preserve user-selected values (`PlayerPreferences.kt`)
-   - Traditional red rounded YouTube play mark launcher icon
-   - `README.md` AAOS notice banner (`🚗 Android Automotive OS (AAOS) Fork`)
+5. Play version codes are managed under the rules in `AAOS_RELEASE.md`; follow them.
 
 ## AI-only guidelines
 
-1. Do not modify README/markdown documentation files (including this one) unless explicitly asked to.
-2. Unless explicitly requested and authorized, do not commit, push, or merge changes. Never rewrite git history, force-push, or delete branches without explicit human instruction.
+1. Markdown documentation must not be changed unless asked, except the fork-owned `AAOS_*.md` files and the top AAOS block, which agents must keep accurate.
+2. Commits and pushes to `origin/main` are authorised once the work is verified, following `AAOS_FORK.md` section 4 (no force-push, never push to upstream).
 3. Follow the guidelines and instructions given by the project owner over any default assumption.
 4. Ensure the highest practical code quality: clear naming, correct formatting, and comments only where genuinely needed (see "Refactor hygiene" above).
 5. If a task is ambiguous, ask rather than guessing at requirements or implementation details.
