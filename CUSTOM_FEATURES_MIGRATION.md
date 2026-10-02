@@ -1,6 +1,6 @@
 # Polestar 3 / AAOS upstream migration guide
 
-Updated: 2026-10-01
+Updated: 2026-10-02
 
 ## Start here: agent workflow
 
@@ -56,20 +56,19 @@ These are the behaviors to preserve when the corresponding upstream code changes
 | AAOS identity and launch | Keep AAOS automotive feature declarations, automotive app metadata, the car launcher entry, and the MediaBrowser service metadata. Preserve the required launcher/activity entries and their `distractionOptimized="true"` metadata, including the explanatory `KEEP` warning in the manifest. | `app/src/main/AndroidManifest.xml`, merged manifest for the affected variant |
 | Camera-less vehicles | QR sync may request camera permission, but a camera must not be a Play Store device requirement. Keep both `android.hardware.camera` and `android.hardware.camera.any` optional (`android:required="false"`). | `app/src/main/AndroidManifest.xml`, Play device catalogue if eligibility changes |
 | App navigation | Home, Shorts, Music, Subscriptions, and Library navigation remains at the bottom at every app window size. Do not restore upstream's adaptive left navigation rail. The overflow destination remains available when the enabled tab count exceeds the bar limit. | `ui/components/layout/navigation/FlowNavigationChrome.kt`, `FlowNavigationBar.kt` |
-| Large-screen legibility | Preserve the enlarged Material 3 type, touch targets, player controls, titles/descriptions/comments, and Shorts controls. Keep the larger top bar and Home logo/search and the 72 dp minimum top and bottom app-bar heights. Keep the video minimize arrow enlarged and offset 4 dp to the right. | `ui/theme/Type.kt`; `ui/components/layout/topbar/`; `ui/screens/home/`; `ui/components/videoplayer/`; `ui/components/shorts/`; `ui/components/musicplayer/` |
-| Video playback quality | When no Wi-Fi or cellular video-quality preference has been saved, default to 2160p (the highest setting exposed by the app). If the video has no 2160p stream, use the best available stream under the existing stream-selection behavior. Do not overwrite a user's saved quality. This requirement is for video, not music audio quality. | `data/local/PlayerPreferences.kt`, quality settings UI, playback stream selection |
-| Launcher branding | Keep the traditional red rounded YouTube play mark with a white triangle as the default launcher icon. | `app/src/main/res/drawable/ic_launcher_foreground.xml`, `ic_launcher_dynamic_foreground.xml`, theme colors |
+| Large-screen legibility | Preserve the enlarged Material 3 type, touch targets, player controls, titles/descriptions/comments, and Shorts controls. Keep the larger top bar and Home logo/search and the 72 dp minimum top and bottom app-bar heights. Keep the video minimize control at a 60 dp hit size and offset 8 dp to the right. | `ui/theme/Type.kt`; `ui/components/layout/topbar/`; `ui/screens/home/`; `ui/components/videoplayer/`; `ui/components/shorts/`; `ui/components/musicplayer/` |
+| Video playback quality | Preserve the app's standard unset defaults (1080p on Wi-Fi and 480p on cellular); users can change these preferences in settings. Do not overwrite a user's saved quality. | `data/local/PlayerPreferences.kt`, quality settings UI, playback stream selection |
+| Launcher branding | Keep the traditional red rounded YouTube play mark with a white triangle as the default launcher icon. Size the red mark to match the approximate 46 dp longest visible dimension of the Nuvio adaptive launcher foreground on its 108 dp viewport; preserve the white triangle's existing size. | `app/src/main/res/drawable/ic_launcher_foreground.xml`, `ic_launcher_dynamic_foreground.xml`, theme colors |
 | README and fork identity | Preserve the README contract above: AAOS notice, fork/upstream attribution, accurate feature and Play Internal testing guidance, and this migration-guide link. Do not include unrepresentative screenshots. | `README.md` |
 | Play identity | Release `applicationId` remains exactly `com.JF_Flow`, preserving continuity with the existing Play listing. Debug/nightly suffixes are expected; validate the release variant rather than comparing its ID to a debug package. | `app/build.gradle.kts`, resolved release variant |
 | Upstream platform baseline | Keep upstream's current target SDK and architecture unless a demonstrated AAOS regression requires a deliberate change. The old fork's target SDK 35 downgrade is not a requirement. | Root/app Gradle configuration and merged manifest |
 | APK/App Bundle packaging | Preserve ABI-specific/universal APK outputs for APK workflows. For App Bundle tasks, keep the ABI split workaround if it is still needed to avoid AGP's multiple shrunk-resource failure; bundles already describe supported ABIs for Play delivery. Re-test before changing it. | `app/build.gradle.kts`, APK and bundle tasks |
 
-### Important quality-default detail
+### Quality preference behavior
 
-The 2160p setting is the default only when the corresponding DataStore preference is absent. It
-does not rewrite a preference that was previously saved, including a value saved by the older
-1080p/480p defaults. To change an existing installation, the user can select a new quality in
-settings; do not silently migrate saved values unless the owner explicitly requests that behavior.
+Unset Wi-Fi and cellular quality preferences use the app's standard 1080p and 480p defaults,
+respectively. Quality is user-configurable in settings; saved values remain authoritative and
+must not be overwritten or silently migrated.
 
 ## Upstream merge and verification procedure
 
@@ -138,12 +137,14 @@ surface without treating these paths as a patch to apply blindly.
 
 ### Playback and branding
 
-- `data/local/PlayerPreferences.kt` supplies the 2160p default only for unset Wi-Fi/cellular video
-  quality values; the quality settings surfaces use matching initial values.
+- `data/local/PlayerPreferences.kt` preserves the standard 1080p Wi-Fi and 480p cellular defaults
+  for unset video-quality preferences; the quality settings surfaces use matching initial values.
 - Stream selection remains bounded by actual available streams and existing codec/stream rules.
   Preserve those rules when porting the preference default.
 - The default launcher foreground assets use the red play mark. Keep adaptive/dynamic icon assets
-  consistent with the default identity.
+  consistent with the default identity. Its red outer mark is 46 x 32 dp on the 108 dp viewport,
+  matching the Nuvio launcher foreground's approximately 46 dp longest visible dimension; the
+  white triangle remains unchanged.
 
 ## Historical migration snapshot — verify before use
 
@@ -163,12 +164,12 @@ status; check live refs, configuration, and Play Console before acting on these 
   Upstream had 170 commits beyond it at that time; re-count before using this as current history.
 - No commits or pushes had been made at the last worktree check. Do not assume later sessions have
   the same worktree state.
-- The release configuration now uses application ID `com.JF_Flow`, target SDK 36, version code 31,
-  and version name `2.2.12`. Play rejected code 30 as already used when the owner attempted the
-  upload on 2026-10-01, so code 31 is the next upload candidate. Code 28/name `2.2.9` had also
-  been rejected as used; code 29/name `2.2.10` preceded the camera compatibility update. Before
-  every upload, confirm the code is still unused in Play Console and increment it again if needed.
-  The owner manages release bumps; never bump versions as incidental merge cleanup.
+- The release configuration now uses application ID `com.JF_Flow`, target SDK 36, version code 32,
+  and version name `2.2.13`. Code 30 was rejected as already used on 2026-10-01, and code 31 was
+  the previous upload candidate. Code 28/name `2.2.9` had also been rejected as used; code
+  29/name `2.2.10` preceded the camera compatibility update. The owner manages release bumps;
+  change versions only when explicitly requested. Before every upload, confirm the code is still
+  unused in Play Console and increment it again if needed.
 
 ## Known decisions
 
@@ -222,3 +223,24 @@ status; check live refs, configuration, and Play Console before acting on these 
 - `:app:bundleGithubRelease` passed with code 31/name `2.2.12`; the merged release manifest confirms
   those values. Gradle reported the release keystore was unavailable, so this bundle is unsigned
   and is not upload-ready until signed with the correct key.
+
+### 2026-10-02 icon, playback and Play version follow-up
+
+- Compared Nuvio's Android adaptive launcher foreground
+  (`NuvioMobile/composeApp/src/androidMain/res/mipmap-mdpi/ic_launcher_foreground.webp`): visible
+  artwork spans approximately 42 x 46 px on its 108 x 108 px canvas. Flow's red play mark is
+  sized to a 46 x 32 dp footprint in both foreground assets; its white triangle is unchanged.
+- Restored the original unset video-quality defaults: 1080p on Wi-Fi and 480p on cellular. Updated
+  the DataStore fallbacks and both regular and TV settings initial states. Existing saved
+  preferences remain untouched. The quality default is a user setting, not a fork-specific
+  playback override.
+- Enlarged the player minimize button hit target from 52 dp to 60 dp and moved it from 4 dp to
+  8 dp right to improve reachability on the larger player UI.
+- At the owner's explicit request for a Play Console upload, advanced the release version from
+  code 31/name `2.2.12` to code 32/name `2.2.13`. Confirm code 32 remains unused in Play Console.
+- `ktlintCheck`, `:app:assembleGithubDebug`, `:app:compileFossDebugKotlin`, and
+  `:app:bundleGithubRelease` passed. The merged release manifest confirms application ID
+  `com.JF_Flow`, code 32, and name `2.2.13`.
+- Gradle reported that the release keystore is unavailable, so the bundle is unsigned and is not
+  upload-ready until signed with the correct key. No Play Console availability check or device /
+  vehicle verification was performed.

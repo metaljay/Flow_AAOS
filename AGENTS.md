@@ -471,7 +471,7 @@ rows, bespoke empty/error states, bespoke badges, bespoke formatters, or a secon
    - Target vehicle: Polestar 3 running Android Automotive OS (AAOS)
    - Bottom navigation forced at all window sizes (`FlowNavigationChrome.kt`)
    - AAOS enlarged touch targets, 72 dp app bars, and large typography scaling
-   - 2160p default video playback quality when unset (`PlayerPreferences.kt`)
+   - 1080p Wi-Fi / 480p cellular video-quality defaults when unset; preserve user-selected values (`PlayerPreferences.kt`)
    - Traditional red rounded YouTube play mark launcher icon
    - `README.md` AAOS notice banner (`🚗 Android Automotive OS (AAOS) Fork`)
 

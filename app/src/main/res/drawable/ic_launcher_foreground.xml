@@ -5,7 +5,7 @@
     android:viewportHeight="108">
     <path
         android:fillColor="@color/youtube_red"
-        android:pathData="M 31,32 L 77,32 C 83.6,32 88,36.4 88,43 L 88,65 C 88,71.6 83.6,76 77,76 L 31,76 C 24.4,76 20,71.6 20,65 L 20,43 C 20,36.4 24.4,32 31,32 Z" />
+        android:pathData="M 37,38 L 71,38 C 74.9,38 77,41 77,45 L 77,63 C 77,67 74.9,70 71,70 L 37,70 C 33,70 31,67 31,63 L 31,45 C 31,41 33,38 37,38 Z" />
     <path
         android:fillColor="#FFFFFFFF"
         android:pathData="M 45,41 L 67,54 L 45,67 Z" />
