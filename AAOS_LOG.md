@@ -50,6 +50,7 @@ status; check live refs, configuration, and Play Console before acting on these 
 ## Known decisions
 
 - Android Auto: resolved — AAOS only; do not add Android Auto metadata.
+- GitHub default branch switched to `main` on 2026-10-02; the `cmp-rewrite` branch is intentionally kept for now rather than removed.
 - Re-evaluate whether each existing AAOS launch intent/metadata entry remains required when
   upstream changes the app's activities or launch structure. Do not remove required entries based
   only on a successful compile.
