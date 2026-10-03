@@ -1,5 +1,6 @@
 ---
-description: Record a confirmed Google Play upload (keeps the version-code rule accurate)
+name: aaos-uploaded
+description: Use when the owner confirms a version was uploaded to Google Play, to record it.
 ---
 Read AAOS_RELEASE.md. If I have not told you, ask me which version code and version name were uploaded to Play and accepted.
 

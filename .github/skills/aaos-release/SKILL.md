@@ -1,5 +1,6 @@
 ---
-description: Prepare a Play release (steps 1 and 2 of AAOS_RELEASE.md); the owner signs and uploads
+name: aaos-release
+description: Use when the owner asks to prepare a Google Play release bundle for the Polestar 3.
 ---
 Read AAOS_FORK.md and AAOS_RELEASE.md. Do steps 1 and 2 of AAOS_RELEASE.md only.
 

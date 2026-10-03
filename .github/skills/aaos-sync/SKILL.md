@@ -1,5 +1,6 @@
 ---
-description: Pull the latest parent (upstream) changes safely, following AAOS_UPSTREAM_SYNC.md
+name: aaos-sync
+description: Use when the owner asks to pull, sync or merge the latest parent (upstream) changes into this fork.
 ---
 Read AAOS_FORK.md and AAOS_UPSTREAM_SYNC.md, then pull the latest parent (upstream) changes into this fork, following AAOS_UPSTREAM_SYNC.md exactly, step by step.
 
