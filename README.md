@@ -76,20 +76,32 @@ official test release.
 
 ## 🔄 Keeping this fork up to date with its parent
 
-This fork follows [Flow](https://github.com/A-EDev/Flow). `main` holds the parent's code plus the AAOS customisations. Parent updates are never merged straight into `main`: they are reviewed on a temporary `sync/` branch first, and nothing is ever pushed to the parent. The procedure is written down for people **and** AI agents, so the changes this fork needs for the car survive every update.
+This fork follows [Flow](https://github.com/A-EDev/Flow). `main` holds the parent's code plus the AAOS customisations. Parent updates are never merged straight into `main`: an AI agent first applies them on a temporary `sync/` branch, re-applies the car customisations, runs checks, and waits for the owner's approval. Nothing is ever pushed to the parent. No git knowledge is needed: you paste short messages to an AI agent (GitHub Copilot, Codex or Gemini) opened in this repository, and it does the work and reports back in plain English.
 
-### Quick how-to
+### 1. Check for and review a parent update
+Paste this to your agent:
+```
+Follow the instructions in .github/skills/aaos-sync/SKILL.md exactly.
+```
+In GitHub Copilot you can type `/aaos-sync` instead. The agent tells you whether anything is new. If it is, it prepares and checks the update, then **stops and explains the changes in plain English**. Nothing reaches `main` until you reply `approve sync`. Reply `cancel sync` to discard the update safely. To see more detail first, ask: "Explain the three biggest changes and whether any touch the car customisations."
 
-1. **See what is new.** Run `git fetch upstream`, then `git log --oneline main..upstream/main`. No output means there is nothing to sync.
-2. **Pull the update safely.** Ask your AI agent to run the `aaos-sync` recipe. GitHub Copilot lists it as `/aaos-sync`; with any other agent say: "Follow the instructions in .github/skills/aaos-sync/SKILL.md exactly." It merges the parent into a `sync/` branch, re-applies the AAOS customisations, restores the fork-only values (application ID, Play version code, README banner), runs the checks, and only then merges into `main`.
-3. **Inspect the changes.** To review before anything reaches `main`, add "stop after the checks and before merging into main" to your request, then look at `git diff --stat main..sync/<date>` (what changed) and `git diff main..sync/<date> -- <file>` for any file in the hotspot table of `AAOS_UPSTREAM_SYNC.md`. After it has landed, `git diff --stat pre-sync-<date> main` shows the same thing (the procedure tags the last good state before it starts). Then read the newest entry in `AAOS_LOG.md` (conflicts, how they were resolved, what was verified and what was not) and tick through the invariants in `AAOS_FORK.md` section 5.
-4. **Release.** The `aaos-release` recipe (`/aaos-release`) prepares and checks a release bundle. Sign it in Android Studio (Build, then Generate Signed App Bundle), upload it to Google Play Internal testing, then run `aaos-uploaded <version code>` (`/aaos-uploaded <code>`) to record it. Every upload needs a higher version code than the last one, whatever the parent's version says.
+### 2. Prepare a release
+```
+Follow the instructions in .github/skills/aaos-release/SKILL.md exactly.
+```
+The agent builds and checks the release bundle, then gives you the exact clicks to sign it in Android Studio and upload it to Google Play Internal testing. Every Play upload needs a higher version code than the last one, whatever the parent's version says; the agent handles this.
+
+### 3. Record the upload
+After Play accepts the upload, paste this (replace 33 with the version code you uploaded):
+```
+Follow the instructions in .github/skills/aaos-uploaded/SKILL.md exactly. The version code uploaded was 33.
+```
 
 ### What protects the customisations
-- `AAOS_FORK.md`: rules, safety rails (no force-push, never push to the parent, never commit keys), and the list of customisations that must survive every merge.
+- `AAOS_FORK.md`: rules, safety rails and the customisations that must survive every merge.
 - `AAOS_UPSTREAM_SYNC.md`: the step-by-step procedure, the files most likely to conflict, and how to roll back.
 - `AAOS_RELEASE.md`: release steps and the version-code rule. `AAOS_LOG.md`: dated history of what changed and what was verified.
-- The recipes live in `.github/skills/` and `AGENTS.md` is the entry point for AI agents.
+- `AGENTS.md` is the entry point for AI agents; the recipes live in `.github/skills/`.
 
 ## 📚 AAOS rules and fork inventory
 

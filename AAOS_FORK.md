@@ -45,6 +45,17 @@ Agents may edit files, build, run tests, commit, push to `origin/main` once the 
 
 Commit with small, clear messages (`type(scope): description`). Stage files by name; do not use `git add -A`.
 
+## 4b. Talking to the owner (the owner is not a coder)
+
+The owner copy-pastes messages between chats and has little or no coding experience. Therefore:
+1. Never tell the owner to run a command unless you give the complete command in a copy-paste code block with every value filled in. No placeholders such as <date> or <file>: look the value up yourself first.
+2. Run commands yourself wherever you can. Ask the owner to act only for things only they can do: sign the bundle in Android Studio, upload in Play Console, change GitHub settings, or approve a decision.
+3. Offer decisions as copy-paste replies, for example: reply `approve sync` or `cancel sync`. One decision at a time.
+4. Explain results in plain English. Explain any jargon in one short phrase (for example: "merge means combining the parent's changes with ours").
+5. End every task with a report in this order: What I did / What I checked (the exact commands and results) / What I did NOT check / What you need to do next (the exact message to paste, or "nothing").
+6. If something fails, stop and say what failed in plain English. Give the owner one message to paste back to you or to another AI assistant. Do not attempt risky fixes.
+7. Do not ask the owner to read raw code, diffs or logs; summarise them. Offer the raw output only if asked.
+
 ## 5. Invariants: must survive every upstream merge
 
 1. **Play identity**: the release `applicationId` is exactly `com.JF_Flow`. The code namespace stays `io.github.aedev.flow` as upstream; never confuse the two.

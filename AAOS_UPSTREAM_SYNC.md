@@ -11,14 +11,15 @@ Do this only when the owner asks, or before a release that needs parent fixes. `
 4. **Resolve conflicts** using the hotspot table below. Rule: take upstream's new code, then re-apply our customisation on top. Never choose "ours" or "theirs" wholesale on a hotspot file. Also review hotspot files that merged *without* conflict, because upstream can change behaviour near our changes silently.
 5. **Restore fork-owned values** (list below).
 6. **Verify.** Run the checks below, walk the invariants in `AAOS_FORK.md` section 5, and inspect the merged **release** manifest for application ID, version, min/target SDK, automotive and camera features, every launcher activity/alias, MediaBrowser entry, and the flavor-specific values that differ between `github` and `foss`. Use the emulator if available.
-7. **Land it.** `git switch main && git merge --ff-only sync/upstream-<date>`. If that refuses because `main` moved, merge `main` into the sync branch, re-verify, retry. Then `git push origin main`.
-8. **Clean up.** `git branch -d sync/upstream-<date>`; if it was pushed, `git push origin --delete sync/upstream-<date>`. Never leave sync branches behind.
-9. **Record.** Add an `AAOS_LOG.md` entry (upstream SHA, conflicts, verification, limits). If releasing, continue with `AAOS_RELEASE.md`.
+7. **Approval gate.** Stop. Do not merge into main. Give the owner a plain-English review of the update (see `AAOS_FORK.md` section 4b) and ask them to reply with exactly `approve sync` or `cancel sync`. On `cancel sync`, delete the sync branch (see "Abort or roll back"); main stays untouched. If the owner returns in a new chat, find the open sync/ branch, re-run the checks quickly, then continue.
+8. **Land it.** `git switch main && git merge --ff-only sync/upstream-<date>`. If that refuses because `main` moved, merge `main` into the sync branch, re-verify, retry. Then `git push origin main`.
+9. **Clean up.** `git branch -d sync/upstream-<date>`; if it was pushed, `git push origin --delete sync/upstream-<date>`. Never leave sync branches behind.
+10. **Record.** Add an `AAOS_LOG.md` entry (upstream SHA, conflicts, verification, limits). If releasing, continue with `AAOS_RELEASE.md`.
 
 ## Abort or roll back
 
-- Before step 7: `git switch main && git branch -D sync/upstream-<date>`. `main` was never touched.
-- After step 7: create a revert commit (`git revert -m 1 <merge commit>`). Do not reset or force-push. The `pre-sync-<date>` tag marks the last good state.
+- Before step 8: `git switch main && git branch -D sync/upstream-<date>`. `main` was never touched.
+- After step 8: create a revert commit (`git revert -m 1 <merge commit>`). Do not reset or force-push. The `pre-sync-<date>` tag marks the last good state.
 
 ## Restore after every merge
 
