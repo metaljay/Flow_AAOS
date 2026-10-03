@@ -5,8 +5,8 @@
 | Item | Value |
 | --- | --- |
 | Release application ID | `com.JF_Flow` |
-| **Last uploaded to Play** | **31 (2.2.12)**, confirmed by the owner from Play Console on 2026-10-02 |
-| Code in the repo now | 32 (2.2.13), ready for the next upload |
+| **Last uploaded to Play** | **32 (2.2.13)**, confirmed by the owner from Play Console on 2026-10-03 |
+| Code in the repo now | **32 (2.2.13)**; must be raised before the next release |
 | Version file | `app/build.gradle.kts` (`versionCode` and `versionName` in `defaultConfig`, around line 40) |
 | Release key | `Key.jks` in the AAOS folder that contains both repos (outside the repo; keep a backup) |
 | Who signs and uploads | The owner, with Android Studio and Play Console. Agents prepare and verify. |
