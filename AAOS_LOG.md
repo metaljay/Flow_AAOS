@@ -11,6 +11,8 @@ Newest entry first. One entry per verified change, upstream sync or upload. Form
 
 Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`.
 
+## 2026-10-03: Instructions rewritten for a non-coder owner: communication rules, approval gate in the sync procedure, click-by-click release steps, prompt-based README how-to.
+
 ## 2026-10-03: Signed bundles now collected in a standard For upload to Play Console folder.
 - Updated the release instructions, release helper, fork environment notes and README with the standard signed-bundle folder and collection steps.
 - Commands run and results: `git diff --check` passed; no build commands were run (docs-only change).
@@ -21,8 +23,6 @@ Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`
 - Updated the release-state table in `AAOS_RELEASE.md` to record the confirmed upload and to note that the repo version must be raised before the next release.
 - Commands run and results: `git diff --check` passed; `git status --short` showed only the docs updates for the release record.
 - Verified: no compile, unit-test, emulator or real-car check was run for this status update; the only verification here is the owner's Play Console confirmation. No device or vehicle claim is made by an agent.
-
-## 2026-10-03: Instructions rewritten for a non-coder owner: communication rules, approval gate in the sync procedure, click-by-click release steps, prompt-based README how-to.
 
 ## 2026-10-03: README gained a 'Keeping this fork up to date' how-to.
 
