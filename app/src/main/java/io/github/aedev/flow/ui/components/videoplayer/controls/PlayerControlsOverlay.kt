@@ -30,7 +30,6 @@ private val OverlayActionSpacing = 12.dp
 internal val OverlayPillHeight = 40.dp
 private val OverlayExpandIconSize = 24.dp
 private val OverlayControlRowMinHeight = 56.dp
-private val OverlayActionIconInset = (OverlayActionButtonSize - OverlayActionIconSize) / 2f
 
 /** Tint over the video while the controls are up; the loading state blacks it out entirely. */
 private const val CONTROLS_BACKDROP_ALPHA = 0.24f
@@ -133,13 +132,22 @@ internal fun PlayerControlsOverlay(
         animatedInset(
             target =
                 when {
-                    isPortraitFullscreen -> 16.dp
+                    isPortraitFullscreen -> 20.dp
                     isFullscreen -> maxOf(56.dp, cutoutHorizontalPadding)
-                    else -> 12.dp
+                    else -> 16.dp
                 },
             label = "bottomControlPadding",
         )
-    val topControlHorizontalPadding = (bottomControlHorizontalPadding - OverlayActionIconInset).coerceAtLeast(0.dp)
+    val topControlHorizontalPadding =
+        animatedInset(
+            target =
+                when {
+                    isPortraitFullscreen -> 20.dp
+                    isFullscreen -> maxOf(56.dp, cutoutHorizontalPadding)
+                    else -> 16.dp
+                },
+            label = "topControlPadding",
+        )
     val topControlVerticalPadding = if (isFullscreen) 8.dp else 4.dp
     val fullscreenTopPadding =
         when {

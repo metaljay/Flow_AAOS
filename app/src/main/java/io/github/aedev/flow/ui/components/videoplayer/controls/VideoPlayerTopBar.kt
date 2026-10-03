@@ -125,7 +125,7 @@ internal fun VideoPlayerTopBar(
                     contentDescription = stringResource(R.string.btn_minimize),
                     buttonSize = actionButtonSize + 8.dp,
                     iconSize = actionIconSize * 1.35f,
-                    modifier = Modifier.offset(x = 8.dp),
+                    modifier = Modifier.offset(x = 12.dp),
                     containerColor = Color.Transparent,
                 )
 

@@ -11,6 +11,13 @@ Newest entry first. One entry per verified change, upstream sync or upload. Form
 
 Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`.
 
+## 2026-10-03: Official YouTube launcher icon and player top bar spacing update
+- Updated launcher foreground assets (`ic_launcher_foreground.xml` and `ic_launcher_dynamic_foreground.xml`) to use the official YouTube play button vector path (68 x 45 dp on a 108 dp viewport), matching its official smooth Bezier curves and centered triangle proportions.
+- Updated video player top bar controls in `PlayerControlsOverlay.kt` and `VideoPlayerTopBar.kt`: set horizontal padding to 16 dp (normal) / 20 dp (portrait) and shifted the minimize chevron button offset to +12 dp, moving the minimize button rightwards and the gear icon / action cluster leftwards away from display screen edges.
+- Updated unit test `VideoPlayerTopBarSpacingTest.kt` to account for the enlarged minimize touch target.
+- Commands run and results: `./gradlew ktlintCheck` passed; `./gradlew :app:testGithubDebugUnitTest` passed (3046 passed); `./gradlew :app:assembleGithubDebug` passed.
+- Verified: Kotlin formatting, unit tests, and GitHub debug APK build passed. NOT verified: emulator or real car display (no connected device or active emulator was available).
+
 ## 2026-10-03: Added the aaos-log-change recipe (record changes and bug fixes) and README step 4.
 - Documented the change-logging recipe `.github/skills/aaos-log-change/SKILL.md` in `README.md`, `AGENTS.md`, `AAOS_FORK.md`, and `AAOS_LOG.md`.
 - Commands run and results: none (docs-only change).
@@ -160,3 +167,14 @@ status; check live refs, configuration, and Play Console before acting on these 
 - Gradle reported that the release keystore is unavailable, so the bundle is unsigned and is not
   upload-ready until signed with the correct key. No Play Console availability check or device /
   vehicle verification was performed.
+
+### 2026-10-02 launcher icon and player top bar spacing update
+
+- Updated launcher foreground assets (`ic_launcher_foreground.xml` and `ic_launcher_dynamic_foreground.xml`)
+  to replace the small flat 46 x 32 dp box with the official YouTube play mark vector path (68 x 45 dp
+  on the 108 dp viewport), matching the official YouTube logo's smooth Bezier curves and centered triangle proportions.
+- Updated video player top bar positioning in `PlayerControlsOverlay.kt` and `VideoPlayerTopBar.kt`:
+  increased top control row horizontal padding to 16 dp (normal) / 20 dp (portrait) and shifted the minimize chevron
+  icon to +12 dp horizontal offset, moving the minimize button inward from the left screen edge and the gear/action cluster
+  inward from the right screen edge.
+- Verified with `./gradlew ktlintCheck`, `:app:testGithubDebugUnitTest` (3046 passed), and `:app:assembleGithubDebug`.
