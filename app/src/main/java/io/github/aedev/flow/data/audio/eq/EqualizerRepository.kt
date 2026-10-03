@@ -1,9 +1,5 @@
 package io.github.aedev.flow.data.audio.eq
 
-import dagger.Binds
-import dagger.Module
-import dagger.hilt.InstallIn
-import dagger.hilt.components.SingletonComponent
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -139,11 +135,4 @@ class EqualizerRepository internal constructor(
     private companion object {
         const val SAVE_DEBOUNCE_MS = 400L
     }
-}
-
-@Module
-@InstallIn(SingletonComponent::class)
-internal interface EqualizerModule {
-    @Binds
-    fun bindPersistence(store: EqStateStore): EqStatePersistence
 }
