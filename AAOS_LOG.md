@@ -1,5 +1,7 @@
 # Flow AAOS log
 
+## 2026-10-02: Docs anonymised: removed personal identifiers from fork-owned docs.
+
 Newest entry first. One entry per verified change, upstream sync or upload. Format:
 
 ```

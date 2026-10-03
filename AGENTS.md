@@ -1,7 +1,7 @@
 <!-- AAOS-FORK:START (fork-owned block; keep at the very top; do not edit upstream text below it) -->
 # READ FIRST: Flow AAOS fork
 
-This repo is Jordan's fork of Flow, customised for his Polestar 3 (Android Automotive OS). Before ANY code change, upstream merge, build or release:
+This repo is the owner's fork of Flow, customised for the owner's Polestar 3 (Android Automotive OS). Before ANY code change, upstream merge, build or release:
 
 1. Read `AAOS_FORK.md` (rules, safety rails, and what must survive every merge).
 2. Pulling parent (upstream) changes: follow `AAOS_UPSTREAM_SYNC.md`.

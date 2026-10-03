@@ -4,7 +4,7 @@
 
 ## 1. What this repo is
 
-Jordan's fork of [Flow](https://github.com/A-EDev/Flow), customised so the app is readable and usable on the Polestar 3's Android Automotive OS (AAOS) display. It reaches the car only through Google Play **Internal testing**. The owner has no coding experience, so explain in plain English and never assume he can spot a code problem. The sister fork (Nuvio) follows identical docs.
+This is the owner's fork of [Flow](https://github.com/A-EDev/Flow), customised so the app is readable and usable on the Polestar 3's Android Automotive OS (AAOS) display. It reaches the car only through Google Play **Internal testing**. The owner has no coding experience, so explain in plain English and never assume the owner can spot a code problem. The sister fork (Nuvio) follows identical docs.
 
 AAOS is an Android OS built into the car that runs normal Android apps. **Android Auto (phone projection) is out of scope**; do not add Android Auto metadata.
 
@@ -13,7 +13,7 @@ AAOS is an Android OS built into the car that runs normal Android apps. **Androi
 | Term | Meaning |
 | --- | --- |
 | upstream | The parent project (https://github.com/A-EDev/Flow). Read-only to us. Only `upstream/main` is ever synced; ignore its other branches. |
-| origin | Jordan's GitHub fork (https://github.com/metaljay/Flow_AAOS). |
+| origin | The owner's GitHub fork (https://github.com/metaljay/Flow_AAOS). |
 | `main` | Upstream code plus our customisations. The only long-lived branch; always buildable and releasable. |
 | sync branch | Temporary `sync/upstream-<date>` branch used to review an upstream update before it reaches `main`. Deleted afterwards. |
 | customisation | A deliberate change we keep (sections 5 and Part 2). |
@@ -75,7 +75,7 @@ After every verified change: add a dated entry to `AAOS_LOG.md` (what changed, c
 
 ## 9. Environment notes (one Mac, Android Studio)
 
-- Builds run on Jordan's Mac. Both apps sit in `/Users/jordanfern/Documents/AAOS/`; the release key `Key.jks` is in that folder, outside both repos.
+- Builds run on the owner's Mac. The apps sit in the AAOS folder that contains both repos; the release key `Key.jks` is in that folder, outside both repos.
 - Emulator used for checks: `Automotive_Large_Portrait` (1280 x 1606). It does not prove every Polestar 3 configuration. If `adb` or the emulator is unavailable, say so; never claim device verification from a compile.
 - Robolectric tests need Android Studio's bundled JBR; the default JDK 27 fails on the test runner's class parser (environment issue, not a test failure).
 - `graphify` (see the upstream rules in `AGENTS.md`) may not be installed; if it is missing, say so and carry on.
