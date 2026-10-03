@@ -67,7 +67,7 @@ Details and file locations are in Part 2 below.
 
 ## 7. README contract
 
-`README.md` is part of the fork's identity. Every merge or refresh must keep: the `🚗 Android Automotive OS (AAOS) Fork` banner at the top; Flow branding and the link to the upstream project; the explanation that this is an AAOS fork for the Polestar 3; an accurate feature summary; the Google Play Internal testing path (no public GitHub downloads); links to `AAOS_FORK.md` and `AAOS_RELEASE.md`. Only use screenshots of this fork that exist and are accurate. On a README conflict, merge deliberately; do not accept either side blindly.
+`README.md` is part of the fork's identity. Every merge or refresh must keep: the `🚗 Android Automotive OS (AAOS) Fork` banner at the top; Flow branding and the link to the upstream project; the explanation that this is an AAOS fork for the Polestar 3; an accurate feature summary; the Google Play Internal testing path (no public GitHub downloads); links to `AAOS_FORK.md` and `AAOS_RELEASE.md`; a 'Keeping this fork up to date' section consistent with the AAOS_*.md files and .github/skills. Only use screenshots of this fork that exist and are accurate. On a README conflict, merge deliberately; do not accept either side blindly.
 
 ## 8. Keeping these docs current
 

@@ -1,5 +1,10 @@
 # Flow AAOS log
 
+## 2026-10-03: README gained a 'Keeping this fork up to date' how-to.
+
+- Added parent-sync and release guidance to the README and added it to the README contract.
+- Verified the documentation diff and whitespace with `git diff --check`; no builds were run (docs-only change).
+
 ## 2026-10-02: Docs anonymised: removed personal identifiers from fork-owned docs.
 
 Newest entry first. One entry per verified change, upstream sync or upload. Format:
