@@ -37,12 +37,14 @@ import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
 import com.google.common.util.concurrent.ListenableFuture
+import com.google.common.util.concurrent.SettableFuture
 import dagger.hilt.android.AndroidEntryPoint
 import io.github.aedev.flow.MainActivity
 import io.github.aedev.flow.R
 import io.github.aedev.flow.data.audio.eq.EqualizerRepository
 import io.github.aedev.flow.data.download.DownloadUtil
 import io.github.aedev.flow.data.download.LegacySongDownloads
+import io.github.aedev.flow.data.local.QueuePersistence
 import io.github.aedev.flow.data.localmedia.LocalMediaIds
 import io.github.aedev.flow.data.music.YouTubeMusicService
 import io.github.aedev.flow.data.music.model.MusicTrack
@@ -51,6 +53,7 @@ import io.github.aedev.flow.data.recommendation.music.MusicBrainEngine
 import io.github.aedev.flow.extensions.setOffloadEnabled
 import io.github.aedev.flow.innertube.YouTube
 import io.github.aedev.flow.innertube.models.WatchEndpoint
+import io.github.aedev.flow.player.EnhancedMusicPlayerManager
 import io.github.aedev.flow.player.MusicPlaybackRecoveryPlanner
 import io.github.aedev.flow.player.MusicQueuePlanner
 import io.github.aedev.flow.player.MusicRadioPlanner
@@ -269,10 +272,41 @@ class Media3MusicService : MediaLibraryService() {
         initializeSession()
         observeEqualizer()
 
+        lifecycleScope.launch(Dispatchers.IO) {
+            restoreSavedQueueStateIfNeeded()
+        }
+
         lifecycleScope.launch {
             prefs.playDuringCalls
                 .distinctUntilChanged()
                 .collectLatest(::applyPlayDuringCallsPreference)
+        }
+    }
+
+    private suspend fun restoreSavedQueueStateIfNeeded() {
+        if (!::player.isInitialized) return
+        if (player.mediaItemCount > 0) return
+
+        val savedState = QueuePersistence.getInstance(applicationContext).restoreQueue() ?: return
+        if (savedState.queue.isEmpty()) return
+
+        withContext(Dispatchers.Main) {
+            if (!::player.isInitialized) return@withContext
+            if (player.mediaItemCount > 0) return@withContext
+
+            EnhancedMusicPlayerManager.initialize(
+                applicationContext,
+                { videoId -> LocalMediaIds.isLocal(videoId) },
+            )
+
+            val mediaItems = savedState.queue.map { it.toAutoMediaItem() }
+            val startIndex = savedState.currentIndex.coerceIn(0, mediaItems.size - 1)
+            val startPositionMs = savedState.currentPosition
+
+            player.setMediaItems(mediaItems, startIndex, startPositionMs)
+            player.prepare()
+
+            Log.d(TAG, "Restored saved queue to service player: ${mediaItems.size} items, index=$startIndex, pos=$startPositionMs")
         }
     }
 
@@ -1460,14 +1494,25 @@ class Media3MusicService : MediaLibraryService() {
                     }
 
                     AUTO_QUEUE_ID -> {
-                        io.github.aedev.flow.player.EnhancedMusicPlayerManager.queue.value
-                            .map { it.toAutoMediaItem() }
+                        val managerQueue = EnhancedMusicPlayerManager.queue.value
+                        if (managerQueue.isNotEmpty()) {
+                            managerQueue.map { it.toAutoMediaItem() }
+                        } else if (::player.isInitialized && player.mediaItemCount > 0) {
+                            List(player.mediaItemCount) { idx -> player.getMediaItemAt(idx) }
+                        } else {
+                            emptyList()
+                        }
                     }
 
                     AUTO_CURRENT_ID -> {
-                        io.github.aedev.flow.player.EnhancedMusicPlayerManager.currentTrack.value
-                            ?.let { listOf(it.toAutoMediaItem()) }
-                            ?: emptyList()
+                        val currentTrack = EnhancedMusicPlayerManager.currentTrack.value
+                        if (currentTrack != null) {
+                            listOf(currentTrack.toAutoMediaItem())
+                        } else if (::player.isInitialized && player.currentMediaItem != null) {
+                            listOf(player.currentMediaItem!!)
+                        } else {
+                            emptyList()
+                        }
                     }
 
                     else -> {
@@ -1478,6 +1523,34 @@ class Media3MusicService : MediaLibraryService() {
             return Futures.immediateFuture(
                 LibraryResult.ofItemList(ImmutableList.copyOf(items), params),
             )
+        }
+
+        @OptIn(UnstableApi::class)
+        @Suppress("DEPRECATION")
+        override fun onPlaybackResumption(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo,
+        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+            val settableFuture = SettableFuture.create<MediaSession.MediaItemsWithStartPosition>()
+            lifecycleScope.launch(Dispatchers.IO) {
+                val savedState = QueuePersistence.getInstance(applicationContext).restoreQueue()
+                if (savedState != null && savedState.queue.isNotEmpty()) {
+                    val items = savedState.queue.map { it.toAutoMediaItem() }
+                    val index = savedState.currentIndex.coerceIn(0, items.size - 1)
+                    val pos = savedState.currentPosition
+                    withContext(Dispatchers.Main) {
+                        restoreSavedQueueStateIfNeeded()
+                        settableFuture.set(
+                            MediaSession.MediaItemsWithStartPosition(items, index, pos),
+                        )
+                    }
+                } else {
+                    settableFuture.set(
+                        MediaSession.MediaItemsWithStartPosition(emptyList(), 0, 0L),
+                    )
+                }
+            }
+            return settableFuture
         }
 
         override fun onGetItem(
@@ -1580,21 +1653,29 @@ class Media3MusicService : MediaLibraryService() {
                 .takeIf { it.isNotBlank() }
                 ?.let(Uri::parse)
 
-        return MediaItem
-            .Builder()
-            .setMediaId(videoId)
-            .setUri(LocalMediaIds.audioUri(videoId) ?: Uri.parse("music://$videoId"))
-            .setMediaMetadata(
-                MediaMetadata
-                    .Builder()
-                    .setTitle(title)
-                    .setArtist(artist)
-                    .setArtworkUri(artwork)
-                    .setIsBrowsable(false)
-                    .setIsPlayable(true)
-                    .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
-                    .build(),
-            ).build()
+        val isLocal = LocalMediaIds.isLocal(videoId)
+        val builder =
+            MediaItem
+                .Builder()
+                .setMediaId(videoId)
+                .setUri(LocalMediaIds.audioUri(videoId) ?: Uri.parse("music://$videoId"))
+                .setMediaMetadata(
+                    MediaMetadata
+                        .Builder()
+                        .setTitle(title)
+                        .setArtist(artist)
+                        .setArtworkUri(artwork)
+                        .setIsBrowsable(false)
+                        .setIsPlayable(true)
+                        .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
+                        .build(),
+                )
+
+        if (!isLocal) {
+            builder.setCustomCacheKey(videoId)
+        }
+
+        return builder.build()
     }
 
     private fun autoTrackForMediaId(mediaId: String): MusicTrack? {

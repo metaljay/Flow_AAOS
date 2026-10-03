@@ -749,8 +749,6 @@ object EnhancedMusicPlayerManager {
 
             if (savedState.queue.isEmpty()) return
 
-            if ((player?.mediaItemCount ?: 0) > 0) return
-
             Log.d("EnhancedMusicPlayer", "Restoring saved queue: ${savedState.queue.size} tracks")
 
             _queue.value = savedState.queue
@@ -774,6 +772,21 @@ object EnhancedMusicPlayerManager {
                 if (it.duration > 0) {
                     _playerState.value = _playerState.value.copy(duration = it.duration * 1000L)
                 }
+            }
+
+            val p = player
+            if (p != null && p.mediaItemCount == 0) {
+                val mediaItems = savedState.queue.map { buildMediaItem(it) }
+                val startIndex = savedState.currentIndex.coerceIn(0, mediaItems.size - 1)
+                val startPositionMs = savedState.currentPosition
+                p.setMediaItems(mediaItems, startIndex, startPositionMs)
+                p.prepare()
+                _currentPosition.value = startPositionMs
+                _playerState.value = _playerState.value.copy(position = startPositionMs)
+                Log.d(
+                    "EnhancedMusicPlayer",
+                    "Populated ${mediaItems.size} saved items onto player at index=$startIndex, pos=$startPositionMs",
+                )
             }
         } catch (e: Exception) {
             Log.e("EnhancedMusicPlayer", "Failed to restore queue", e)

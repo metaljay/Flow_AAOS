@@ -11,6 +11,22 @@ Newest entry first. One entry per verified change, upstream sync or upload. Form
 
 Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`.
 
+## 2026-10-03: Fix AAOS home screen current-media card blank state on playback resumption
+- Fixed AAOS home screen current-media card showing blank when returning to previously played media:
+  - Updated `Media3MusicService.onCreate()` to restore saved queue state from `QueuePersistence` upon service startup, initializing `EnhancedMusicPlayerManager` and setting the saved tracks and seek position on ExoPlayer (paused).
+  - Updated `EnhancedMusicPlayerManager.restoreSavedQueue()` to populate ExoPlayer (`player.setMediaItems`) when `player.mediaItemCount == 0`.
+  - Implemented `onPlaybackResumption()` in `LibrarySessionCallback` inside `Media3MusicService.kt` to return `MediaItemsWithStartPosition` for AndroidX Media3 playback resumption requests.
+  - Updated `onGetChildren` in `LibrarySessionCallback` to fall back to `player.currentMediaItem` or timeline when manager state is empty, and added `customCacheKey` to `toAutoMediaItem()`.
+  - Bumped version code to 33 and version name to 2.2.14 in `app/build.gradle.kts`.
+- Commands run and results: `./gradlew ktlintCheck` passed; `./gradlew :app:assembleGithubDebug` passed.
+- Verified: Kotlin sources formatted with Spotless/ktlint and GitHub debug APK assembled successfully. No emulator or real-car verification was performed.
+
+## 2026-10-03: Launcher icon aligned with official YouTube play-mark proportions
+- Kept the red mark at 46 x 32 dp and resized its white triangle from 22 x 26 dp to 12 x 13.8 dp, matching the official YouTube logo SVG's triangle proportions. Updated the monochrome adaptive icon to use the same silhouette.
+- Compared against the official YouTube logo SVG (`https://www.gstatic.com/youtube/img/branding/youtubelogo/svg/youtubelogo.svg`) and the Nuvio Android launcher foreground.
+- Commands run and results: `./gradlew :app:assembleGithubDebug` passed; `git diff --check` passed. `graphify update .` could not run because graphify is not installed.
+- Verified: Android resources compiled and the GitHub debug APK assembled. No emulator or real-car visual check was performed.
+
 ## 2026-10-03: Instructions rewritten for a non-coder owner: communication rules, approval gate in the sync procedure, click-by-click release steps, prompt-based README how-to.
 
 ## 2026-10-03: Signed bundles now collected in a standard For upload to Play Console folder.

@@ -63,7 +63,7 @@ The owner copy-pastes messages between chats and has little or no coding experie
 3. **Camera optional**: `android.hardware.camera` and `android.hardware.camera.any` stay `required="false"`.
 4. **Bottom navigation at every window size**: no side rail (`FlowNavigationChrome.kt`, `FlowNavigationBar.kt`); the overflow destination still works.
 5. **Large-display legibility**: enlarged Material 3 type (`ui/theme/Type.kt`), 72 dp minimum top and bottom bars (shared `FlowTopBar` components), larger player, Shorts and music controls, video minimise button 60 dp hit size offset 8 dp.
-6. **Launcher icon**: traditional red rounded play mark with a white triangle (46 x 32 dp on the 108 dp viewport) in both foreground assets.
+6. **Launcher icon**: traditional red rounded YouTube play mark with a white triangle (red mark 46 x 32 dp on the 108 dp viewport) in both foreground assets.
 7. **Bundle packaging**: the ABI-split workaround for bundle tasks in `app/build.gradle.kts` (re-test before removing).
 8. **Fork docs**: the README banner/contract and the `AAOS_*.md` files.
 
@@ -107,7 +107,7 @@ These are the behaviors to preserve when the corresponding upstream code changes
 | App navigation | Home, Shorts, Music, Subscriptions, and Library navigation remains at the bottom at every app window size. Do not restore upstream's adaptive left navigation rail. The overflow destination remains available when the enabled tab count exceeds the bar limit. | `ui/components/layout/navigation/FlowNavigationChrome.kt`, `FlowNavigationBar.kt` |
 | Large-screen legibility | Preserve the enlarged Material 3 type, touch targets, player controls, titles/descriptions/comments, and Shorts controls. Keep the larger top bar and Home logo/search and the 72 dp minimum top and bottom app-bar heights. Keep the video minimize control at a 60 dp hit size and offset 8 dp to the right. | `ui/theme/Type.kt`; `ui/components/layout/topbar/`; `ui/screens/home/`; `ui/components/videoplayer/`; `ui/components/shorts/`; `ui/components/musicplayer/` |
 | Video playback quality | Preserve the app's standard unset defaults (1080p on Wi‑Fi and 480p on cellular); users can change these preferences in settings. Do not overwrite a user's saved quality. | `data/local/PlayerPreferences.kt`, quality settings UI, playback stream selection |
-| Launcher branding | Keep the traditional red rounded YouTube play mark with a white triangle as the default launcher icon. Size the red mark to match the approximate 46 dp longest visible dimension of the Nuvio adaptive launcher foreground on its 108 dp viewport; preserve the white triangle's existing size. | `app/src/main/res/drawable/ic_launcher_foreground.xml`, `ic_launcher_dynamic_foreground.xml`, theme colors |
+| Launcher branding | Keep the traditional red rounded YouTube play mark with a white triangle as the default launcher icon. Size the red mark to match the approximate 46 dp longest visible dimension of the Nuvio adaptive launcher foreground on its 108 dp viewport; use the official YouTube mark's centered triangle proportions. | `app/src/main/res/drawable/ic_launcher_foreground.xml`, `ic_launcher_dynamic_foreground.xml`, theme colors |
 | README and fork identity | Preserve the README contract above: AAOS notice, fork/upstream attribution, accurate feature and Play Internal testing guidance, and this migration-guide link. Do not include unrepresentative screenshots. | `README.md` |
 | Play identity | Release `applicationId` remains exactly `com.JF_Flow`, preserving continuity with the existing Play listing. Debug/nightly suffixes are expected; validate the release variant rather than comparing its ID to a debug package. | `app/build.gradle.kts`, resolved release variant |
 | Upstream platform baseline | Keep upstream's current target SDK and architecture unless a demonstrated AAOS regression requires a deliberate change. The old fork's target SDK 35 downgrade is not a requirement. | Root/app Gradle configuration and merged manifest |
@@ -159,5 +159,5 @@ surface without treating these paths as a patch to apply blindly.
   Preserve those rules when porting the preference default.
 - The default launcher foreground assets use the red play mark. Keep adaptive/dynamic icon assets
   consistent with the default identity. Its red outer mark is 46 x 32 dp on the 108 dp viewport,
-  matching the Nuvio launcher foreground's approximately 46 dp longest visible dimension; the
-  white triangle remains unchanged.
+  matching the Nuvio launcher foreground's approximately 46 dp longest visible dimension. The
+  white play triangle follows the official YouTube mark's centered proportions.
