@@ -11,6 +11,12 @@ Newest entry first. One entry per verified change, upstream sync or upload. Form
 
 Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`.
 
+## 2026-10-03: Upload confirmed by the owner in Play Console
+- The owner confirmed the accepted upload for version code 34 (version name 2.2.15) in Play Console.
+- Updated the release-state table in `AAOS_RELEASE.md` to record the confirmed upload and noted that the repo version must be raised before the next release.
+- Commands run and results: `git diff --check` passed.
+- Verified: no compile, unit-test, emulator or real-car check was run for this status update; the only verification here is the owner's Play Console confirmation. No device or vehicle claim is made.
+
 ## 2026-10-03: Raised the Play version for a safety buffer before upload
 - Increased the release version code from 33 to 34 and the version name from 2.2.14 to 2.2.15 to keep a clear safety buffer above the last confirmed Play upload (32 / 2.2.13).
 - Updated the release-state table in `AAOS_RELEASE.md` to reflect the current repo version and the new signed-bundle naming convention.

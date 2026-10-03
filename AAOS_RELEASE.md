@@ -5,8 +5,8 @@
 | Item | Value |
 | --- | --- |
 | Release application ID | `com.JF_Flow` |
-| **Last uploaded to Play** | **32 (2.2.13)**, confirmed by the owner from Play Console on 2026-10-03 |
-| Code in the repo now | **34 (2.2.15)** |
+| **Last uploaded to Play** | **34 (2.2.15)**, confirmed by the owner from Play Console on 2026-10-03 |
+| Code in the repo now | **34 (2.2.15)** (equals last upload; must be raised before next release) |
 | Signed bundles for upload | The folder named `For upload to Play Console` in the AAOS folder (next to both repos, outside git). Files are named `<App>-<code>-<name>.aab`, for example `Flow-34-2.2.15.aab`. |
 | Version file | `app/build.gradle.kts` (`versionCode` and `versionName` in `defaultConfig`, around line 40) |
 | Release key | `Key.jks` in the AAOS folder that contains both repos (outside the repo; keep a backup) |
