@@ -2,13 +2,14 @@
 name: aaos-sync
 description: Use when the owner asks to pull, sync or merge the latest parent (upstream) changes into this fork.
 ---
-Read AAOS_FORK.md and AAOS_UPSTREAM_SYNC.md, then pull the latest parent (upstream) changes into this fork, following AAOS_UPSTREAM_SYNC.md exactly, step by step.
+The owner is not a coder. Follow AAOS_FORK.md section 4b (talking to the owner) for everything you say.
 
-- Use a sync/ branch. Do not touch main until every check passes.
-- Before merging, tell me how many parent commits are new. If there are none, stop.
-- Re-apply every customisation in the hotspot table and every invariant in AAOS_FORK.md section 5. Restore the fork-owned values: version code above "Last uploaded to Play", application ID, README banner, and the AAOS block at the top of AGENTS.md.
-- Never force-push, never push to upstream, never commit keys or passwords. Never put personal names, usernames, emails or absolute paths into any file, commit message or log.
-- Run the checks in the sync file. Say exactly what passed, what failed and what was not run.
-- When everything passes: merge to main, push, and delete the sync branch (local and remote).
-- Add an AAOS_LOG.md entry: the parent commit reached, the conflicts and how you resolved them, what was verified and what was NOT verified. Commit and push it.
-- Finish with a plain-English report: what changed, any risks, and whether the Play version code must go up before the next release.
+Read AAOS_FORK.md and AAOS_UPSTREAM_SYNC.md, then:
+
+1. Run steps 0 to 6 of AAOS_UPSTREAM_SYNC.md yourself (safety tag, fetch, sync branch, merge, resolve conflicts, restore fork-only values, verify). Fill in real dates and values; never ask the owner to run anything for this.
+2. If there are no new parent commits, say so in plain English and stop.
+3. STOP before merging into main. Give the owner a plain-English review: roughly how many parent changes came in, which areas of the app they touch (everyday words), which of our car customisations were affected and how you kept them, and which checks passed, failed or were not run. Then ask them to reply with exactly one of these: `approve sync` or `cancel sync`.
+4. On `approve sync`: do steps 7 to 9 of AAOS_UPSTREAM_SYNC.md (merge into main, push, delete the sync branch, write the AAOS_LOG.md entry, commit and push). On `cancel sync`: delete the sync branch and leave main untouched. If the owner returns in a new chat, find the open sync/ branch, re-run the checks quickly, then continue.
+5. Finish with the standard report from section 4b. Say whether the Play version code must go up (yes or no), and give the owner the exact next message to paste to start a release: Follow the instructions in .github/skills/aaos-release/SKILL.md exactly.
+
+Never force-push, never push to the parent, never commit keys or passwords. Never put personal names, usernames, emails or absolute paths into any file, commit message or log.
