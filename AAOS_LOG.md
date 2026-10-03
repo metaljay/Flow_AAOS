@@ -11,6 +11,11 @@ Newest entry first. One entry per verified change, upstream sync or upload. Form
 
 Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`.
 
+## 2026-10-03: Added the aaos-log-change recipe (record changes and bug fixes) and README step 4.
+- Documented the change-logging recipe `.github/skills/aaos-log-change/SKILL.md` in `README.md`, `AGENTS.md`, `AAOS_FORK.md`, and `AAOS_LOG.md`.
+- Commands run and results: none (docs-only change).
+- Verified: documentation diff and formatting checked; no compile, unit tests, emulator or real-car checks were run.
+
 ## 2026-10-03: Fix AAOS home screen current-media card blank state on playback resumption
 - Fixed AAOS home screen current-media card showing blank when returning to previously played media:
   - Updated `Media3MusicService.onCreate()` to restore saved queue state from `QueuePersistence` upon service startup, initializing `EnhancedMusicPlayerManager` and setting the saved tracks and seek position on ExoPlayer (paused).

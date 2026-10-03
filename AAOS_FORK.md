@@ -82,7 +82,7 @@ Details and file locations are in Part 2 below.
 
 ## 8. Keeping these docs current
 
-After every verified change: add a dated entry to `AAOS_LOG.md` (what changed, commands run, what was and was not verified); update Part 2 if behaviour changed; update the release-state table in `AAOS_RELEASE.md` after any version bump or confirmed upload. The `AAOS_*.md` files are the memory that survives between agent chats; if it is not written here, the next agent will not know it.
+After every verified change: add a dated entry to `AAOS_LOG.md` (what changed, commands run, what was and was not verified); update Part 2 if behaviour changed; update the release-state table in `AAOS_RELEASE.md` after any version bump or confirmed upload. The `AAOS_*.md` files are the memory that survives between agent chats; if it is not written here, the next agent will not know it. After any change or bug fix, run the `.github/skills/aaos-log-change` recipe, which makes all of these updates.
 
 ## 9. Environment notes (one Mac, Android Studio)
 

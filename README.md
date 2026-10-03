@@ -98,6 +98,13 @@ After Play accepts the upload, paste this (replace 33 with the version code you 
 Follow the instructions in .github/skills/aaos-uploaded/SKILL.md exactly. The version code uploaded was 33.
 ```
 
+### 4. After you change or fix something
+Whenever you tweak the app or fix a bug, with any AI agent, finish in the same chat with this message:
+```
+Follow the instructions in .github/skills/aaos-log-change/SKILL.md exactly.
+```
+In GitHub Copilot you can type `/aaos-log-change` instead. The agent records what changed, updates the list of car customisations if needed, checks the app still builds, makes sure the Play version code is high enough, and pushes the result. If you start a new chat for a change, first say "Read AGENTS.md and follow it." In a new chat the agent works out what changed from the repository's recent history.
+
 ### What protects the customisations
 - `AAOS_FORK.md`: rules, safety rails and the customisations that must survive every merge.
 - `AAOS_UPSTREAM_SYNC.md`: the step-by-step procedure, the files most likely to conflict, and how to roll back.
