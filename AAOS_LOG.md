@@ -11,6 +11,12 @@ Newest entry first. One entry per verified change, upstream sync or upload. Form
 
 Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`.
 
+## 2026-10-03: Prepared release bundle for version code 33 (2.2.14)
+- Prepared release bundle for Play Console upload with versionCode 33 and versionName 2.2.14.
+- Verified merged release manifest: application ID `com.JF_Flow`, version code 33, version name 2.2.14, target SDK 36, automotive metadata present, camera features optional (`required="false"`).
+- Commands run and results: `./gradlew :app:bundleGithubRelease` passed.
+- Verified: release bundle build and merged manifest inspection passed. NOT verified: signing, Play Console upload, emulator or real car installation (owner will sign and upload).
+
 ## 2026-10-03: Fixed stale launcher size notes in AAOS_FORK.md.
 - Updated Part 2 of `AAOS_FORK.md` to record that the red launcher mark is 68 x 45 dp on the 108 dp viewport, using the official YouTube mark's Bezier curves and centred triangle proportions.
 - Commands run and results: none (docs-only change).
