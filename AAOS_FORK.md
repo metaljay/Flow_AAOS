@@ -87,6 +87,7 @@ After every verified change: add a dated entry to `AAOS_LOG.md` (what changed, c
 ## 9. Environment notes (one Mac, Android Studio)
 
 - Builds run on the owner's Mac. The apps sit in the AAOS folder that contains both repos; the release key `Key.jks` is in that folder, outside both repos.
+- Signed bundles for upload go in the `For upload to Play Console` folder in the AAOS folder, next to both repos (outside git).
 - Emulator used for checks: `Automotive_Large_Portrait` (1280 x 1606). It does not prove every Polestar 3 configuration. If `adb` or the emulator is unavailable, say so; never claim device verification from a compile.
 - Robolectric tests need Android Studio's bundled JBR; the default JDK 27 fails on the test runner's class parser (environment issue, not a test failure).
 - `graphify` (see the upstream rules in `AGENTS.md`) may not be installed; if it is missing, say so and carry on.

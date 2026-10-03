@@ -73,6 +73,7 @@ GitHub-flavor bundle used for Play testing:
 Uploading to Play requires the authorized release-signing configuration and access to the Play
 Console internal testing track. Do not distribute an unsigned or locally signed build as an
 official test release.
+The finished file ends up in a folder called For upload to Play Console next to both repos.
 
 ## 🔄 Keeping this fork up to date with its parent
 
