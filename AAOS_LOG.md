@@ -11,6 +11,11 @@ Newest entry first. One entry per verified change, upstream sync or upload. Form
 
 Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`.
 
+## 2026-10-03: Fixed stale launcher size notes in AAOS_FORK.md.
+- Updated Part 2 of `AAOS_FORK.md` to record that the red launcher mark is 68 x 45 dp on the 108 dp viewport, using the official YouTube mark's Bezier curves and centred triangle proportions.
+- Commands run and results: none (docs-only change).
+- Verified: documentation diff checked; no compile, unit tests, emulator or real-car checks run (docs-only change).
+
 ## 2026-10-03: Official YouTube launcher icon and player top bar spacing update
 - Updated launcher foreground assets (`ic_launcher_foreground.xml` and `ic_launcher_dynamic_foreground.xml`) to use the official YouTube play button vector path (68 x 45 dp on a 108 dp viewport), matching its official smooth Bezier curves and centered triangle proportions.
 - Updated video player top bar controls in `PlayerControlsOverlay.kt` and `VideoPlayerTopBar.kt`: set horizontal padding to 16 dp (normal) / 20 dp (portrait) and shifted the minimize chevron button offset to +12 dp, moving the minimize button rightwards and the gear icon / action cluster leftwards away from display screen edges.

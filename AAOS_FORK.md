@@ -158,6 +158,5 @@ surface without treating these paths as a patch to apply blindly.
 - Stream selection remains bounded by actual available streams and existing codec/stream rules.
   Preserve those rules when porting the preference default.
 - The default launcher foreground assets use the red play mark. Keep adaptive/dynamic icon assets
-  consistent with the default identity. Its red outer mark is 46 x 32 dp on the 108 dp viewport,
-  matching the Nuvio launcher foreground's approximately 46 dp longest visible dimension. The
-  white play triangle follows the official YouTube mark's centered proportions.
+  consistent with the default identity. The red mark is 68 x 45 dp on the 108 dp viewport, using the
+  official YouTube mark's Bezier curves and centred triangle proportions.
