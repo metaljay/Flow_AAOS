@@ -75,40 +75,31 @@ Console internal testing track. Do not distribute an unsigned or locally signed 
 official test release.
 The finished file ends up in a folder called For upload to Play Console next to both repos.
 
-## 🔄 Keeping this fork up to date with its parent
+## 🔄 Keeping this fork up to date and improving it
 
-This fork follows [Flow](https://github.com/A-EDev/Flow). `main` holds the parent's code plus the AAOS customisations. Parent updates are never merged straight into `main`: an AI agent first applies them on a temporary `sync/` branch, re-applies the car customisations, runs checks, and waits for the owner's approval. Nothing is ever pushed to the parent. No git knowledge is needed: you paste short messages to an AI agent (GitHub Copilot, Codex or Gemini) opened in this repository, and it does the work and reports back in plain English.
+This fork follows [Flow](https://github.com/A-EDev/Flow). `main` holds the parent's code plus the AAOS customisations. There are only two jobs, and you do both by pasting one short message to an AI agent (GitHub Copilot, Codex or Gemini) opened in this repository. The agent does the work, reports in plain English, and finishes by preparing the Google Play release. No git knowledge is needed, and nothing is ever pushed to the parent.
 
-### 1. Check for and review a parent update
-Paste this to your agent:
+### Job 1: update from the parent
 ```
 Follow the instructions in .github/skills/aaos-sync/SKILL.md exactly.
 ```
-In GitHub Copilot you can type `/aaos-sync` instead. The agent tells you whether anything is new. If it is, it prepares and checks the update, then **stops and explains the changes in plain English**. Nothing reaches `main` until you reply `approve sync`. Reply `cancel sync` to discard the update safely. To see more detail first, ask: "Explain the three biggest changes and whether any touch the car customisations."
+The agent merges the parent's changes on a temporary branch, re-applies the car customisations, builds a test version, and tells you how to try it in the Automotive emulator. It **stops until you reply** `approve sync` (or `cancel sync`, or `problem: ...`). Only then does it update `main` and prepare the release.
 
-### 2. Prepare a release
+### Job 2: tweak or fix something
 ```
-Follow the instructions in .github/skills/aaos-release/SKILL.md exactly.
+Follow the instructions in .github/skills/aaos-tweak/SKILL.md exactly. The tweak: [describe what you want changed, in plain English].
 ```
-The agent builds and checks the release bundle, then gives you the exact clicks to sign it in Android Studio and upload it to Google Play Internal testing. Every Play upload needs a higher version code than the last one, whatever the parent's version says; the agent handles this.
+The agent makes the change, checks the app builds, records it (log and customisation list), pushes it, then prepares the release.
 
-### 3. Record the upload
-After Play accepts the upload, paste this (replace 33 with the version code you uploaded):
-```
-Follow the instructions in .github/skills/aaos-uploaded/SKILL.md exactly. The version code uploaded was 33.
-```
+### The release (both jobs end here)
+The agent raises the version number automatically (version numbers only have to go up; they drift from the parent's and that is fine), builds the bundle, and gives you the exact clicks to sign it in Android Studio and upload it to Google Play Internal testing. Say `Bundle built` when it is signed and the agent collects the file into a folder called For upload to Play Console. To run only this stage: `Follow the instructions in .github/skills/aaos-release/SKILL.md exactly.`
 
-### 4. After you change or fix something
-Whenever you tweak the app or fix a bug, with any AI agent, finish in the same chat with this message:
-```
-Follow the instructions in .github/skills/aaos-log-change/SKILL.md exactly.
-```
-In GitHub Copilot you can type `/aaos-log-change` instead. The agent records what changed, updates the list of car customisations if needed, checks the app still builds, makes sure the Play version code is high enough, and pushes the result. If you start a new chat for a change, first say "Read AGENTS.md and follow it." In a new chat the agent works out what changed from the repository's recent history.
+In GitHub Copilot you can type `/aaos-sync`, `/aaos-tweak` or `/aaos-release` instead. An optional `/aaos-uploaded` records what you uploaded.
 
-### What protects the customisations
+### What protects the car customisations
 - `AAOS_FORK.md`: rules, safety rails and the customisations that must survive every merge.
 - `AAOS_UPSTREAM_SYNC.md`: the step-by-step procedure, the files most likely to conflict, and how to roll back.
-- `AAOS_RELEASE.md`: release steps and the version-code rule. `AAOS_LOG.md`: dated history of what changed and what was verified.
+- `AAOS_RELEASE.md`: release steps and the version rule. `AAOS_LOG.md`: dated history of what changed and what was verified.
 - `AGENTS.md` is the entry point for AI agents; the recipes live in `.github/skills/`.
 
 ## 📚 AAOS rules and fork inventory

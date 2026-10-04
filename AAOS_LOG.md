@@ -11,6 +11,8 @@ Newest entry first. One entry per verified change, upstream sync or upload. Form
 
 Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`.
 
+## 2026-10-04: Workflow simplified to two jobs (parent update, tweak), both ending in a release that raises the version automatically; aaos-log-change replaced by aaos-tweak.
+
 ## 2026-10-03: Upload confirmed by the owner in Play Console
 - The owner confirmed the accepted upload for version code 34 (version name 2.2.15) in Play Console.
 - Updated the release-state table in `AAOS_RELEASE.md` to record the confirmed upload and noted that the repo version must be raised before the next release.

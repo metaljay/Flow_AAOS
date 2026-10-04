@@ -8,6 +8,13 @@ This is the owner's fork of [Flow](https://github.com/A-EDev/Flow), customised s
 
 AAOS is an Android OS built into the car that runs normal Android apps. **Android Auto (phone projection) is out of scope**; do not add Android Auto metadata.
 
+## 1b. The two jobs
+
+Every change to this fork is meant for the owner's car, so there are only two jobs, and both end in a release:
+1. **Update from the parent** (`.github/skills/aaos-sync`): merge the parent's changes on a temporary `sync/` branch, re-apply the car customisations, build and test (the owner checks it in the Automotive emulator), merge into `main` only after the owner replies `approve sync`, then run the release stage.
+2. **Tweak or fix** (`.github/skills/aaos-tweak`): make the change, check it builds, update the log and the customisation list, push to `main`, then run the release stage.
+The release stage (`.github/skills/aaos-release`) always raises the version automatically, builds the bundle, and gives the owner the signing and upload steps. `.github/skills/aaos-uploaded` only records an upload and is optional.
+
 ## 2. Terminology (identical in both repos)
 
 | Term | Meaning |
@@ -29,7 +36,7 @@ AAOS is an Android OS built into the car that runs normal Android apps. **Androi
 3. Never push to upstream. We only control our fork. Parent changes flow in one way.
 4. Port, don't replay: adapt each required behaviour into the current upstream code instead of cherry-picking old commits.
 5. Keep edits to upstream-owned files as small as possible (fewer merge conflicts). Fork-only additions go in clearly separate places or files.
-6. Every release bundle needs a Play version code higher than the last upload, whatever upstream's version says (`AAOS_RELEASE.md`).
+6. Every release build raises the version automatically (see `AAOS_RELEASE.md`); the parent's version numbers are ignored.
 7. If a product decision is unclear (for example removing a customisation), ask the owner instead of guessing.
 
 ## 4. Permissions and safety rails
@@ -82,7 +89,7 @@ Details and file locations are in Part 2 below.
 
 ## 8. Keeping these docs current
 
-After every verified change: add a dated entry to `AAOS_LOG.md` (what changed, commands run, what was and was not verified); update Part 2 if behaviour changed; update the release-state table in `AAOS_RELEASE.md` after any version bump or confirmed upload. The `AAOS_*.md` files are the memory that survives between agent chats; if it is not written here, the next agent will not know it. After any change or bug fix, run the `.github/skills/aaos-log-change` recipe, which makes all of these updates.
+After every verified change: add a dated entry to `AAOS_LOG.md` (what changed, commands run, what was and was not verified); update Part 2 if behaviour changed; update the release-state table in `AAOS_RELEASE.md` after any version bump or confirmed upload. The `AAOS_*.md` files are the memory that survives between agent chats; if it is not written here, the next agent will not know it. After any change or bug fix, run the `.github/skills/aaos-tweak` recipe, which makes all of these updates.
 
 ## 9. Environment notes (one Mac, Android Studio)
 
