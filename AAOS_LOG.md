@@ -3,12 +3,6 @@
 Newest entry first. One entry per verified change, upstream sync or upload. Format:
 
 ```
-## 2026-10-04: Release prepared for version 35 (2.2.16)
-- Contains the car media card change logged below. Version raised by the release recipe and pushed on its own.
-- Commands run and results: `./gradlew :app:bundleGithubRelease` passed (unsigned, as expected).
-- Merged release manifest checked: application ID `com.JF_Flow`, version code 35, name 2.2.16, min SDK 26, target SDK 36, automotive and camera features optional; `FlowCarMediaBrowserService` (with `androidx.car.app.launchable`) and the `com.JF_Flow.carmediaart` provider present.
-- NOT verified: signing (done by the owner in Android Studio), Play upload, the real car.
-
 ## YYYY-MM-DD: short title
 - What changed and why
 - Commands run and results
@@ -16,6 +10,12 @@ Newest entry first. One entry per verified change, upstream sync or upload. Form
 ```
 
 Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`.
+
+## 2026-10-04: Release prepared for version 35 (2.2.16)
+- Contains the car media card change logged below. Version raised by the release recipe and pushed on its own.
+- Commands run and results: `./gradlew :app:bundleGithubRelease` passed (unsigned, as expected).
+- Merged release manifest checked: application ID `com.JF_Flow`, version code 35, name 2.2.16, min SDK 26, target SDK 36, automotive and camera features optional; `FlowCarMediaBrowserService` (with `androidx.car.app.launchable`) and the `com.JF_Flow.carmediaart` provider present.
+- NOT verified: signing (done by the owner in Android Studio), Play upload, the real car.
 
 ## 2026-10-04: Car media card shows the last video or song reliably, including after Flow is closed
 
