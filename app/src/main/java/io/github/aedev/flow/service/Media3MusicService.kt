@@ -285,7 +285,7 @@ class Media3MusicService : MediaLibraryService() {
 
     private suspend fun restoreSavedQueueStateIfNeeded() {
         if (!::player.isInitialized) return
-        if (player.mediaItemCount > 0) return
+        // The player may only be read on the main thread; mediaItemCount is checked below inside withContext(Main).
 
         val savedState = QueuePersistence.getInstance(applicationContext).restoreQueue() ?: return
         if (savedState.queue.isEmpty()) return

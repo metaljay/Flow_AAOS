@@ -11,6 +11,14 @@ Newest entry first. One entry per verified change, upstream sync or upload. Form
 
 Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`.
 
+## 2026-10-04: Launcher mark sized like Nuvio's, minimise arrow nudged left, music-service crash fixed
+- Launcher icon: the official YouTube mark (68 x 45 on the 108 viewport) is now scaled by 0.706 to 48 x 32 in both foreground assets, so it matches the Nuvio launcher artwork (measured at about 41 x 45 on the same grid). Owner request.
+- Video player minimise arrow: offset reduced from 12 dp to 6 dp to the right of the upstream position (`VideoPlayerTopBar.kt`). Owner request: still in from the edge, just less than before.
+- Crash fix: `Media3MusicService.restoreSavedQueueStateIfNeeded` read `player.mediaItemCount` on a background thread ("Player is accessed on the wrong thread", Flow crash report at `Media3MusicService.kt:288`, version 2.2.15-debug on the emulator). Removed that off-thread read; the same check already runs on the main thread a few lines later.
+- Commands run and results: `./gradlew ktlintCheck`, `:app:compileGithubDebugKotlin`, `:app:compileFossDebugKotlin`, `:app:testGithubDebugUnitTest`, `:app:assembleGithubDebug` and `git diff --check` all passed.
+- Verified (emulator `Automotive_Large_Portrait`, GitHub debug build): the app grid shows the smaller red mark at a size similar to Nuvio's; the player's minimise arrow sits about 52 px from the left edge (settings gear about 42 px from the right); after installing the fix and rebooting the emulator the music service started with no crash.
+- NOT verified: the real Polestar 3.
+
 ## 2026-10-04: Release prepared for version 35 (2.2.16)
 - Contains the car media card change logged below. Version raised by the release recipe and pushed on its own.
 - Commands run and results: `./gradlew :app:bundleGithubRelease` passed (unsigned, as expected).
