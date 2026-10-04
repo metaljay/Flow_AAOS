@@ -1,0 +1,7 @@
+<?xml version="1.0" encoding="utf-8"?>
+<!-- AAOS fork: car media card texts (fork-only file, English only). -->
+<resources>
+    <string name="aaos_car_media_continue" translatable="false">Continue</string>
+    <string name="aaos_car_media_open_app_message" translatable="false">Open %1$s to continue watching</string>
+    <string name="aaos_car_media_open_app_action" translatable="false">Open %1$s</string>
+</resources>

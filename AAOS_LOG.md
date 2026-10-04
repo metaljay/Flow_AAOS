@@ -11,6 +11,14 @@ Newest entry first. One entry per verified change, upstream sync or upload. Form
 
 Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`.
 
+## 2026-10-04: Car media card shows the last video or song reliably, including after Flow is closed
+
+- Why the card was often blank: on the Google car launcher an app with a launcher activity must opt its `MediaBrowserService` in with `androidx.car.app.launchable`, otherwise the card ignores the service and only shows text while a live Flow session happens to be active (emulator log "Skipping MBS for ... Media3MusicService belonging to non media template app"). The card also reads only the browse service's session, which was the music session, so videos could never appear through it. Sources: Google "Build media apps for cars", "Configure manifest", "Display media artwork", "Media controls / playback resumption" pages; AOSP `CarMediaService.java` and car-media-common `PlaybackViewModel.java`.
+- Added `FlowCarMediaSession` (one session mirroring whichever of the video or music player played last, last item saved to disk and restored as paused, controls forwarded, "Open Flow" prompt or music resume when play is pressed while closed), `FlowCarMediaBrowserService` (opted in, "Continue" browse tab) and `FlowCarMediaArtworkProvider` (content:// artwork, which AAOS requires). One `startObserving` call in `FlowApplication.onCreate`; manifest and fork-only strings file updated.
+- Commands run and results: `./gradlew ktlintCheck` passed; `./gradlew :app:compileGithubDebugKotlin` passed; `./gradlew :app:compileFossDebugKotlin` passed; `./gradlew :app:testGithubDebugUnitTest` passed; `./gradlew :app:assembleGithubDebug` passed; `git diff --check` passed.
+- Verified (emulator `Automotive_Large_Portrait`, Android 15, GitHub debug build): before the change the home card showed only "Flow" with no text. After it: a real YouTube video played in Flow appeared on the card (title and channel); after force-stopping Flow and restarting the launcher the card still showed that video with its thumbnail; a hand-seeded saved item also showed with Flow closed; pressing play with Flow closed showed the "Open Flow to continue watching" prompt in the car media screen (with a "Continue" tab listing the video) and its button opened Flow (the first scripted tap did nothing, probably sent before the dialog was ready; the second opened Flow).
+- NOT verified: music playback mirrored on the card and the music resume from the card's play button; the real Polestar 3 (its launcher may differ from the emulator's Google car launcher).
+
 ## 2026-10-04: Workflow simplified to two jobs (parent update, tweak), both ending in a release that raises the version automatically; aaos-log-change replaced by aaos-tweak.
 
 ## 2026-10-03: Upload confirmed by the owner in Play Console

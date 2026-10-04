@@ -72,6 +72,7 @@ The owner copy-pastes messages between chats and has little or no coding experie
 5. **Large-display legibility**: enlarged Material 3 type (`ui/theme/Type.kt`), 72 dp minimum top and bottom bars (shared `FlowTopBar` components), larger player, Shorts and music controls, video minimise button 60 dp hit size offset 12 dp.
 6. **Launcher icon**: traditional red rounded YouTube play mark with a white triangle (red mark 68 x 45 dp on the 108 dp viewport with official YouTube Bezier curves) in both foreground assets.
 7. **Bundle packaging**: the ABI-split workaround for bundle tasks in `app/build.gradle.kts` (re-test before removing).
+7b. **Car media card**: `FlowCarMediaBrowserService` stays declared before `Media3MusicService` in `app/src/main/AndroidManifest.xml` with the `android.media.browse.MediaBrowserService` intent filter and `androidx.car.app.launchable=true` meta-data, plus `FlowCarMediaArtworkProvider`; `FlowApplication.onCreate` starts `FlowCarMediaSession.startObserving`.
 8. **Fork docs**: the README banner/contract and the `AAOS_*.md` files.
 
 Details and file locations are in Part 2 below.
@@ -136,6 +137,26 @@ surface without treating these paths as a patch to apply blindly.
   required activities/aliases. Preserve the nearby `KEEP` note when resolving manifest conflicts.
 - `app/src/main/res/xml/automotive_app_desc.xml`: automotive app descriptor referenced by the
   manifest.
+- Car media card (2026-10-04): AAOS only treats an app as a media source if it exposes a
+  `MediaBrowserService`, the home screen card reads the session token that service hands out, and
+  the Google car launcher skips the service of an app that also has a launcher activity unless it
+  opts in with `androidx.car.app.launchable=true` (emulator log: "Skipping MBS ... belonging to non
+  media template app"). That is why the card was often blank: it only showed text while one of
+  Flow's live sessions happened to be active. Flow plays videos and music in two separate Media3
+  sessions, so `service/FlowCarMediaSession.kt` is one framework session that mirrors whichever
+  played last (it observes `GlobalPlayerState.currentVideo`, `EnhancedPlayerManager.playerState`,
+  `EnhancedMusicPlayerManager.currentTrack` and `playerState`) and forwards the car's controls to
+  that player. `service/FlowCarMediaBrowserService.kt` hands it to the car (declared before
+  `Media3MusicService` so the car picks it for this package). The last item (kind, title,
+  channel/artist, artwork, position, duration) is saved (shared preferences
+  `flow_car_media_card`, `files/car_media_card_artwork.png`) and restored as `STATE_PAUSED`
+  (never `STATE_NONE`, which hides the card) when the car binds with the app closed. Artwork is
+  served read-only as a `content://` URI by `service/FlowCarMediaArtworkProvider.kt` (AAOS shows
+  only local artwork URIs). Pressing play with the app closed: music asks `Media3MusicService` to
+  resume its saved queue; video shows the AAOS error-resolution prompt "Open Flow to continue
+  watching" with an "Open Flow" button (Android blocks a background app from opening itself), then
+  returns to paused after 15 s. Texts live in `res/values/aaos_car_media_strings.xml`. Side effect:
+  the car app grid lists Flow twice (the app and its media entry).
 - `app/build.gradle.kts`: release application ID, build identity, APK splits, and the App Bundle
   ABI-split workaround. Keep release versioning under owner control.
 - Runtime component names follow the Kotlin/manifest namespace `io.github.aedev.flow`; runtime

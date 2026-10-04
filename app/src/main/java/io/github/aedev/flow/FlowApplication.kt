@@ -275,6 +275,10 @@ class FlowApplication :
                 Log.w(TAG, "Subscription thumbnail repair failed: ${e.message}")
             }
         }
+
+        // AAOS fork: keep the car's media card in step with the video and music players.
+        io.github.aedev.flow.service.FlowCarMediaSession
+            .startObserving(this)
     }
 
     private fun applyProxyConfig(config: io.github.aedev.flow.network.AppProxyConfig) {

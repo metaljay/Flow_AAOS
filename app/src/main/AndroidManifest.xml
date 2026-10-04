@@ -225,6 +225,26 @@
             <meta-data android:name="distractionOptimized" android:value="true" />
         </activity>
         
+        <!-- AAOS fork: the car media card source; declared before Media3MusicService so the car picks it for this package. -->
+        <service
+            android:name=".service.FlowCarMediaBrowserService"
+            android:exported="true"
+            android:label="@string/app_launcher_name">
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+            <!-- Opts this service in as a car media source even though the app also has a launcher activity. -->
+            <meta-data
+                android:name="androidx.car.app.launchable"
+                android:value="true" />
+        </service>
+
+        <!-- AAOS fork: read-only artwork for the car media card (AAOS needs a content:// URI). -->
+        <provider
+            android:name=".service.FlowCarMediaArtworkProvider"
+            android:authorities="${applicationId}.carmediaart"
+            android:exported="true" />
+
         <!-- Media3 Music Service -->
         <service
             android:name=".service.Media3MusicService"
