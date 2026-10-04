@@ -11,6 +11,12 @@ Newest entry first. One entry per verified change, upstream sync or upload. Form
 
 Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`.
 
+## 2026-10-04: Release prepared for version 36 (2.2.17)
+- Contains the launcher mark, minimise arrow and music-service crash fix logged below, plus the car media card change. Version 35 was prepared but not uploaded; the release rule raises the version again anyway.
+- Commands run and results: `./gradlew :app:bundleGithubRelease` passed (unsigned, as expected).
+- Merged release manifest checked: application ID `com.JF_Flow`, version code 36, name 2.2.17, target SDK 36, automotive and camera features optional; car media service and artwork provider present.
+- NOT verified: signing (done by the owner in Android Studio), Play upload, the real car.
+
 ## 2026-10-04: Launcher mark sized like Nuvio's, minimise arrow nudged left, music-service crash fixed
 - Launcher icon: the official YouTube mark (68 x 45 on the 108 viewport) is now scaled by 0.706 to 48 x 32 in both foreground assets, so it matches the Nuvio launcher artwork (measured at about 41 x 45 on the same grid). Owner request.
 - Video player minimise arrow: offset reduced from 12 dp to 6 dp to the right of the upstream position (`VideoPlayerTopBar.kt`). Owner request: still in from the edge, just less than before.
