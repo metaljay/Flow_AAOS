@@ -18,14 +18,14 @@ The owner's fork of [Flow](https://github.com/A-EDev/Flow), a YouTube client, cu
 
 ## 2. The jobs (shared)
 
-Every change is meant for the owner's car, so there are only these jobs. The owner starts each one by pasting a prompt from `README.md`.
+The owner is the only user (Play Internal testing) and every change goes to their car, so the owner has exactly two jobs, both started by pasting a prompt from `README.md`, and both always end in a release:
 
 | Job | Recipe | Ends with |
 | --- | --- | --- |
-| Update from the parent | `.github/skills/aaos-sync/SKILL.md` | the approval report in `AAOS_UPSTREAM_SYNC.md`, the owner's `approve sync`, then a release |
-| Tweak or fix for the car | `.github/skills/aaos-tweak/SKILL.md` | a release |
-| Release | `.github/skills/aaos-release/SKILL.md` | a bundle the owner signs and uploads (also runs on its own) |
-| Record an upload (optional) | `.github/skills/aaos-uploaded/SKILL.md` | "Last uploaded to Play" updated in `AAOS_RELEASE.md` |
+| Update from the parent | `.github/skills/aaos-sync/SKILL.md` | the approval report in `AAOS_UPSTREAM_SYNC.md`, the owner's `approve sync`, then the release stage |
+| Improve or fix the app for the car | `.github/skills/aaos-tweak/SKILL.md` | the release stage |
+
+The release stage (`.github/skills/aaos-release/SKILL.md`) and recording the upload (`.github/skills/aaos-uploaded/SKILL.md`) are run by the agent as the last steps of both jobs; the owner never needs to start them. An agent may run the release stage on its own only to finish or retry an interrupted release.
 
 The recipes are plain instructions any AI agent can follow. Claude Code and GitHub Copilot also list them as `/aaos-sync`, `/aaos-tweak`, `/aaos-release` and `/aaos-uploaded`.
 
@@ -110,7 +110,7 @@ Each one has a detail block in Part 2: what and why, where it lives, how to redo
 2. **What this is**: an AAOS fork of the parent app for the owner's Polestar 3, not Android Auto.
 3. **What's different in the car**: an accurate plain-English summary, one row per customisation, each linking to its Part 2 block in `AAOS_FORK.md`.
 4. **Getting it on the car**: Google Play Internal testing only; no public downloads.
-5. **What do you want to do?**: one section per job in section 2, each with a copy-paste prompt and what happens next, plus help for when something goes wrong.
+5. **What do you want to do?**: the two jobs in section 2, each with a copy-paste prompt and what happens next; the release both end with; and help for when something goes wrong.
 6. **Behind the scenes**: which file holds what, for the curious.
 7. **License**.
 

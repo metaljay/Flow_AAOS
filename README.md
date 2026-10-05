@@ -54,59 +54,36 @@ The car's Play Store may show a temporary name ending in "(unreviewed)" and a pl
 
 ## 🛠️ What do you want to do?
 
-Everything is done by an AI assistant (Claude Code, GitHub Copilot, Codex or Gemini). Open it in the **Flow** folder (this app's folder), paste the prompt for your job, and follow what it tells you. It explains everything in plain English, runs the commands itself, and only asks you to do the steps only you can do: approving, signing in Android Studio, uploading to Play and testing in the car. Each prompt only affects this app; do the other app separately in its own folder.
+There are only two jobs, and both end with the new version on your car. Each is done by an AI assistant (Claude Code, GitHub Copilot, Codex or Gemini). Open it in the **Flow** folder (this app's folder), paste the prompt, and follow what it tells you. It explains everything in plain English, runs the commands itself, and only asks you to do what only you can do: approve, sign in Android Studio, upload to Play, and test in the car. Each prompt only affects this app; do the other app separately in its own folder.
 
 In Claude Code or GitHub Copilot you can type the short command shown instead of pasting the prompt.
 
-### 1. Check whether the original app has something new
-
-Nothing gets changed. You get a plain-English summary of what's new and which car changes it would affect.
-
-```
-Follow the instructions in .github/skills/aaos-sync/SKILL.md, but only check for parent updates. Do not change anything.
-```
-
-### 2. Update from the original app (`/aaos-sync`)
+### 1. Update from the original app (`/aaos-sync`)
 
 ```
 Follow the instructions in .github/skills/aaos-sync/SKILL.md exactly.
 ```
 
-What happens next:
+The assistant brings in the parent's changes on a temporary copy, redoes every car change in the new code, builds a test version, and sends you a report with four parts: **what's new for you**, **how each of your car changes was kept or adapted** (or if any is at risk), **risks with a recommendation**, and **what to test**. Nothing reaches the real app until you reply with one of these:
 
-1. The assistant brings in the parent's changes on a temporary copy and redoes every car change in the new code.
-2. It builds a test version and sends you a report with four parts: **what's new for you**, **how each of your car changes was kept or adapted** (or if any is at risk), **risks with a recommendation**, and **what to test**.
-3. Nothing reaches the real app until you reply with one of these:
-   - `approve sync`: it goes ahead and prepares a release (step 4 below).
-   - `cancel sync`: everything is thrown away and nothing changes.
-   - `problem: ` followed by what you saw: it fixes that and reports again.
+- `approve sync`: it goes ahead and releases it to the car (below).
+- `cancel sync`: everything is thrown away and nothing changes.
+- `problem: ` followed by what you saw: it fixes that and reports again.
 
-### 3. Change or fix something for the car (`/aaos-tweak`)
+### 2. Improve or fix the app for the car (`/aaos-tweak`)
 
 ```
 Follow the instructions in .github/skills/aaos-tweak/SKILL.md exactly. The tweak: [describe what you want changed, or what is wrong on the car, in plain English].
 ```
 
-The assistant makes the change, checks the app still builds, records what it did, and then prepares a release (step 4 below).
+The assistant makes the change, checks the app still builds, records what it did, and releases it to the car (below). If you mention something you noticed about the car itself, it adds it to the car notes in both apps.
 
-### 4. Release it to the car (`/aaos-release`)
+### Both jobs end with a release to the car
 
-Updates and tweaks end here automatically. To run this step on its own:
-
-```
-Follow the instructions in .github/skills/aaos-release/SKILL.md exactly.
-```
-
-1. The assistant raises the version number (it must go up for every upload) and checks the build.
+1. The assistant raises the version number (Play needs a higher one for every upload) and checks the build.
 2. It gives you click-by-click steps to sign the file in Android Studio. When that's done, reply `Bundle built`.
 3. It puts the file in the **For upload to Play Console** folder, opens that folder, and gives you the clicks for Google Play Console. When Play accepts it, reply `Uploaded` and it records the upload.
 4. Install or update the app from the Play Store in the car.
-
-### 5. Tell the assistant something you learned about the car
-
-```
-I learned this about the car: [what you saw]. Add it to AAOS_CAR_NOTES.md in both the Flow and NuvioMobile folders, following AAOS_FORK.md section 10.
-```
 
 ### If something goes wrong
 
