@@ -5,8 +5,8 @@
 | Item | Value |
 | --- | --- |
 | Release application ID | `com.JF_Flow` |
-| **Last uploaded to Play** | **34 (2.2.15)**, confirmed by the owner from Play Console on 2026-10-03 |
-| Code in the repo now | **34 (2.2.15)** (informational; the release recipe raises it on every release) |
+| **Last uploaded to Play** | **38 (2.2.19)**, reported installed on the car by the owner on 2026-10-05 |
+| Code in the repo now | Informational (the release recipe raises it on every release) |
 
 ## The version rule (hard rule): every release build raises the version
 

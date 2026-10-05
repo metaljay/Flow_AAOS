@@ -2,6 +2,8 @@
 
 Do this only when the owner asks, or before a release that needs parent fixes. `main` is not touched until the sync branch is verified. Parent changes only flow in; nothing is ever pushed to upstream.
 
+**Last merged parent commit:** `10f588961d3467a2210a302d3698e9262c3ea201 (2026-09-30)` on `upstream/main`. Step 1 lists everything newer than this; step 10 updates this line.
+
 ## Steps
 
 0. **Safety.** `git status` must be clean (apart from known items in `AAOS_FORK.md` section 6). Then `git switch main && git pull origin main` and mark the last good state with `git tag pre-sync-$(date +%F)`.
@@ -14,7 +16,7 @@ Do this only when the owner asks, or before a release that needs parent fixes. `
 7. **Approval gate.** Before asking, build the debug app and give the owner the Automotive emulator test steps (see `.github/skills/aaos-sync/SKILL.md` step 3); the owner may also reply `problem: <what you saw>`. Stop. Do not merge into main. Give the owner a plain-English review of the update (see `AAOS_FORK.md` section 4b) and ask them to reply with exactly `approve sync` or `cancel sync`. On `cancel sync`, delete the sync branch (see "Abort or roll back"); main stays untouched. If the owner returns in a new chat, find the open sync/ branch, re-run the checks quickly, then continue. After approval the next stage is the release (`.github/skills/aaos-release/SKILL.md`).
 8. **Land it.** `git switch main && git merge --ff-only sync/upstream-<date>`. If that refuses because `main` moved, merge `main` into the sync branch, re-verify, retry. Then `git push origin main`.
 9. **Clean up.** `git branch -d sync/upstream-<date>`; if it was pushed, `git push origin --delete sync/upstream-<date>`. Never leave sync branches behind.
-10. **Record.** Add an `AAOS_LOG.md` entry (upstream SHA, conflicts, verification, limits). If releasing, continue with `AAOS_RELEASE.md`.
+10. **Record.** Update **Last merged parent commit** at the top of this file, and add an `AAOS_LOG.md` entry (upstream SHA, conflicts, verification, limits). If releasing, continue with `AAOS_RELEASE.md`.
 
 ## Abort or roll back
 
@@ -25,7 +27,6 @@ Do this only when the owner asks, or before a release that needs parent fixes. `
 
 - Keep OUR version code and name in the version file (take ours on any conflict); never copy the parent's. The release stage raises them.
 - Release `applicationId` is exactly `com.JF_Flow`.
-- The release `applicationId` is still `com.JF_Flow`.
 - The merged manifest still contains the AAOS metadata, every launcher alias, the camera features as optional, the MediaBrowser entry, the target SDK, and the correct application ID.
 - README banner/contract and the AGENTS AAOS block are intact.
 
@@ -35,10 +36,10 @@ Do this only when the owner asks, or before a release that needs parent fixes. `
 ./gradlew ktlintCheck
 ./gradlew :app:compileGithubDebugKotlin
 ./gradlew :app:compileFossDebugKotlin      # run one flavour at a time (memory)
-./gradlew :app:testGithubDebugUnitTest
+JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home" ./gradlew :app:testGithubDebugUnitTest   # tests need Android Studio's Java
 ./gradlew :app:assembleGithubDebug
 ```
-Always use flavour-prefixed tasks. Never bare `assembleDebug` or `compileDebugKotlin`.
+Always use flavour-prefixed tasks. Never bare `assembleDebug` or `compileDebugKotlin`. If the tests report about 180 failures with "Unsupported class file major version 71", the wrong Java was used: rerun the test line exactly as written (it is an environment problem, not real failures). If a build then fails in `kspGithubDebugKotlin`, run `./gradlew --stop` and retry.
 
 ## Hotspots: files where our changes live
 
@@ -54,3 +55,4 @@ Always use flavour-prefixed tasks. Never bare `assembleDebug` or `compileDebugKo
 | `ui/components/videoplayer/`, `shorts/`, `musicplayer/` | larger controls | Re-apply sizes, keep upstream logic |
 | `res/drawable/ic_launcher_foreground.xml`, `ic_launcher_dynamic_foreground.xml` | red play mark | Keep ours |
 | `README.md`, `AGENTS.md` | fork banner/contract; AGENTS top block | Keep our block/banner, take upstream text elsewhere |
+| `CLAUDE.md`, `.claude/skills` (link to `.github/skills`), `AAOS_CAR_NOTES.md`, `AAOS_LOG_ARCHIVE.md` | fork-owned agent entry point and docs | Keep ours (upstream's `.gitignore` ignores `.claude/` and `claude.md`; these are tracked anyway, never delete them) |

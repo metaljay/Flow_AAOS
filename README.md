@@ -77,7 +77,7 @@ The finished file ends up in a folder called For upload to Play Console next to 
 
 ## 🔄 Keeping this fork up to date and improving it
 
-This fork follows [Flow](https://github.com/A-EDev/Flow). `main` holds the parent's code plus the AAOS customisations. There are only two jobs, and you do both by pasting one short message to an AI agent (GitHub Copilot, Codex or Gemini) opened in this repository. The agent does the work, reports in plain English, and finishes by preparing the Google Play release. No git knowledge is needed, and nothing is ever pushed to the parent.
+This fork follows [Flow](https://github.com/A-EDev/Flow). `main` holds the parent's code plus the AAOS customisations. There are only two jobs, and you do both by pasting one short message to an AI agent (Claude Code, GitHub Copilot, Codex or Gemini) opened in this repository. The agent does the work, reports in plain English, and finishes by preparing the Google Play release. No git knowledge is needed, and nothing is ever pushed to the parent.
 
 ### Job 1: update from the parent
 ```
@@ -94,13 +94,14 @@ The agent makes the change, checks the app builds, records it (log and customisa
 ### The release (both jobs end here)
 The agent raises the version number automatically (version numbers only have to go up; they drift from the parent's and that is fine), builds the bundle, and gives you the exact clicks to sign it in Android Studio and upload it to Google Play Internal testing. Say `Bundle built` when it is signed and the agent collects the file into a folder called For upload to Play Console. To run only this stage: `Follow the instructions in .github/skills/aaos-release/SKILL.md exactly.`
 
-In GitHub Copilot you can type `/aaos-sync`, `/aaos-tweak` or `/aaos-release` instead. An optional `/aaos-uploaded` records what you uploaded.
+In Claude Code or GitHub Copilot you can type `/aaos-sync`, `/aaos-tweak` or `/aaos-release` instead. An optional `/aaos-uploaded` records what you uploaded.
 
 ### What protects the car customisations
 - `AAOS_FORK.md`: rules, safety rails and the customisations that must survive every merge.
 - `AAOS_UPSTREAM_SYNC.md`: the step-by-step procedure, the files most likely to conflict, and how to roll back.
-- `AAOS_RELEASE.md`: release steps and the version rule. `AAOS_LOG.md`: dated history of what changed and what was verified.
-- `AGENTS.md` is the entry point for AI agents; the recipes live in `.github/skills/`.
+- `AAOS_CAR_NOTES.md`: facts learned on the real car (app icon, media card, screen edges, Play), identical in both forks.
+- `AAOS_RELEASE.md`: release steps and the version rule. `AAOS_LOG.md`: dated history of what changed and what was verified (older entries in `AAOS_LOG_ARCHIVE.md`).
+- `AGENTS.md` is the entry point for AI agents (`CLAUDE.md` and `GEMINI.md` point to it); the recipes live in `.github/skills/`.
 
 ## 📚 AAOS rules and fork inventory
 

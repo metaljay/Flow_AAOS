@@ -37,7 +37,8 @@ The release stage (`.github/skills/aaos-release`) always raises the version auto
 4. Port, don't replay: adapt each required behaviour into the current upstream code instead of cherry-picking old commits.
 5. Keep edits to upstream-owned files as small as possible (fewer merge conflicts). Fork-only additions go in clearly separate places or files.
 6. Every release build raises the version automatically (see `AAOS_RELEASE.md`); the parent's version numbers are ignored.
-7. If a product decision is unclear (for example removing a customisation), ask the owner instead of guessing.
+7. Before touching the manifest, the media card, how the app launches, or anything near the screen edges, read `AAOS_CAR_NOTES.md` (facts learned on the real car).
+8. If a product decision is unclear (for example removing a customisation), ask the owner instead of guessing.
 
 ## 4. Permissions and safety rails
 
@@ -70,11 +71,11 @@ The owner copy-pastes messages between chats and has little or no coding experie
 3. **Camera optional**: `android.hardware.camera` and `android.hardware.camera.any` stay `required="false"`.
 4. **Bottom navigation at every window size**: no side rail (`FlowNavigationChrome.kt`, `FlowNavigationBar.kt`); the overflow destination still works.
 5. **Large-display legibility**: enlarged Material 3 type (`ui/theme/Type.kt`), 72 dp minimum top and bottom bars (shared `FlowTopBar` components), larger player, Shorts and music controls, video minimise button 60 dp hit size offset 6 dp.
-6. **Launcher icon**: traditional red rounded YouTube play mark with a white triangle (official YouTube mark scaled to 48 x 32 dp on the 108 dp viewport, matching the Nuvio launcher artwork size) in both foreground assets.
-7. **Bundle packaging**: the ABI-split workaround for bundle tasks in `app/build.gradle.kts` (re-test before removing).
-5b. **Display safe area (Polestar 3)**: the car screen's rounded corners and bezel cover the outer edge of the app window, so anything tappable must sit well inside it. Keep every touch target (not just the icon) at least 16 dp from the left and right edges of the app window, and icons about 24-28 dp in; check new or moved top bars, side buttons and player controls against this. Measured fix: Flow's top bar settings cog was only partly tappable at 4 dp; its trailing actions now have a 12 dp end inset (`FlowTopBarDefaults.ActionsEndInset`) (owner report 2026-10-05).
-7b. **Car media card**: `FlowCarMediaBrowserService` stays declared before `Media3MusicService` in `app/src/main/AndroidManifest.xml` with the `android.media.browse.MediaBrowserService` intent filter, plus `FlowCarMediaArtworkProvider`; `FlowApplication.onCreate` starts `FlowCarMediaSession.startObserving`. Do NOT add `androidx.car.app.launchable` to it: on the Polestar launcher (one icon per app) that makes the app icon open the car's media screen ("Continue watching") with no way into the app (owner report 2026-10-05).
-8. **Fork docs**: the README banner/contract and the `AAOS_*.md` files.
+6. **Display safe area (Polestar 3)**: the car screen's rounded corners and bezel cover the outer edge of the app window, so anything tappable must sit well inside it. Keep every touch target (not just the icon) at least 16 dp from the left and right edges of the app window, and icons about 24-28 dp in; check new or moved top bars, side buttons and player controls against this. Measured fix: Flow's top bar settings cog was only partly tappable at 4 dp; its trailing actions now have a 12 dp end inset (`FlowTopBarDefaults.ActionsEndInset`) (owner report 2026-10-05).
+7. **Launcher icon**: traditional red rounded YouTube play mark with a white triangle (official YouTube mark scaled to 48 x 32 dp on the 108 dp viewport, matching the Nuvio launcher artwork size) in both foreground assets.
+8. **Bundle packaging**: the ABI-split workaround for bundle tasks in `app/build.gradle.kts` (re-test before removing).
+9. **Car media card**: `FlowCarMediaBrowserService` stays declared before `Media3MusicService` in `app/src/main/AndroidManifest.xml` with the `android.media.browse.MediaBrowserService` intent filter, plus `FlowCarMediaArtworkProvider`; `FlowApplication.onCreate` starts `FlowCarMediaSession.startObserving`. Do NOT add `androidx.car.app.launchable` to it (see `AAOS_CAR_NOTES.md`): on the Polestar it makes the app icon open the car's media screen instead of the app. Known limit: after a full car restart the card stays blank.
+10. **Fork docs**: the README banner/contract and the `AAOS_*.md` files.
 
 Details and file locations are in Part 2 below.
 
@@ -92,6 +93,10 @@ Details and file locations are in Part 2 below.
 ## 8. Keeping these docs current
 
 After every verified change: add a dated entry to `AAOS_LOG.md` (what changed, commands run, what was and was not verified); update Part 2 if behaviour changed; update the release-state table in `AAOS_RELEASE.md` after any version bump or confirmed upload. The `AAOS_*.md` files are the memory that survives between agent chats; if it is not written here, the next agent will not know it. After any change or bug fix, run the `.github/skills/aaos-tweak` recipe, which makes all of these updates.
+
+- **Car facts go in both repos.** Flow and Nuvio share the same car. Anything learned about the car, the launcher, the media card, Play or the display goes into `AAOS_CAR_NOTES.md` in **both** repos in the same change (the file is identical in both). The same applies to a workflow or recipe improvement: make it in both repos.
+- **Keep the log short.** `AAOS_LOG.md` keeps the newest 15 entries. When adding an entry would make more, move the oldest entries (unchanged) to the top of `AAOS_LOG_ARCHIVE.md`. A release-preparation entry is at most three lines.
+- **Never leave docs contradicting each other.** When a number or a rule changes, search `README.md`, `AGENTS.md` and every `AAOS_*.md` file for the old wording and update every mention.
 
 ## 9. Environment notes (one Mac, Android Studio)
 
@@ -140,12 +145,7 @@ surface without treating these paths as a patch to apply blindly.
   manifest.
 - Car media card (2026-10-04): AAOS only treats an app as a media source if it exposes a
   `MediaBrowserService`, the home screen card reads the session token that service hands out, and
-  the Google car launcher on the emulator skips the service of an app that also has a launcher
-  activity unless it opts in with `androidx.car.app.launchable=true` (emulator log: "Skipping MBS ...
-  belonging to non media template app"). That opt-in was removed on 2026-10-05 because the Polestar
-  launcher then opened the car's media screen instead of Flow; whether the Polestar card follows the
-  service without it is to be confirmed on the car. That is why the card was often blank: it only showed text while one of
-  Flow's live sessions happened to be active. Flow plays videos and music in two separate Media3
+  the card shows what is playing while the car is running. Before this work the card could only show Flow's music, and only while that session happened to be active. The `androidx.car.app.launchable` opt-in is deliberately NOT used (it broke the Polestar app icon; after a full restart the card therefore stays blank; see `AAOS_CAR_NOTES.md`). Flow plays videos and music in two separate Media3
   sessions, so `service/FlowCarMediaSession.kt` is one framework session that mirrors whichever
   played last (it observes `GlobalPlayerState.currentVideo`, `EnhancedPlayerManager.playerState`,
   `EnhancedMusicPlayerManager.currentTrack` and `playerState`) and forwards the car's controls to
@@ -158,8 +158,8 @@ surface without treating these paths as a patch to apply blindly.
   only local artwork URIs). Pressing play with the app closed: music asks `Media3MusicService` to
   resume its saved queue; video shows the AAOS error-resolution prompt "Open Flow to continue
   watching" with an "Open Flow" button (Android blocks a background app from opening itself), then
-  returns to paused after 15 s. Texts live in `res/values/aaos_car_media_strings.xml`. Side effect:
-  the car app grid lists Flow twice (the app and its media entry).
+  returns to paused after 15 s. Texts live in `res/values/aaos_car_media_strings.xml`. No `androidx.car.app.launchable` opt-in (see
+  `AAOS_CAR_NOTES.md`), so the car app list shows one icon that opens the app.
 - `app/build.gradle.kts`: release application ID, build identity, APK splits, and the App Bundle
   ABI-split workaround. Keep release versioning under owner control.
 - Runtime component names follow the Kotlin/manifest namespace `io.github.aedev.flow`; runtime
