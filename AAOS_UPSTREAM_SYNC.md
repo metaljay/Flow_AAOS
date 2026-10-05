@@ -50,7 +50,7 @@ Always use flavour-prefixed tasks. Never bare `assembleDebug` or `compileDebugKo
 | `ui/components/layout/navigation/FlowNavigationChrome.kt`, `FlowNavigationBar.kt` | bottom nav forced | Upstream's adaptive side rail must not return |
 | `ui/components/layout/topbar/*` | 72 dp bars, larger actions | Keep screens on the shared component |
 | `ui/theme/Type.kt` | larger typography | Re-apply our scale on upstream's new scale |
-| `ui/screens/home/HomeScreen.kt` | larger logo/search | Re-apply |
+| `ui/screens/home/HomeScreen.kt` | larger logo/search; logo 12 dp start inset | Re-apply |
 | `ui/components/videoplayer/`, `shorts/`, `musicplayer/` | larger controls | Re-apply sizes, keep upstream logic |
 | `res/drawable/ic_launcher_foreground.xml`, `ic_launcher_dynamic_foreground.xml` | red play mark | Keep ours |
 | `README.md`, `AGENTS.md` | fork banner/contract; AGENTS top block | Keep our block/banner, take upstream text elsewhere |

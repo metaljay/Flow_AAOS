@@ -160,7 +160,7 @@ fun HomeScreen(
                                         DeepFlowManager.toggle(context)
                                     }
                                 },
-                                modifier = Modifier.size(44.dp),
+                                modifier = Modifier.padding(start = 12.dp).size(44.dp),
                             )
                         }
                     } else {

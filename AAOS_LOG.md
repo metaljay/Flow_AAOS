@@ -11,6 +11,13 @@ Newest entry first. One entry per verified change, upstream sync or upload. Form
 
 Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`.
 
+## 2026-10-05: Home screen logo moved in from the left edge; car media card checked after reboot and after an update
+- Home logo: the 44 dp logo sat in the top bar's leading slot with only the bar's 4 dp padding, so it almost touched the left edge while the search/settings icons sit about 16 dp in. Added a 12 dp start inset (`HomeScreen.kt`). Owner request.
+- Car media card, emulator investigation (no code change): after a full reboot the card showed the last video (paused) and, when music was playing at shutdown, the last song (the car resumed it, as its play-on-boot setting allows). After Flow was reinstalled (same as a Play update) or force-stopped, the card went blank showing only "Flow" and stayed blank even after Flow was reopened and played music; Flow's session had the right title and state, so the car's home screen simply did not reconnect. A full reboot restored it. This is car launcher behaviour after the app's process is replaced; Flow cannot make the launcher reconnect. The earlier entry's "force-stop" check had restarted the launcher, which hid this.
+- Commands run and results: `./gradlew ktlintCheck` passed; `:app:assembleGithubDebug` passed; `:app:compileGithubDebugKotlin` and `:app:compileFossDebugKotlin` passed; `:app:testGithubDebugUnitTest` passed with Android Studio's bundled JBR (3098 tests, 0 failures; the default JDK 27 fails 180 Robolectric tests with "Unsupported class file major version 71", an environment issue).
+- Verified (emulator `Automotive_Large_Portrait`, GitHub debug build): the Home logo now sits about the same distance from the left edge as the settings icon from the right.
+- NOT verified: the real Polestar 3.
+
 ## 2026-10-04: Release prepared for version 36 (2.2.17)
 - Contains the launcher mark, minimise arrow and music-service crash fix logged below, plus the car media card change. Version 35 was prepared but not uploaded; the release rule raises the version again anyway.
 - Commands run and results: `./gradlew :app:bundleGithubRelease` passed (unsigned, as expected).
