@@ -72,7 +72,7 @@ The owner copy-pastes messages between chats and has little or no coding experie
 5. **Large-display legibility**: enlarged Material 3 type (`ui/theme/Type.kt`), 72 dp minimum top and bottom bars (shared `FlowTopBar` components), larger player, Shorts and music controls, video minimise button 60 dp hit size offset 6 dp.
 6. **Launcher icon**: traditional red rounded YouTube play mark with a white triangle (official YouTube mark scaled to 48 x 32 dp on the 108 dp viewport, matching the Nuvio launcher artwork size) in both foreground assets.
 7. **Bundle packaging**: the ABI-split workaround for bundle tasks in `app/build.gradle.kts` (re-test before removing).
-7b. **Car media card**: `FlowCarMediaBrowserService` stays declared before `Media3MusicService` in `app/src/main/AndroidManifest.xml` with the `android.media.browse.MediaBrowserService` intent filter and `androidx.car.app.launchable=true` meta-data, plus `FlowCarMediaArtworkProvider`; `FlowApplication.onCreate` starts `FlowCarMediaSession.startObserving`.
+7b. **Car media card**: `FlowCarMediaBrowserService` stays declared before `Media3MusicService` in `app/src/main/AndroidManifest.xml` with the `android.media.browse.MediaBrowserService` intent filter, plus `FlowCarMediaArtworkProvider`; `FlowApplication.onCreate` starts `FlowCarMediaSession.startObserving`. Do NOT add `androidx.car.app.launchable` to it: on the Polestar launcher (one icon per app) that makes the app icon open the car's media screen ("Continue watching") with no way into the app (owner report 2026-10-05).
 8. **Fork docs**: the README banner/contract and the `AAOS_*.md` files.
 
 Details and file locations are in Part 2 below.
@@ -139,9 +139,11 @@ surface without treating these paths as a patch to apply blindly.
   manifest.
 - Car media card (2026-10-04): AAOS only treats an app as a media source if it exposes a
   `MediaBrowserService`, the home screen card reads the session token that service hands out, and
-  the Google car launcher skips the service of an app that also has a launcher activity unless it
-  opts in with `androidx.car.app.launchable=true` (emulator log: "Skipping MBS ... belonging to non
-  media template app"). That is why the card was often blank: it only showed text while one of
+  the Google car launcher on the emulator skips the service of an app that also has a launcher
+  activity unless it opts in with `androidx.car.app.launchable=true` (emulator log: "Skipping MBS ...
+  belonging to non media template app"). That opt-in was removed on 2026-10-05 because the Polestar
+  launcher then opened the car's media screen instead of Flow; whether the Polestar card follows the
+  service without it is to be confirmed on the car. That is why the card was often blank: it only showed text while one of
   Flow's live sessions happened to be active. Flow plays videos and music in two separate Media3
   sessions, so `service/FlowCarMediaSession.kt` is one framework session that mirrors whichever
   played last (it observes `GlobalPlayerState.currentVideo`, `EnhancedPlayerManager.playerState`,

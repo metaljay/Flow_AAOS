@@ -11,6 +11,12 @@ Newest entry first. One entry per verified change, upstream sync or upload. Form
 
 Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`.
 
+## 2026-10-05: App icon opens Flow again (car media opt-in removed)
+- Removed `androidx.car.app.launchable` from `FlowCarMediaBrowserService` in the manifest. Why: on the Polestar 3 (one icon per app) the app icon opened the car's media screen ("Continue watching") instead of the app, with no way in; the owner could only open the app from the Play Store's Open button. The car launcher source (AOSP `AppGridRepository`) adds a separate media entry for any opted-in media service; the Polestar keeps one entry per app and picks that one. The rest of the media card code (mirroring video and music, saved last item, artwork provider) is kept.
+- Commands run and results: `./gradlew ktlintCheck`, `:app:compileGithubDebugKotlin`, `:app:compileFossDebugKotlin`, `:app:assembleGithubDebug` and `git diff --check` passed. Unit tests not re-run (manifest and comment change only; they passed earlier today).
+- Verified (emulator `Automotive_Large_Portrait`, GitHub debug build): the app grid shows one Flow icon and tapping it opens Flow; while a video played, the home card showed its title, channel and thumbnail. After a full reboot the emulator launcher logged "Skipping MBS ... non media template app" for Flow, so on that launcher the card does not refill itself after a restart (the emulator home screen then stayed black, an emulator problem).
+- NOT verified: the real Polestar 3 (icon behaviour and whether its card follows the service after a restart).
+
 ## 2026-10-05: Release prepared for version 37 (2.2.18)
 - Contains the Home logo inset logged below. Version raised by the release recipe and pushed on its own.
 - Commands run and results: `./gradlew :app:bundleGithubRelease` passed (unsigned, as expected).

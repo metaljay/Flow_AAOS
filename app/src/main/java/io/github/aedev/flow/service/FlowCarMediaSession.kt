@@ -41,8 +41,7 @@ import kotlin.math.abs
  * AAOS fork: the session the car's home screen media card reads.
  *
  * AAOS only treats apps with a MediaBrowserService as media sources, the card reads the session token
- * that service hands out, and the Google car launcher skips a service of an app with a launcher
- * activity unless it opts in with `androidx.car.app.launchable`. Flow plays videos and music in two
+ * that service hands out. Flow plays videos and music in two
  * separate Media3 sessions, so this single framework session mirrors whichever one played last and
  * forwards the car's controls to it. The last item is saved to disk so the card can be refilled,
  * without network, after the app process has been closed.

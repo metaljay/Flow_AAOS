@@ -5,8 +5,9 @@ import android.os.Bundle
 import android.service.media.MediaBrowserService
 
 /**
- * AAOS fork: the media source the car's home screen card follows (opted in with
- * `androidx.car.app.launchable` in the manifest). It hands out [FlowCarMediaSession], which mirrors
+ * AAOS fork: the media source the car's home screen card follows. It is deliberately not opted in
+ * with `androidx.car.app.launchable`: on the Polestar launcher that makes the app icon open the car's
+ * media screen instead of Flow. It hands out [FlowCarMediaSession], which mirrors
  * whichever of Flow's video or music players played last, and refills it from disk when the car
  * binds after the app was closed.
  */

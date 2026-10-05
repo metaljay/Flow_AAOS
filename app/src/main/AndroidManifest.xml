@@ -233,10 +233,7 @@
             <intent-filter>
                 <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
-            <!-- Opts this service in as a car media source even though the app also has a launcher activity. -->
-            <meta-data
-                android:name="androidx.car.app.launchable"
-                android:value="true" />
+            <!-- No androidx.car.app.launchable here: on the Polestar launcher it makes the app icon open the car's media screen instead of the app. -->
         </service>
 
         <!-- AAOS fork: read-only artwork for the car media card (AAOS needs a content:// URI). -->
