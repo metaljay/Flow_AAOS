@@ -11,6 +11,12 @@ Newest entry first. One entry per verified change, upstream sync or upload. Form
 
 Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`.
 
+## 2026-10-05: Release prepared for version 37 (2.2.18)
+- Contains the Home logo inset logged below. Version raised by the release recipe and pushed on its own.
+- Commands run and results: `./gradlew :app:bundleGithubRelease` passed (unsigned, as expected).
+- Merged release manifest checked: application ID `com.JF_Flow`, version code 37, name 2.2.18, min SDK 26, target SDK 36, automotive and camera features optional; car media service and artwork provider present.
+- NOT verified: signing (done by the owner in Android Studio), Play upload, the real car.
+
 ## 2026-10-05: Home screen logo moved in from the left edge; car media card checked after reboot and after an update
 - Home logo: the 44 dp logo sat in the top bar's leading slot with only the bar's 4 dp padding, so it almost touched the left edge while the search/settings icons sit about 16 dp in. Added a 12 dp start inset (`HomeScreen.kt`). Owner request.
 - Car media card, emulator investigation (no code change): after a full reboot the card showed the last video (paused) and, when music was playing at shutdown, the last song (the car resumed it, as its play-on-boot setting allows). After Flow was reinstalled (same as a Play update) or force-stopped, the card went blank showing only "Flow" and stayed blank even after Flow was reopened and played music; Flow's session had the right title and state, so the car's home screen simply did not reconnect. A full reboot restored it. This is car launcher behaviour after the app's process is replaced; Flow cannot make the launcher reconnect. The earlier entry's "force-stop" check had restarted the launcher, which hid this.
