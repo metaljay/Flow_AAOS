@@ -11,6 +11,10 @@ Newest entry first. One entry per verified change, upstream sync or upload. Form
 
 Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`; facts about the car live in `AAOS_CAR_NOTES.md`. This file keeps the newest 15 entries; older ones are in `AAOS_LOG_ARCHIVE.md`.
 
+## 2026-10-05: Version 39 (2.2.20) uploaded and working on the car
+- The owner reported version 39 (2.2.20) installed on the Polestar 3 and working, including the media card still showing the last item about an hour later. Release table updated.
+- Verified: real car, by the owner. No commands run apart from `git diff --check`.
+
 ## 2026-10-05: Fork docs tidied for future agents (no app change)
 - Added `AAOS_CAR_NOTES.md` (identical in both forks: launcher, media card, safe area, testing like the car, Play), `CLAUDE.md` and `.claude/skills` (a link to `.github/skills`) so Claude Code finds the same rules and recipes.
 - Recipes: tweak adds a car-like emulator check (open from the app list, check edges, media card and a reboot when relevant); sync and tweak read the car notes; release asks the owner to reply `Uploaded` and then records it.
@@ -97,9 +101,3 @@ Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`
 - Updated the release-state table in `AAOS_RELEASE.md` to reflect the current repo version and the new signed-bundle naming convention.
 - Commands run and results: `./gradlew ktlintCheck` passed; `./gradlew :app:assembleGithubDebug` passed.
 - Verified: Kotlin formatting and the GitHub debug APK build passed. NOT verified: signing for Play upload, Play Console upload, emulator launch, and real car installation.
-
-## 2026-10-03: Prepared release bundle for version code 33 (2.2.14)
-- Prepared release bundle for Play Console upload with versionCode 33 and versionName 2.2.14.
-- Verified merged release manifest: application ID `com.JF_Flow`, version code 33, version name 2.2.14, target SDK 36, automotive metadata present, camera features optional (`required="false"`).
-- Commands run and results: `./gradlew :app:bundleGithubRelease` passed.
-- Verified: release bundle build and merged manifest inspection passed. NOT verified: signing, Play Console upload, emulator or real car installation (owner will sign and upload).
