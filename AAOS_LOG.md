@@ -11,6 +11,12 @@ Newest entry first. One entry per verified change, upstream sync or upload. Form
 
 Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`.
 
+## 2026-10-05: Release prepared for version 38 (2.2.19)
+- Contains the app icon fix logged below (car media opt-in removed). Version raised by the release recipe and pushed on its own.
+- Commands run and results: `./gradlew :app:bundleGithubRelease` passed (unsigned, as expected).
+- Merged release manifest checked: application ID `com.JF_Flow`, version code 38, name 2.2.19, target SDK 36, automotive and camera features optional; car media service present without `androidx.car.app.launchable`.
+- NOT verified: signing (done by the owner in Android Studio), Play upload, the real car.
+
 ## 2026-10-05: App icon opens Flow again (car media opt-in removed)
 - Removed `androidx.car.app.launchable` from `FlowCarMediaBrowserService` in the manifest. Why: on the Polestar 3 (one icon per app) the app icon opened the car's media screen ("Continue watching") instead of the app, with no way in; the owner could only open the app from the Play Store's Open button. The car launcher source (AOSP `AppGridRepository`) adds a separate media entry for any opted-in media service; the Polestar keeps one entry per app and picks that one. The rest of the media card code (mirroring video and music, saved last item, artwork provider) is kept.
 - Commands run and results: `./gradlew ktlintCheck`, `:app:compileGithubDebugKotlin`, `:app:compileFossDebugKotlin`, `:app:assembleGithubDebug` and `git diff --check` passed. Unit tests not re-run (manifest and comment change only; they passed earlier today).
