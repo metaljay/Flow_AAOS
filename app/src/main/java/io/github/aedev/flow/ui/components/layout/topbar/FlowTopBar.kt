@@ -2,9 +2,11 @@ package io.github.aedev.flow.ui.components.layout.topbar
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
+import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.heightIn
 import androidx.compose.foundation.layout.size
+import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -120,6 +122,7 @@ fun FlowTopBar(
             if (showGlobalActions) {
                 FlowGlobalActionsRow()
             }
+            Spacer(Modifier.width(FlowTopBarDefaults.ActionsEndInset))
         },
         colors = FlowTopBarDefaults.colors(),
         windowInsets = windowInsets,

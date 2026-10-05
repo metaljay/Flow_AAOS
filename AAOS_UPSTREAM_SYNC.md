@@ -48,7 +48,7 @@ Always use flavour-prefixed tasks. Never bare `assembleDebug` or `compileDebugKo
 | `app/build.gradle.kts` | release `applicationId`, Play version code/name, ABI-split workaround | keep ours |
 | `service/FlowCarMediaSession.kt`, `FlowCarMediaBrowserService.kt`, `FlowCarMediaArtworkProvider.kt`, `FlowApplication.kt` (one `startObserving` call) | car media card mirror of the video and music players | Keep; if upstream renames `GlobalPlayerState.currentVideo`, `EnhancedPlayerManager.playerState` or `EnhancedMusicPlayerManager.currentTrack/playerState`, re-point the observers |
 | `ui/components/layout/navigation/FlowNavigationChrome.kt`, `FlowNavigationBar.kt` | bottom nav forced | Upstream's adaptive side rail must not return |
-| `ui/components/layout/topbar/*` | 72 dp bars, larger actions | Keep screens on the shared component |
+| `ui/components/layout/topbar/*` | 72 dp bars, larger actions, 12 dp end inset after the trailing actions (display safe area) | Keep screens on the shared component |
 | `ui/theme/Type.kt` | larger typography | Re-apply our scale on upstream's new scale |
 | `ui/screens/home/HomeScreen.kt` | larger logo/search; logo 12 dp start inset | Re-apply |
 | `ui/components/videoplayer/`, `shorts/`, `musicplayer/` | larger controls | Re-apply sizes, keep upstream logic |
