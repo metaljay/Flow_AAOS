@@ -2,6 +2,12 @@
 
 Older `AAOS_LOG.md` entries, newest first, moved here unchanged to keep the main log short. New entries always go in `AAOS_LOG.md`; when it passes 15 entries, move the oldest to the top of this file.
 
+## 2026-10-03: Raised the Play version for a safety buffer before upload
+- Increased the release version code from 33 to 34 and the version name from 2.2.14 to 2.2.15 to keep a clear safety buffer above the last confirmed Play upload (32 / 2.2.13).
+- Updated the release-state table in `AAOS_RELEASE.md` to reflect the current repo version and the new signed-bundle naming convention.
+- Commands run and results: `./gradlew ktlintCheck` passed; `./gradlew :app:assembleGithubDebug` passed.
+- Verified: Kotlin formatting and the GitHub debug APK build passed. NOT verified: signing for Play upload, Play Console upload, emulator launch, and real car installation.
+
 ## 2026-10-03: Prepared release bundle for version code 33 (2.2.14)
 - Prepared release bundle for Play Console upload with versionCode 33 and versionName 2.2.14.
 - Verified merged release manifest: application ID `com.JF_Flow`, version code 33, version name 2.2.14, target SDK 36, automotive metadata present, camera features optional (`required="false"`).

@@ -11,6 +11,12 @@ Newest entry first. One entry per verified change, upstream sync or upload. Form
 
 Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`; facts about the car live in `AAOS_CAR_NOTES.md`. This file keeps the newest 15 entries; older ones are in `AAOS_LOG_ARCHIVE.md`.
 
+## 2026-10-05: Fork docs restructured on one skeleton shared by both forks (no app change)
+- Why: the owner found the docs repetitive, partly obsolete and hard to navigate, and wanted Flow and Nuvio aligned. `README.md` rewritten for the owner (no coding needed): what this is, what's different (each row linked to its customisation), getting it on the car, and copy-paste prompts per job, including a check-only parent update and help when something goes wrong.
+- `AAOS_FORK.md` rebuilt on the same skeleton as the sister fork: shared sections word for word in both; every customisation numbered (C1 to C10) with the same four headings (what and why, where, after a parent update, check). `AAOS_UPSTREAM_SYNC.md`: new assess step and a four-part approval report for the owner (what's new, every customisation's status, risks and recommendation, what to test); hotspots mapped to customisations. `AAOS_RELEASE.md`: one release facts table plus shared steps. AGENTS block and recipes aligned and identical in both forks. Obsolete text removed (duplicate requirements table, old migration-guide mention, build-from-source section). The release steps referred to a version file, module and variant that were never written down; they are now in the release facts table.
+- Commands run and results: `git diff --check` passed; README links to the customisation headings checked. Documentation only; no build needed.
+- Verified: documentation-only change. NOT verified: nothing in the app changed.
+
 ## 2026-10-05: Version 39 (2.2.20) uploaded and working on the car
 - The owner reported version 39 (2.2.20) installed on the Polestar 3 and working, including the media card still showing the last item about an hour later. Release table updated.
 - Verified: real car, by the owner. No commands run apart from `git diff --check`.
@@ -95,9 +101,3 @@ Agents read this file only when they need evidence. Rules live in `AAOS_FORK.md`
 - Updated the release-state table in `AAOS_RELEASE.md` to record the confirmed upload and noted that the repo version must be raised before the next release.
 - Commands run and results: `git diff --check` passed.
 - Verified: no compile, unit-test, emulator or real-car check was run for this status update; the only verification here is the owner's Play Console confirmation. No device or vehicle claim is made.
-
-## 2026-10-03: Raised the Play version for a safety buffer before upload
-- Increased the release version code from 33 to 34 and the version name from 2.2.14 to 2.2.15 to keep a clear safety buffer above the last confirmed Play upload (32 / 2.2.13).
-- Updated the release-state table in `AAOS_RELEASE.md` to reflect the current repo version and the new signed-bundle naming convention.
-- Commands run and results: `./gradlew ktlintCheck` passed; `./gradlew :app:assembleGithubDebug` passed.
-- Verified: Kotlin formatting and the GitHub debug APK build passed. NOT verified: signing for Play upload, Play Console upload, emulator launch, and real car installation.

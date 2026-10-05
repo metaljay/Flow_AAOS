@@ -8,110 +8,130 @@
 
 # Flow for AAOS
 
-### A large-screen, in-car adaptation of Flow for Android Automotive OS
-
-Built with the Polestar 3 in mind, with AAOS integration and thoughtful changes for use on a
-vehicle display.
+### Flow, the YouTube app, adapted for the Polestar 3's built-in Android Automotive screen
 
 <br>
 
 [![Android Automotive OS](https://img.shields.io/badge/Platform-Android_Automotive_OS-3DDC84?style=for-the-badge&logo=android&logoColor=white)](https://developer.android.com/training/cars)
-[![Upstream Flow](https://img.shields.io/badge/Forked_from-Flow-4285F4?style=for-the-badge&logo=github&logoColor=white)](https://github.com/A-EDev/Flow)
+[![Forked from Flow](https://img.shields.io/badge/Forked_from-Flow-4285F4?style=for-the-badge&logo=github&logoColor=white)](https://github.com/A-EDev/Flow)
 [![License: GPL v3](https://img.shields.io/badge/License-GPLv3-orange?style=for-the-badge&logo=gnu&logoColor=white)](License)
 
-<br>
-
-[AAOS rules](AAOS_FORK.md) · [Release steps](AAOS_RELEASE.md) · [Upstream project](https://github.com/A-EDev/Flow) · [License](License)
+[Original Flow project](https://github.com/A-EDev/Flow) · [Car customisations](AAOS_FORK.md#part-2-customisation-details) · [License](License)
 
 </div>
 
 ---
 
-## 🚘 About this fork
+## 🚘 What this is
 
-Flow for AAOS is a community fork of [A-EDev/Flow](https://github.com/A-EDev/Flow), adapted to run
-on Android Automotive OS (AAOS). It keeps Flow's core experience while adding vehicle-display
-integration and larger-screen refinements, with the Polestar 3 as the primary target.
+Flow is a free YouTube client (watch videos, Shorts and music without the official YouTube app). This is a personal copy of it (a "fork"), changed to work well on the screen of a Polestar 3, which runs **Android Automotive OS** (AAOS): Android built into the car itself. It is not an Android Auto app (Android Auto mirrors a phone onto the car screen).
 
-This project targets **Android Automotive OS**, the operating system built into compatible
-vehicles. It is not an Android Auto version.
+Changes from the original Flow project (the "parent") are brought into this copy from time to time, and the car changes are redone on top each time, so the app stays up to date without losing them.
 
-## ✨ What’s different
+## ✨ What's different in the car
 
-| | AAOS-focused changes |
-| --- | --- |
-| 🧭 | **Navigation stays at the bottom** at every window size, keeping the main destinations in a consistent place. |
-| 👀 | **More legible on a large display**, with enlarged Material 3 typography, icons, touch targets and player controls. |
-| 📐 | **Larger app bars**, with a 72 dp minimum height for top and bottom bars. |
-| 🚗 | **AAOS system integration**, including automotive app metadata, a car-launcher entry and media browsing support. |
-| 📷 | **Camera features remain optional**, so a camera is not required for device compatibility. |
-| ▶️ | **Traditional red play-mark launcher icon** and the fork’s dedicated Play application identity. |
+| | Change | Details |
+| --- | --- | --- |
+| 🧭 | **Navigation stays at the bottom**, even on the car's wide screen. | [More](AAOS_FORK.md#c4-bottom-navigation-at-every-window-size) |
+| 👀 | **Bigger text, icons, buttons and player controls**, easy to read and tap at a glance. | [More](AAOS_FORK.md#c5-large-display-legibility) |
+| 👆 | **Nothing you tap hides under the screen's rounded edges.** | [More](AAOS_FORK.md#c6-display-safe-area) |
+| 🚗 | **Works as a car app**: it appears in the car's app list and the car lets its screens run. | [More](AAOS_FORK.md#c2-aaos-manifest) |
+| 🎵 | **The car's home screen media card** shows what Flow is playing. | [More](AAOS_FORK.md#c8-car-media-card) |
+| 📷 | **Installs without a camera** (the car has none for apps). | [More](AAOS_FORK.md#c3-camera-optional) |
+| ▶️ | **Red YouTube-style play icon** in the car's app list. | [More](AAOS_FORK.md#c7-launcher-icon) |
+| 📦 | **Updates come through your own Play Store listing**, so they reach the car. | [More](AAOS_FORK.md#c1-play-identity) |
 
-These changes are specific to the automotive experience; they are not a promise of compatibility
-with every vehicle, display configuration or AAOS version.
+**Known limit:** after a full restart of the car, the home screen media card stays blank. That is the price of the app icon opening the app properly; see the [car notes](AAOS_CAR_NOTES.md).
 
-## 🧭 Internal testing and installation
+## 📲 Getting it on the car
 
-**There are no public GitHub release downloads for this fork.** The intended distribution path is
-Google Play internal testing: maintainers build a Play-compatible Android App Bundle and publish
-it to the private internal testing track. This is how this custom AAOS app is delivered to invited
-testers through Google Play.
+There are no public downloads. The app reaches the car only through **Google Play Internal testing** (a private test track on your own Play listing):
 
-To install or update the app, you need access to the internal test and a compatible AAOS device.
-After accepting the test invitation, use the Google Play Store on the vehicle to install the app.
-The app is not available as a public Play Store listing.
+1. Accept the internal test invitation for Flow with the Google account used in the car.
+2. Open the Play Store in the car and install or update Flow.
 
-## 🛠️ Building from source
+The car's Play Store may show a temporary name ending in "(unreviewed)" and a placeholder icon. That is normal for an internal test, and installs and updates still work.
 
-The repository contains the source code; a local build is not a public release. To create the
-GitHub-flavor bundle used for Play testing:
+## 🛠️ What do you want to do?
 
-```bash
-./gradlew :app:bundleGithubRelease
+Everything is done by an AI assistant (Claude Code, GitHub Copilot, Codex or Gemini). Open it in the **Flow** folder (this app's folder), paste the prompt for your job, and follow what it tells you. It explains everything in plain English, runs the commands itself, and only asks you to do the steps only you can do: approving, signing in Android Studio, uploading to Play and testing in the car. Each prompt only affects this app; do the other app separately in its own folder.
+
+In Claude Code or GitHub Copilot you can type the short command shown instead of pasting the prompt.
+
+### 1. Check whether the original app has something new
+
+Nothing gets changed. You get a plain-English summary of what's new and which car changes it would affect.
+
+```
+Follow the instructions in .github/skills/aaos-sync/SKILL.md, but only check for parent updates. Do not change anything.
 ```
 
-Uploading to Play requires the authorized release-signing configuration and access to the Play
-Console internal testing track. Do not distribute an unsigned or locally signed build as an
-official test release.
-The finished file ends up in a folder called For upload to Play Console next to both repos.
+### 2. Update from the original app (`/aaos-sync`)
 
-## 🔄 Keeping this fork up to date and improving it
-
-This fork follows [Flow](https://github.com/A-EDev/Flow). `main` holds the parent's code plus the AAOS customisations. There are only two jobs, and you do both by pasting one short message to an AI agent (Claude Code, GitHub Copilot, Codex or Gemini) opened in this repository. The agent does the work, reports in plain English, and finishes by preparing the Google Play release. No git knowledge is needed, and nothing is ever pushed to the parent.
-
-### Job 1: update from the parent
 ```
 Follow the instructions in .github/skills/aaos-sync/SKILL.md exactly.
 ```
-The agent merges the parent's changes on a temporary branch, re-applies the car customisations, builds a test version, and tells you how to try it in the Automotive emulator. It **stops until you reply** `approve sync` (or `cancel sync`, or `problem: ...`). Only then does it update `main` and prepare the release.
 
-### Job 2: tweak or fix something
+What happens next:
+
+1. The assistant brings in the parent's changes on a temporary copy and redoes every car change in the new code.
+2. It builds a test version and sends you a report with four parts: **what's new for you**, **how each of your car changes was kept or adapted** (or if any is at risk), **risks with a recommendation**, and **what to test**.
+3. Nothing reaches the real app until you reply with one of these:
+   - `approve sync`: it goes ahead and prepares a release (step 4 below).
+   - `cancel sync`: everything is thrown away and nothing changes.
+   - `problem: ` followed by what you saw: it fixes that and reports again.
+
+### 3. Change or fix something for the car (`/aaos-tweak`)
+
 ```
-Follow the instructions in .github/skills/aaos-tweak/SKILL.md exactly. The tweak: [describe what you want changed, in plain English].
+Follow the instructions in .github/skills/aaos-tweak/SKILL.md exactly. The tweak: [describe what you want changed, or what is wrong on the car, in plain English].
 ```
-The agent makes the change, checks the app builds, records it (log and customisation list), pushes it, then prepares the release.
 
-### The release (both jobs end here)
-The agent raises the version number automatically (version numbers only have to go up; they drift from the parent's and that is fine), builds the bundle, and gives you the exact clicks to sign it in Android Studio and upload it to Google Play Internal testing. Say `Bundle built` when it is signed and the agent collects the file into a folder called For upload to Play Console. To run only this stage: `Follow the instructions in .github/skills/aaos-release/SKILL.md exactly.`
+The assistant makes the change, checks the app still builds, records what it did, and then prepares a release (step 4 below).
 
-In Claude Code or GitHub Copilot you can type `/aaos-sync`, `/aaos-tweak` or `/aaos-release` instead. An optional `/aaos-uploaded` records what you uploaded.
+### 4. Release it to the car (`/aaos-release`)
 
-### What protects the car customisations
-- `AAOS_FORK.md`: rules, safety rails and the customisations that must survive every merge.
-- `AAOS_UPSTREAM_SYNC.md`: the step-by-step procedure, the files most likely to conflict, and how to roll back.
-- `AAOS_CAR_NOTES.md`: facts learned on the real car (app icon, media card, screen edges, Play), identical in both forks.
-- `AAOS_RELEASE.md`: release steps and the version rule. `AAOS_LOG.md`: dated history of what changed and what was verified (older entries in `AAOS_LOG_ARCHIVE.md`).
-- `AGENTS.md` is the entry point for AI agents (`CLAUDE.md` and `GEMINI.md` point to it); the recipes live in `.github/skills/`.
+Updates and tweaks end here automatically. To run this step on its own:
 
-## 📚 AAOS rules and fork inventory
+```
+Follow the instructions in .github/skills/aaos-release/SKILL.md exactly.
+```
 
-For the fork rules, invariant list, implementation locations, rationale and upstream-migration
-requirements, see **[AAOS_FORK.md](AAOS_FORK.md)**. It is the reference for understanding which
-AAOS behaviors are intentional and must be preserved.
+1. The assistant raises the version number (it must go up for every upload) and checks the build.
+2. It gives you click-by-click steps to sign the file in Android Studio. When that's done, reply `Bundle built`.
+3. It puts the file in the **For upload to Play Console** folder, opens that folder, and gives you the clicks for Google Play Console. When Play accepts it, reply `Uploaded` and it records the upload.
+4. Install or update the app from the Play Store in the car.
 
-For release procedure and Play version rules, see **[AAOS_RELEASE.md](AAOS_RELEASE.md)**.
+### 5. Tell the assistant something you learned about the car
+
+```
+I learned this about the car: [what you saw]. Add it to AAOS_CAR_NOTES.md in both the Flow and NuvioMobile folders, following AAOS_FORK.md section 10.
+```
+
+### If something goes wrong
+
+- **A chat ended halfway through a job:** open a new chat in the same folder and paste:
+  ```
+  Read AGENTS.md, then check AAOS_LOG.md, git status and any sync/ branch, and tell me in plain English where the last job got to and what's next. Do not change anything yet.
+  ```
+- **Play says the version code was already used:** tell the assistant `Play says the version code was already used.` It raises the number and you sign and upload again.
+- **The assistant stops with an error:** it gives you one message to paste back to it, or to another AI assistant. You never need to fix code yourself.
+
+## 🗂️ Behind the scenes
+
+You don't need to read these files. They are the instructions that keep any AI assistant on track between chats.
+
+| File | What it holds |
+| --- | --- |
+| `README.md` | This page |
+| [`AAOS_FORK.md`](AAOS_FORK.md) | Rules for AI assistants, and the full list of car customisations with technical detail |
+| [`AAOS_UPSTREAM_SYNC.md`](AAOS_UPSTREAM_SYNC.md) | How parent updates are done, and the report you get before approving |
+| [`AAOS_RELEASE.md`](AAOS_RELEASE.md) | Release steps, the version number rule, and the last version uploaded |
+| [`AAOS_CAR_NOTES.md`](AAOS_CAR_NOTES.md) | Things learned on the real Polestar 3 (the same in both apps) |
+| [`AAOS_LOG.md`](AAOS_LOG.md) | A diary of every change and what was checked (older entries in `AAOS_LOG_ARCHIVE.md`) |
+| `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` | Where AI assistants start reading |
+| `.github/skills/` | The step-by-step recipes that the prompts above run |
 
 ## 📄 License
 
-Flow is distributed under the [GNU General Public License v3.0](License). See the license file for
-the terms that apply to this fork and its upstream project.
+Flow is distributed under the [GNU General Public License v3.0](License). The license applies to this fork and to the original project.
