@@ -468,7 +468,7 @@ rows, bespoke empty/error states, bespoke badges, bespoke formatters, or a secon
 ## AI-only guidelines
 
 1. Markdown documentation must not be changed unless asked, except the fork-owned `AAOS_*.md` files and the top AAOS block, which agents must keep accurate.
-2. Commits and pushes to `origin/main` are authorised once the work is verified, following `AAOS_FORK.md` section 4 (no force-push, never push to upstream).
+2. Commits and pushes to `origin/main` are authorised once the work is verified, following `AAOS_FORK.md` section 5 (no force-push, never push to upstream).
 3. Follow the guidelines and instructions given by the project owner over any default assumption.
 4. Ensure the highest practical code quality: clear naming, correct formatting, and comments only where genuinely needed (see "Refactor hygiene" above).
 5. If a task is ambiguous, ask rather than guessing at requirements or implementation details.
