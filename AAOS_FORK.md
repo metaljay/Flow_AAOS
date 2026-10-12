@@ -4,7 +4,7 @@
 
 ## 1. What this repo is
 
-The owner's fork of [Flow](https://github.com/A-EDev/Flow), a YouTube client, customised so it is readable and usable on the owner's Polestar 3 running Android Automotive OS (AAOS). It reaches the car only through Google Play **Internal testing**. The sister fork is Nuvio, next to this repo in the AAOS folder.
+The owner's fork of [Flow](https://github.com/A-EDev/Flow), a YouTube client, customised so it is readable and usable on the owner's Polestar 3 running Android Automotive OS (AAOS). It reaches the car only through Google Play **Internal testing**. The sister fork is Nuvio, next to this repo in the Development folder.
 
 | Fork fact | Value |
 | --- | --- |
@@ -128,7 +128,7 @@ Keep code, file paths and jargon out of sections 1 to 5 apart from the prompts. 
 
 Shared (both repos):
 
-- Builds run on the owner's Mac with Android Studio. The AAOS folder holds both repos, the release key `Key.jks` (outside both repos) and the `For upload to Play Console` folder for signed bundles (outside git).
+- Builds run on the owner's Mac with Android Studio. The Development folder holds both repos side by side; the release key `Key.jks` and the `For upload to Play Console` folder sit in `Android-Release` beside them for signed bundles (outside git).
 - Emulator used for checks: `Automotive_Large_Portrait` (1280 x 1606). It does not prove Polestar 3 behaviour. If `adb` or the emulator is unavailable, say so; never claim device verification from a compile.
 - If tests fail with "Unsupported class file major version 71", the default Java is too new: rerun with Android Studio's bundled Java (`JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"` in front). It is an environment problem, not real failures.
 
