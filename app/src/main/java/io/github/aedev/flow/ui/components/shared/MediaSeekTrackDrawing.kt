@@ -16,8 +16,8 @@ import io.github.aedev.flow.ui.theme.SPONSOR_BLOCK_SEGMENT_ALPHA
 import io.github.aedev.flow.ui.theme.defaultSponsorBlockColor
 import org.schabi.newpipe.extractor.stream.StreamSegment
 
-internal val RestTrackHeight = 5.dp
-internal val ActiveTrackHeight = 10.dp
+internal val RestTrackHeight = 7.dp
+internal val ActiveTrackHeight = 14.dp
 
 /**
  * Paints the track: base, buffered, progress, chapter gaps and SponsorBlock segments.

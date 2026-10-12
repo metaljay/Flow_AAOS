@@ -37,8 +37,8 @@ import androidx.compose.ui.unit.dp
 import io.github.aedev.flow.data.model.SponsorBlockSegment
 import org.schabi.newpipe.extractor.stream.StreamSegment
 
-private val EdgeAlignedHeight = 14.dp
-private val ExpandedRowHeight = 32.dp
+private val EdgeAlignedHeight = 28.dp
+private val ExpandedRowHeight = 48.dp
 
 /** Colours the track needs, resolved once in composition so the draw lambda stays theme-free. */
 internal data class SeekTrackColors(
@@ -227,7 +227,7 @@ fun MediaSeekBar(
                         Box(
                             modifier =
                                 Modifier
-                                    .size(16.dp)
+                                    .size(24.dp)
                                     .graphicsLayer {
                                         val scale = thumbScale.value
                                         scaleX = scale
@@ -236,7 +236,7 @@ fun MediaSeekBar(
                                         if (isInteracting) {
                                             drawCircle(
                                                 color = thumbStateLayerColor,
-                                                radius = 20.dp.toPx(),
+                                                radius = 28.dp.toPx(),
                                             )
                                         }
                                     },

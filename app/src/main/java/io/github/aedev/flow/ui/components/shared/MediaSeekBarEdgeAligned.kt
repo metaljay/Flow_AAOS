@@ -21,7 +21,7 @@ import kotlin.math.abs
  * The thin strip under the video that [MediaSeekBar] shows when the controls are hidden.
  *
  * It cannot be a Material `Slider`: `SliderImpl` applies `minimumInteractiveComponentSize()`, so it
- * would claim 48dp of touch height against a bar that sits flush with the video and is 14dp tall.
+ * would claim 48dp of touch height against a bar that sits flush with the video and is 28dp tall.
  * It draws the same track and runs its own pointer handling at its real size.
  */
 @Composable
@@ -110,7 +110,7 @@ internal fun EdgeAlignedSeekbar(
             val trackHeightPx = lerp(RestTrackHeight.toPx(), ActiveTrackHeight.toPx(), expansion)
             val trackCenterY = size.height - trackHeightPx / 2f
             val width = size.width
-            val thumbRadius = 7.dp.toPx() * scale
+            val thumbRadius = 11.dp.toPx() * scale
             val thumbX =
                 if (width > thumbRadius * 2f) {
                     (width * displayValue).coerceIn(thumbRadius, width - thumbRadius)
@@ -119,7 +119,7 @@ internal fun EdgeAlignedSeekbar(
                 }
             drawCircle(
                 color = accentColor.copy(alpha = 0.24f),
-                radius = thumbRadius + 8.dp.toPx(),
+                radius = thumbRadius + 10.dp.toPx(),
                 center = Offset(thumbX, trackCenterY),
             )
             drawCircle(
