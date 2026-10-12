@@ -10,7 +10,7 @@ The owner has no coding experience and relies on the agent to bring every custom
 | --- | --- |
 | Parent repository | https://github.com/A-EDev/Flow (git remote `upstream`) |
 | Parent branch synced | `main` |
-| **Last merged parent commit** | `10f588961d3467a2210a302d3698e9262c3ea201` (2026-09-30). Step 1 lists everything newer; step 11 updates this row. |
+| **Last merged parent commit** | `669e1ae8e631e93381ffee0485ae24f3f662036b` (2026-10-12). Step 1 lists everything newer; step 11 updates this row. |
 
 ## Steps
 
@@ -88,7 +88,8 @@ Run the lines one at a time (one flavour at a time saves memory). Always use fla
 | `ui/components/layout/topbar/*` | C5, C6 | 72 dp bars, larger actions, 12 dp end inset | Keep screens on the shared component |
 | `ui/theme/Type.kt` | C5 | larger typography | Re-apply our scale on the parent's new scale |
 | `ui/screens/home/HomeScreen.kt` | C5 | larger logo and search; logo 12 dp start inset | Re-apply |
-| `ui/components/videoplayer/`, `shorts/`, `musicplayer/` | C5 | larger controls; minimise button size and offset | Re-apply sizes, keep the parent's logic |
+| `ui/components/videoplayer/`, `shorts/`, `musicplayer/`, `shared/MediaPlayPauseButton.kt`, `shared/DescriptionCards.kt`, `shared/FlowDescriptionBottomSheet.kt` | C5 | larger controls and description text; minimise button size and offset | Re-apply sizes, keep the parent's logic |
+| `app/src/test/.../ui/theme/FlowTypographyTest.kt` | C5 | expects our larger type scale | Keep our sizes in the assertions |
 | `res/drawable/ic_launcher_foreground.xml`, `ic_launcher_dynamic_foreground.xml` | C7 | red play mark | Keep ours |
 | `README.md`, `AGENTS.md` | C10 | owner README; fork block at the top of AGENTS | Keep our README and block; take the parent's text below the block |
 | `CLAUDE.md`, `GEMINI.md`, `.claude/skills`, `.github/skills/aaos-*`, `AAOS_*.md` | C10 | fork-owned agent entry points, recipes and docs | Keep ours (the parent's `.gitignore` ignores `.claude/` and `claude.md`; these are tracked anyway, never delete them) |
