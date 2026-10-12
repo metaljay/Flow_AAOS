@@ -6,7 +6,7 @@
 
 | Item | Value |
 | --- | --- |
-| **Last uploaded to Play** | **40 (2.2.21)**, upload confirmed by the owner on 2026-10-12 (not yet tested on the car) |
+| **Last uploaded to Play** | **40 (2.2.21)**, upload confirmed by the owner on 2026-10-12; tested on the car by the owner on 2026-10-12, all working |
 | App name for bundle files | `Flow` |
 | Release application ID | `com.JF_Flow` |
 | Version file | `app/build.gradle.kts` (`versionCode`, `versionName`) |
