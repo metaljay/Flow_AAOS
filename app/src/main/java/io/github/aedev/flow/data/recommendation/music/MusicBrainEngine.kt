@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2025-2026 Flow | A-EDev
  *
- * This file is part of Flow (https://github.com/A-EDev/Flow).
+ * This file is part of Flow (https://github.com/Flow-Tube/Flow).
  */
 
 package io.github.aedev.flow.data.recommendation.music
@@ -435,6 +435,19 @@ class MusicBrainEngine
             if (key.isEmpty() || artistName.isBlank()) return
             val affinity = brain.artistAffinity.getOrPut(key) { MusicAffinity() }
             if (affinity.display.isBlank()) affinity.display = artistName.trim()
+        }
+
+        suspend fun setFavouriteArtist(
+            artistId: String?,
+            artistName: String,
+            favourite: Boolean,
+        ) {
+            ensureInitialized()
+            mutex.withLock {
+                MusicBrainLearn.setFavouriteArtist(brain, musicArtistKey(artistId, artistName), artistName.trim(), favourite)
+                refreshHiddenArtistsLocked()
+            }
+            scheduleDebouncedSave()
         }
 
         suspend fun unblockArtist(artistKey: String) {

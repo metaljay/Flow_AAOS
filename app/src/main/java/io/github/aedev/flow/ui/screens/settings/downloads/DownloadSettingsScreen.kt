@@ -6,7 +6,6 @@ import android.content.Intent
 import android.content.pm.PackageManager
 import android.net.Uri
 import android.os.Build
-import android.os.Environment
 import android.provider.Settings
 import android.text.format.Formatter
 import androidx.activity.compose.rememberLauncherForActivityResult
@@ -15,6 +14,7 @@ import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.outlined.ManageSearch
 import androidx.compose.material.icons.outlined.AudioFile
 import androidx.compose.material.icons.outlined.Folder
 import androidx.compose.material.icons.outlined.FolderSpecial
@@ -39,6 +39,7 @@ import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.graphics.Shape
 import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import androidx.core.content.ContextCompat
@@ -46,13 +47,16 @@ import androidx.hilt.lifecycle.viewmodel.compose.hiltViewModel
 import androidx.lifecycle.compose.LifecycleResumeEffect
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.aedev.flow.R
+import io.github.aedev.flow.data.local.AutoDownloadMode
 import io.github.aedev.flow.data.local.DownloadDialogStyle
 import io.github.aedev.flow.data.local.MAX_CONCURRENT_DOWNLOADS
 import io.github.aedev.flow.data.local.MusicAudioQuality
 import io.github.aedev.flow.data.local.VideoCodec
+import io.github.aedev.flow.data.repository.MediaCacheType
 import io.github.aedev.flow.data.video.downloader.work.RetagStatus
 import io.github.aedev.flow.data.video.storage.DownloadFiles
 import io.github.aedev.flow.data.video.storage.DownloadLocation
+import io.github.aedev.flow.data.video.storage.StorageAccess
 import io.github.aedev.flow.ui.components.settings.SettingsDestination
 import io.github.aedev.flow.ui.components.settings.SettingsPage
 import io.github.aedev.flow.ui.components.settings.SettingsTarget
@@ -73,11 +77,10 @@ import io.github.aedev.flow.ui.screens.settings.quality.codecLabel
 import io.github.aedev.flow.ui.screens.settings.quality.musicQualityLabel
 import io.github.aedev.flow.ui.screens.settings.quality.videoQualityLabel
 
-private enum class DownloadPicker { QUALITY, CODEC, MUSIC_QUALITY, CACHE }
+private enum class DownloadPicker { QUALITY, CODEC, MUSIC_QUALITY, AUTO_DOWNLOAD }
 
 private const val MAX_THREADS = 8
 private val UsageSpacing = 8.dp
-private val CacheSizes = listOf(100, 200, 500, 0)
 
 /** Where downloads are saved, how they are made, and the storage access that lists them. */
 @Composable
@@ -86,6 +89,7 @@ internal fun DownloadSettingsScreen(
     highlight: String?,
     onNavigate: (SettingsTarget) -> Unit,
     viewModel: DownloadSettingsViewModel = hiltViewModel(),
+    cacheViewModel: DownloadCacheViewModel = hiltViewModel(),
 ) {
     val context = LocalContext.current
     val locations by viewModel.locations.collectAsStateWithLifecycle()
@@ -93,14 +97,18 @@ internal fun DownloadSettingsScreen(
     val musicQuality by viewModel.musicQuality.collectAsStateWithLifecycle()
     val retagStatus by viewModel.retagStatus.collectAsStateWithLifecycle()
     val retagValue = retagStatus?.let { retagLabel(it) }
+    val earlierDownloads by viewModel.earlierDownloads.collectAsStateWithLifecycle()
+    val earlierDownloadsValue = earlierDownloads?.let { earlierDownloadsLabel(it) }
     val codec by viewModel.codec.collectAsStateWithLifecycle()
     val menuStyle by viewModel.menuStyle.collectAsStateWithLifecycle()
     val threads by viewModel.threads.collectAsStateWithLifecycle()
     val concurrentDownloads by viewModel.concurrentDownloads.collectAsStateWithLifecycle()
-    val cacheSizeMb by viewModel.cacheSizeMb.collectAsStateWithLifecycle()
+    val autoDownloadOpened by viewModel.autoDownloadOpened.collectAsStateWithLifecycle()
 
     var picker by rememberSaveable { mutableStateOf<DownloadPicker?>(null) }
     var locationTarget by rememberSaveable { mutableStateOf<DownloadTarget?>(null) }
+    var cacheLimit by rememberSaveable { mutableStateOf<MediaCacheType?>(null) }
+    LaunchedEffect(Unit) { cacheViewModel.measure() }
     var access by remember { mutableStateOf(StorageAccess.read(context)) }
     LifecycleResumeEffect(Unit) {
         access = StorageAccess.read(context)
@@ -167,8 +175,8 @@ internal fun DownloadSettingsScreen(
                 locationTarget = DownloadTarget.MUSIC
             })
             row(DownloadsIndex.usage.key) { shape -> StorageUsageRow(usage, storage?.usedFraction, shape) }
-            choice(DownloadsIndex.cacheSize, onClick = { picker = DownloadPicker.CACHE }) { stringResource(cacheSizeLabel(cacheSizeMb)) }
         }
+        downloadCacheSection(cacheViewModel, onEditLimit = { cacheLimit = it })
         group(key = "downloads.defaults", header = R.string.settings_section_download_defaults) {
             choice(DownloadsIndex.quickQuality, onClick = { picker = DownloadPicker.QUALITY }) {
                 stringResource(videoQualityLabel(quickQuality))
@@ -178,7 +186,12 @@ internal fun DownloadSettingsScreen(
                 stringResource(musicQualityLabel(musicQuality))
             }
             toggleGroup(DownloadsIndex.menuStyle, menuStyles, menuStyle, viewModel::setMenuStyle)
+            switch(DownloadsIndex.autoDownloadLikes, viewModel.autoDownloadLikes, viewModel::setAutoDownloadLikes)
+            choice(DownloadsIndex.autoDownloadOpened, onClick = { picker = DownloadPicker.AUTO_DOWNLOAD }) {
+                stringResource(autoDownloadLabel(autoDownloadOpened))
+            }
             switch(DownloadsIndex.wifiOnly, viewModel.wifiOnly, viewModel::setWifiOnly)
+            switch(DownloadsIndex.subtitleFile, viewModel.subtitleFile, viewModel::setSubtitleFile)
         }
         group(key = "downloads.library", header = R.string.local_section_library) {
             nav(
@@ -187,6 +200,13 @@ internal fun DownloadSettingsScreen(
                 onClick = { onNavigate(SettingsTarget(SettingsDestination.LOCAL_MEDIA)) },
             )
             info(DownloadsIndex.retag, value = retagValue)
+            nav(
+                DownloadsIndex.findEarlier,
+                value = earlierDownloadsValue,
+                icon = Icons.AutoMirrored.Outlined.ManageSearch,
+                showChevron = false,
+                onClick = viewModel::findEarlierDownloads,
+            )
         }
         group(key = "downloads.performance", header = R.string.performance_header, footer = R.string.performance_optimization_note) {
             slider(
@@ -249,6 +269,7 @@ internal fun DownloadSettingsScreen(
             DownloadTarget.MUSIC -> locations?.music
             null -> null
         }
+    cacheLimit?.let { type -> DownloadCacheLimitDialog(type, cacheViewModel, onDismiss = { cacheLimit = null }) }
     if (dialogTarget != null && dialogLocation != null) {
         DownloadLocationDialog(
             target = dialogTarget,
@@ -306,12 +327,12 @@ internal fun DownloadSettingsScreen(
             )
         }
 
-        DownloadPicker.CACHE -> {
+        DownloadPicker.AUTO_DOWNLOAD -> {
             FlowChoiceDialog(
-                title = stringResource(R.string.cache_size_header),
-                options = CacheSizes.map { FlowChoice(it, stringResource(cacheSizeLabel(it))) },
-                selected = cacheSizeMb,
-                onSelect = viewModel::setCacheSize,
+                title = stringResource(R.string.settings_auto_download_opened_title),
+                options = AutoDownloadMode.entries.map { FlowChoice(it, stringResource(autoDownloadLabel(it))) },
+                selected = autoDownloadOpened,
+                onSelect = viewModel::setAutoDownloadOpened,
                 onDismiss = { picker = null },
             )
         }
@@ -345,35 +366,6 @@ private fun StorageUsageRow(
     }
 }
 
-@Composable
-private fun LocationUi.label(): String =
-    if (notWritable) stringResource(R.string.download_location_not_writable, saveFolder) else saveFolder
-
-private fun cacheSizeLabel(megabytes: Int): Int =
-    when (megabytes) {
-        100 -> R.string.cache_size_100mb
-        200 -> R.string.cache_size_200mb
-        0 -> R.string.cache_size_unlimited
-        else -> R.string.cache_size_500mb
-    }
-
-private data class StorageAccess(
-    val allFiles: Boolean,
-    val video: Boolean,
-    val audio: Boolean,
-) {
-    companion object {
-        fun read(context: Context): StorageAccess {
-            val tiramisu = Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU
-            return StorageAccess(
-                allFiles = Build.VERSION.SDK_INT >= Build.VERSION_CODES.R && Environment.isExternalStorageManager(),
-                video = tiramisu && context.granted(Manifest.permission.READ_MEDIA_VIDEO),
-                audio = tiramisu && context.granted(Manifest.permission.READ_MEDIA_AUDIO),
-            )
-        }
-    }
-}
-
 private fun Context.granted(permission: String) = ContextCompat.checkSelfPermission(this, permission) == PackageManager.PERMISSION_GRANTED
 
 private fun Context.openAllFilesAccess() {
@@ -381,11 +373,3 @@ private fun Context.openAllFilesAccess() {
     runCatching { startActivity(appPage) }
         .onFailure { runCatching { startActivity(Intent(Settings.ACTION_MANAGE_ALL_FILES_ACCESS_PERMISSION)) } }
 }
-
-@Composable
-private fun retagLabel(status: RetagStatus): String =
-    when (status) {
-        RetagStatus.Waiting -> stringResource(R.string.download_retag_waiting)
-        is RetagStatus.Running -> stringResource(R.string.download_retag_progress, status.done, status.total)
-        is RetagStatus.Finished -> stringResource(R.string.download_retag_result, status.result.tagged, status.result.skipped)
-    }

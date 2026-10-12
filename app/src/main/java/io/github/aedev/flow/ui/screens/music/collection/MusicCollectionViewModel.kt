@@ -111,6 +111,18 @@ class MusicCollectionViewModel
 
         internal val downloads = MusicCollectionDownloads(viewModelScope, collectionId, queuer, collections, _messages::send)
 
+        internal val suggestions = MusicCollectionSuggestions(viewModelScope)
+
+        fun requestSuggestions() = suggestions.requestOnce(trackIds())
+
+        fun refreshSuggestions() = suggestions.refresh(trackIds())
+
+        private fun trackIds(): List<String> =
+            _state.value.details
+                ?.tracks
+                ?.map { it.videoId }
+                .orEmpty()
+
         init {
             load()
         }
@@ -309,6 +321,7 @@ class MusicCollectionViewModel
             if (!_state.value.isOwn) return
             viewModelScope.launch(PerformanceDispatcher.diskIO) {
                 val added = runCatching { playlists.addVideoToPlaylist(collectionId, track.toStoredVideo()) }.isSuccess
+                if (added) suggestions.drop(track.videoId)
                 _messages.send(
                     CollectionMessage(stringRes = if (added) R.string.toast_added_to_playlist else R.string.toast_failed_to_add_track),
                 )
@@ -322,19 +335,24 @@ class MusicCollectionViewModel
         ) {
             viewModelScope.launch(PerformanceDispatcher.networkIO) {
                 val tracks = songs ?: loadAll()?.tracks.orEmpty()
-                if (tracks.isEmpty()) return@launch
-                val added = runCatching { playlists.addVideosToPlaylist(target.id, tracks.map { it.toStoredVideo() }) }.isSuccess
-                _messages.send(
-                    if (added) {
-                        CollectionMessage(
-                            pluralRes = R.plurals.merge_playlist_success,
-                            count = tracks.size,
-                            args = listOf(tracks.size, target.name),
-                        )
-                    } else {
-                        CollectionMessage(stringRes = R.string.toast_failed_to_merge_playlist)
-                    },
-                )
+                copyTracksToPlaylist(playlists, target, tracks)?.let { _messages.send(it) }
+            }
+        }
+
+        /** Makes a music playlist and copies [songs] onto it; null means every song here. */
+        fun createAndAdd(
+            name: String,
+            description: String,
+            songs: List<MusicTrack>? = null,
+        ) {
+            viewModelScope.launch(PerformanceDispatcher.networkIO) {
+                val target = createMusicPlaylist(playlists, name, description)
+                if (target == null) {
+                    _messages.send(CollectionMessage(stringRes = R.string.toast_failed_to_merge_playlist))
+                    return@launch
+                }
+                val tracks = songs ?: loadAll()?.tracks.orEmpty()
+                copyTracksToPlaylist(playlists, target, tracks)?.let { _messages.send(it) }
             }
         }
 
@@ -529,6 +547,8 @@ data class MusicCollectionUiState(
             kind == MusicCollectionKind.DAILY_MIX
 
     val canExport: Boolean get() = kind == MusicCollectionKind.OWN || kind == MusicCollectionKind.SAVED || kind == MusicCollectionKind.LIKED
+
+    val showsSuggestions: Boolean get() = kind != null && kind != MusicCollectionKind.ALBUM && kind != MusicCollectionKind.DAILY_MIX
 }
 
 internal fun remoteKind(id: String): MusicCollectionKind =

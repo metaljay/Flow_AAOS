@@ -28,6 +28,16 @@ val buildingAppBundle =
         taskName.contains("bundle", ignoreCase = true)
     }
 
+fun secretValue(
+    property: String,
+    localKey: String,
+    environment: String,
+): String =
+    (project.findProperty(property) as String?)
+        ?: localProperties.getProperty(localKey)
+        ?: System.getenv(environment)
+        ?: ""
+
 android {
     namespace = "io.github.aedev.flow"
     compileSdk = 37
@@ -42,6 +52,9 @@ android {
         versionName = "2.2.20"
 
         buildConfigField("int", "NIGHTLY_RUN", "0")
+        // Last.fm keys come from the CI secrets; builds without them ask the viewer for their own key.
+        buildConfigField("String", "LASTFM_API_KEY", "\"${secretValue("lastfmApiKey", "lastfm.apiKey", "LASTFM_API_KEY")}\"")
+        buildConfigField("String", "LASTFM_API_SECRET", "\"${secretValue("lastfmApiSecret", "lastfm.apiSecret", "LASTFM_API_SECRET")}\"")
 
         testInstrumentationRunner = "io.github.aedev.flow.HiltTestRunner"
         vectorDrawables {

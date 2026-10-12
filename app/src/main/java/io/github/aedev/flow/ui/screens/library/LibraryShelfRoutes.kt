@@ -16,6 +16,7 @@ import io.github.aedev.flow.data.video.DownloadedVideo
 import io.github.aedev.flow.ui.components.PlaylistCard
 import io.github.aedev.flow.ui.components.PlaylistCardLayout
 import io.github.aedev.flow.ui.components.library.LibraryAlbumCard
+import io.github.aedev.flow.ui.components.library.LibraryEmptyShelf
 import io.github.aedev.flow.ui.components.library.LibraryMediaItem
 import io.github.aedev.flow.ui.components.library.LibraryMediaShelf
 import io.github.aedev.flow.ui.components.library.LibraryShelf
@@ -33,12 +34,17 @@ internal fun LibraryMediaShelfRoute(
     onMusicClick: (MusicTrack, List<MusicTrack>, String) -> Unit,
     onDownloadedVideoClick: (List<DownloadedVideo>, Int) -> Unit,
     onDownloadedMusicClick: (List<DownloadedTrack>, Int) -> Unit,
+    emptyMessage: String? = null,
 ) {
     val items by itemsFlow.collectAsStateWithLifecycle()
     val title = section.title
     when {
         items == null -> {
             LibraryShelfPlaceholder(title = title, icon = section.icon)
+        }
+
+        items.isNullOrEmpty() && emptyMessage != null -> {
+            LibraryEmptyShelf(title = title, icon = section.icon, message = emptyMessage, onTitleClick = onTitleClick)
         }
 
         items.isNullOrEmpty() -> {
@@ -64,14 +70,14 @@ internal fun LibraryMediaShelfRoute(
 @Composable
 internal fun LibraryPlaylistsShelf(
     section: LibrarySection,
-    videoPlaylistsFlow: StateFlow<List<PlaylistInfo>?>,
-    musicPlaylistsFlow: StateFlow<List<PlaylistInfo>?>,
+    videoPlaylistsFlow: StateFlow<List<PlaylistInfo>?>?,
+    musicPlaylistsFlow: StateFlow<List<PlaylistInfo>?>?,
     onTitleClick: () -> Unit,
     onVideoPlaylistClick: (String) -> Unit,
     onMusicPlaylistClick: (String) -> Unit,
 ) {
-    val videoPlaylists by videoPlaylistsFlow.collectAsStateWithLifecycle()
-    val musicPlaylists by musicPlaylistsFlow.collectAsStateWithLifecycle()
+    val videoPlaylists = videoPlaylistsFlow?.collectAsStateWithLifecycle()?.value
+    val musicPlaylists = musicPlaylistsFlow?.collectAsStateWithLifecycle()?.value
     val title = section.title
 
     if (videoPlaylists == null && musicPlaylists == null) {

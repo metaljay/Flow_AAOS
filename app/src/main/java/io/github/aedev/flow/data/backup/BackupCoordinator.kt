@@ -9,10 +9,12 @@ import io.github.aedev.flow.data.local.BackupRepository
 import io.github.aedev.flow.data.local.LocalDataManager
 import io.github.aedev.flow.data.local.NO_LIKES
 import io.github.aedev.flow.data.recommendation.FlowNeuroEngine
+import io.github.aedev.flow.data.recommendation.music.FavouriteArtistsStore
 import io.github.aedev.flow.data.recommendation.music.MusicBrainEngine
 import io.github.aedev.flow.data.stats.RecapBackup
 import io.github.aedev.flow.data.stats.VideoStatsRecorder
 import io.github.aedev.flow.notification.NotificationHelper
+import io.github.aedev.flow.sync.apply.SyncChangeLedgerStore
 import kotlinx.coroutines.CancellationException
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.Dispatchers
@@ -65,6 +67,8 @@ class BackupCoordinator
         private val musicBrain: MusicBrainEngine,
         private val localDataManager: LocalDataManager,
         private val videoStats: VideoStatsRecorder,
+        private val favouriteArtists: FavouriteArtistsStore,
+        private val syncLedger: SyncChangeLedgerStore,
     ) {
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.Default)
         private val _operation = MutableStateFlow<BackupOperation>(BackupOperation.Idle)
@@ -107,7 +111,12 @@ class BackupCoordinator
 
         fun exportMaster(uri: Uri) =
             exportTo(uri, R.string.master_backup_export_success, R.string.master_backup_export_failed) {
-                repository.exportMasterBackup(uri, musicBrain = musicBrainBytes(), recap = recapBytes())
+                repository.exportMasterBackup(
+                    uri,
+                    musicBrain = musicBrainBytes(),
+                    recap = recapBytes(),
+                    favouriteArtists = favouriteArtists.export(),
+                )
             }
 
         /** Writes the automatic backup now, into the chosen folder, and records when it ran. */
@@ -130,6 +139,7 @@ class BackupCoordinator
                             folder,
                             musicBrain = musicBrainBytes(),
                             recap = recapBytes(),
+                            favouriteArtists = favouriteArtists.export(),
                         )
                     }
                 }
@@ -143,7 +153,9 @@ class BackupCoordinator
 
         fun importFlowBackup(uri: Uri) =
             run(context.getString(R.string.import_flow_backup_item_title)) {
-                repository.importData(uri).fold(
+                val result = repository.importData(uri)
+                if (result.isSuccess) syncLedger.reset()
+                result.fold(
                     onSuccess = { BackupOperation.Succeeded(context.getString(R.string.import_flow_backup_success)) },
                     onFailure = { failed(R.string.import_flow_backup_failed_template, it) },
                 )
@@ -151,15 +163,18 @@ class BackupCoordinator
 
         fun importMaster(uri: Uri) =
             run(context.getString(R.string.master_backup_title)) {
-                repository
-                    .importMasterBackup(
+                val result =
+                    repository.importMasterBackup(
                         uri,
                         onMusicBrain = { bytes -> musicBrain.importBrainFromStream(bytes.inputStream()) },
                         onRecap = ::restoreRecap,
-                    ).fold(
-                        onSuccess = { BackupOperation.Succeeded(context.getString(R.string.import_master_backup_success)) },
-                        onFailure = { failed(R.string.import_failed_template, it) },
+                        onFavouriteArtists = favouriteArtists::restore,
                     )
+                if (result.isSuccess) syncLedger.reset()
+                result.fold(
+                    onSuccess = { BackupOperation.Succeeded(context.getString(R.string.import_master_backup_success)) },
+                    onFailure = { failed(R.string.import_failed_template, it) },
+                )
             }
 
         fun importEngine(uri: Uri) =
@@ -229,11 +244,12 @@ class BackupCoordinator
         fun importLibreTubePlaylists(uri: Uri) =
             importCounted(R.string.import_label_libretube_playlists) { progress -> repository.importLibreTubePlaylists(uri, progress) }
 
-        fun importYouTubeTakeout(uri: Uri): Boolean {
+        /** Every archive of one export; Google splits large exports into several. */
+        fun importYouTubeTakeout(uris: List<Uri>): Boolean {
             val label = context.getString(R.string.import_label_youtube_takeout)
             return run(label) {
                 repository
-                    .importYouTubeTakeout(uri) { step, current, total -> progress("$label – $step", current, total) }
+                    .importYouTubeTakeout(uris) { step, current, total -> progress("$label – $step", current, total) }
                     .fold(
                         onSuccess = { summary ->
                             BackupOperation.Succeeded(summary.ifBlank { context.getString(R.string.import_success, label) })

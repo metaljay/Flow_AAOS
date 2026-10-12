@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2025-2026 Flow | A-EDev
  *
- * This file is part of Flow (https://github.com/A-EDev/Flow).
+ * This file is part of Flow (https://github.com/Flow-Tube/Flow).
  *
  * This recommendation algorithm (FlowNeuroEngine) is the intellectual property
  * of the Flow project. Any use of this code in other projects must
@@ -83,6 +83,7 @@ internal object NeuroSearchLearning {
                 brain.globalVector,
                 ContentVector(topics = shares.mapValues { it.value / total }),
                 LEARNING_RATE,
+                NeuroVectorMath.decayStrength(LEARNING_RATE),
             )
         val planted =
             NeuroVectorMath.plantKeys(learned, topics.phrases, NeuroScoring.TOPIC_ACQUISITION_FLOOR)

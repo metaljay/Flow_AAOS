@@ -1,7 +1,7 @@
 /*
  * Copyright (C) 2025-2026 Flow | A-EDev
  *
- * This file is part of Flow (https://github.com/A-EDev/Flow).
+ * This file is part of Flow (https://github.com/Flow-Tube/Flow).
  */
 
 package io.github.aedev.flow.utils.relativedate
@@ -161,5 +161,30 @@ class RelativeUploadDateParserTest {
         assertThat(parse("Se estrena el 12/10/26, 18:00", hl = "es")).isNull()
         assertThat(parse("Première le 12 oct. à 18 h", hl = "fr")).isNull()
         assertThat(parse("1.2M views", hl = "en")).isNull()
+    }
+
+    @Test
+    fun `an age keeps the unit it was given in`() {
+        assertThat(RelativeUploadDateParser.read("1 year ago", "en", now)?.unit).isEqualTo(RelativeDateUnit.YEAR)
+        assertThat(RelativeUploadDateParser.read("hace 3 semanas", "es", now)?.unit).isEqualTo(RelativeDateUnit.WEEK)
+        assertThat(RelativeUploadDateParser.read("5h", "en", now)?.unit).isEqualTo(RelativeDateUnit.HOUR)
+        assertThat(RelativeUploadDateParser.read("Streamed 2 days ago", "en", now)?.unit).isEqualTo(RelativeDateUnit.DAY)
+    }
+
+    @Test
+    fun `only an age under a day places the calendar date`() {
+        assertThat(RelativeUploadDateParser.read("just now", "en", now)?.placesCalendarDay).isTrue()
+        assertThat(RelativeUploadDateParser.read("45 minutes ago", "en", now)?.placesCalendarDay).isTrue()
+        assertThat(RelativeUploadDateParser.read("hace 5 horas", "es", now)?.placesCalendarDay).isTrue()
+        assertThat(RelativeUploadDateParser.read("yesterday", "en", now)?.placesCalendarDay).isFalse()
+        assertThat(RelativeUploadDateParser.read("3 days ago", "en", now)?.placesCalendarDay).isFalse()
+        assertThat(RelativeUploadDateParser.read("1 year ago", "en", now)?.placesCalendarDay).isFalse()
+    }
+
+    @Test
+    fun `read and parse agree on the timestamp`() {
+        listOf("today", "yesterday", "just now", "3 days ago", "2 hrs ago", "1 month ago").forEach { text ->
+            assertWithMessage(text).that(RelativeUploadDateParser.read(text, "en", now)?.timestamp).isEqualTo(parse(text))
+        }
     }
 }

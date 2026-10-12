@@ -20,6 +20,7 @@ import io.github.aedev.flow.data.local.entity.DownloadItemEntity
 import io.github.aedev.flow.data.local.entity.DownloadItemStatus
 import io.github.aedev.flow.data.local.entity.DownloadWithItems
 import io.github.aedev.flow.data.model.Video
+import io.github.aedev.flow.data.video.downloader.request.DownloadRequest
 import io.github.aedev.flow.data.video.downloader.work.DownloadStaging
 import io.github.aedev.flow.data.video.storage.DownloadDestination
 import io.github.aedev.flow.data.video.storage.DownloadFiles
@@ -114,6 +115,11 @@ class VideoDownloadManager
         private val tombstonePrefs by lazy {
             context.getSharedPreferences("flow_file_tombstones", Context.MODE_PRIVATE)
         }
+
+        private val _undeletable = MutableSharedFlow<List<String>>(extraBufferCapacity = 8)
+
+        /** Files a delete left on disk because another install owns them; the screen asks the system instead. */
+        val undeletable: SharedFlow<List<String>> = _undeletable.asSharedFlow()
 
         // Progress updates emitted by FlowDownloadService
         private val _progressUpdates = MutableSharedFlow<DownloadProgressUpdate>(extraBufferCapacity = 64)
@@ -392,7 +398,8 @@ class VideoDownloadManager
                         downloadDao.getDownloadWithItems(videoId)
                             ?: return@withContext false
 
-                    val filePaths = download.items.flatMap { artifactPathsFor(it.filePath) }.distinct()
+                    val subtitleFile = DownloadRequest.decode(download.download.requestJson)?.subtitleFile
+                    val filePaths = (download.items.flatMap { artifactPathsFor(it.filePath) } + listOfNotNull(subtitleFile)).distinct()
                     val thumbPath = download.download.thumbnailPath
 
                     recentlyDeletedPaths.addAll(filePaths)
@@ -400,6 +407,7 @@ class VideoDownloadManager
                     downloadDao.deleteDownload(videoId)
 
                     ioScope.launch {
+                        val left = mutableListOf<String>()
                         filePaths.forEach { path ->
                             val fileGone = deleteFileFromDisk(path)
                             if (fileGone) {
@@ -410,8 +418,10 @@ class VideoDownloadManager
                             } else {
                                 tombstonePrefs.edit().putBoolean(path, true).apply()
                                 Log.w(TAG, "File not deleted (kept in guard + tombstoned): $path")
+                                if (!DownloadFiles.isDocument(path)) left += path
                             }
                         }
+                        if (left.isNotEmpty()) _undeletable.tryEmit(left)
                         thumbPath?.let { tp ->
                             try {
                                 File(tp).takeIf { it.exists() }?.delete()

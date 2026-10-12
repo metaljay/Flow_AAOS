@@ -57,7 +57,16 @@ class OnboardingViewModelTest {
     fun tearDown() = Dispatchers.resetMain()
 
     private fun viewModel(saved: SavedStateHandle = SavedStateHandle()) =
-        OnboardingViewModel(saved, subscriptions, backup, channelSearch, completer, preferences)
+        OnboardingViewModel(
+            saved,
+            subscriptions,
+            backup,
+            channelSearch,
+            completer,
+            preferences,
+            mockk(relaxed = true),
+            mockk(relaxed = true),
+        )
 
     @Test
     fun `a recreated screen resumes on the same step with the same choices`() =
@@ -136,12 +145,12 @@ class OnboardingViewModelTest {
             val viewModel = viewModel()
             runCurrent()
 
-            viewModel.startImport(ImportKind.NEWPIPE_HISTORY, mockk())
+            viewModel.startImport(ImportKind.NEWPIPE_HISTORY, listOf(mockk()))
             operation.value = BackupOperation.Failed("no")
             runCurrent()
             assertThat(viewModel.state.value.importedSources).isEmpty()
 
-            viewModel.startImport(ImportKind.NEWPIPE_SUBSCRIPTIONS, mockk())
+            viewModel.startImport(ImportKind.NEWPIPE_SUBSCRIPTIONS, listOf(mockk()))
             operation.value = BackupOperation.Succeeded("ok")
             runCurrent()
             assertThat(viewModel.state.value.importedSources).containsExactly(ImportSource.NEWPIPE)
