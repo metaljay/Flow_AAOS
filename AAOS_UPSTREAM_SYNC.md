@@ -27,7 +27,7 @@ In the commands below, `<branch>` is the parent branch in "Parent facts" and `<d
 8. **Approval gate.** Build the debug app, write the approval report (below) and stop. Do not merge into `main`. The owner replies `approve sync`, `cancel sync` or `problem: <what you saw>`. On `cancel sync`, delete the sync branch (see "Abort or roll back"); `main` stays untouched. On `problem`, fix it on the sync branch, re-verify and report again. If the owner returns in a new chat, find the open `sync/` branch, re-run the checks quickly, then continue.
 9. **Land it.** `git switch main && git merge --ff-only sync/upstream-<date>`. If that refuses because `main` moved, merge `main` into the sync branch, re-verify, retry. Then `git push origin main`.
 10. **Clean up.** `git branch -d sync/upstream-<date>`; if it was pushed, `git push origin --delete sync/upstream-<date>`. Never leave sync branches behind.
-11. **Record.** Update "Last merged parent commit" above and add an `AAOS_LOG.md` entry: parent SHA, number of parent commits, conflicts, the status of each customisation, what was and was not verified. If a customisation's code moved, update its Part 2 block and the Hotspots table. Then continue with the release (`AAOS_RELEASE.md`).
+11. **Record.** Update "Last merged parent commit" above and record in the session log (`AAOS_FORK.md` section 10): parent SHA, number of parent commits, conflicts, the status of each customisation, what was and was not verified. If a customisation's code moved, update its Part 2 block and the Hotspots table. Then continue with the release (`AAOS_RELEASE.md`).
 
 ## The approval report
 

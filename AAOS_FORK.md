@@ -118,10 +118,10 @@ Keep code, file paths and jargon out of sections 1 to 5 apart from the prompts. 
 
 ## 10. Keeping these docs current (shared)
 
-- **After every verified change**: add a dated entry to `AAOS_LOG.md`; if a customisation was added, changed or removed, update section 7, its Part 2 block, the hotspot table in `AAOS_UPSTREAM_SYNC.md` and, if the owner would notice it, the README summary; after a confirmed upload, update "Last uploaded to Play" in `AAOS_RELEASE.md`. The recipes make these updates.
-- **One home per fact.** Rules and customisations live here; release facts and steps in `AAOS_RELEASE.md`; parent-update steps and the approval report in `AAOS_UPSTREAM_SYNC.md`; car facts in `AAOS_CAR_NOTES.md`; history in `AAOS_LOG.md`. Other files link to these instead of repeating them.
+- **After every verified change**: record what was done and checked in the session log (below); if a customisation was added, changed or removed, update section 7, its Part 2 block, the hotspot table in `AAOS_UPSTREAM_SYNC.md` and, if the owner would notice it, the README summary; after a confirmed upload, update "Last uploaded to Play" in `AAOS_RELEASE.md`. The recipes make these updates.
+- **One home per fact.** Rules and customisations live here; release facts and steps in `AAOS_RELEASE.md`; parent-update steps and the approval report in `AAOS_UPSTREAM_SYNC.md`; car facts in `AAOS_CAR_NOTES.md`; history in the session log. Other files link to these instead of repeating them.
 - **Both repos together.** Flow and Nuvio share the same car and the same doc skeleton. Car facts go into `AAOS_CAR_NOTES.md` in **both** repos in the same change (the file is identical in both). A change to a **(shared)** section, the README layout or a recipe is made in both repos too.
-- **Keep the log short.** `AAOS_LOG.md` keeps the newest 15 entries. When adding an entry would make more, move the oldest entries (unchanged) to the top of `AAOS_LOG_ARCHIVE.md`. A release-preparation entry is at most three lines.
+- **Session log.** History lives in the owner's private session log on the Mac (`handover/SESSION-LOG.md`, excluded from git; entries before 2026-10-12 are in `handover/archive/`). Agents that have it record their work there; agents without it report the same details in the chat instead. Never commit it. A release-preparation record is at most three lines.
 - **No contradictions, no stale text.** When a number or a rule changes, search `README.md`, `AGENTS.md`, the recipes and every `AAOS_*.md` file for the old wording and update every mention. Delete obsolete text rather than adding a correction next to it.
 
 ## 11. Environment notes

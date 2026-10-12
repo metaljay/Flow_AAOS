@@ -1,6 +1,6 @@
 # AAOS car notes: hard-won facts about the Polestar 3
 
-> Fork-owned file, identical in the Flow and Nuvio forks. Read it before touching the manifest, the media card, launch behaviour or anything near the screen edges. When a new car fact is learned, add it here **in both repos** in the same change. Evidence for each fact is in `AAOS_LOG.md` (and `AAOS_LOG_ARCHIVE.md`) under the date given.
+> Fork-owned file, identical in the Flow and Nuvio forks. Read it before touching the manifest, the media card, launch behaviour or anything near the screen edges. When a new car fact is learned, add it here **in both repos** in the same change. Evidence for each fact is in the owner's private session log and its archive (`AAOS_FORK.md` section 10) under the date given.
 
 ## The car and its launcher
 

@@ -89,7 +89,7 @@ The assistant makes the change, checks the app still builds, records what it did
 
 - **A chat ended halfway through a job:** open a new chat in the same folder and paste:
   ```
-  Read AGENTS.md, then check AAOS_LOG.md, git status and any sync/ branch, and tell me in plain English where the last job got to and what's next. Do not change anything yet.
+  Read AGENTS.md, then check the session log if you have it, git status and any sync/ branch, and tell me in plain English where the last job got to and what's next. Do not change anything yet.
   ```
 - **Play says the version code was already used:** tell the assistant `Play says the version code was already used.` It raises the number and you sign and upload again.
 - **The assistant stops with an error:** it gives you one message to paste back to it, or to another AI assistant. You never need to fix code yourself.
@@ -105,7 +105,7 @@ You don't need to read these files. They are the instructions that keep any AI a
 | [`AAOS_UPSTREAM_SYNC.md`](AAOS_UPSTREAM_SYNC.md) | How parent updates are done, and the report you get before approving |
 | [`AAOS_RELEASE.md`](AAOS_RELEASE.md) | Release steps, the version number rule, and the last version uploaded |
 | [`AAOS_CAR_NOTES.md`](AAOS_CAR_NOTES.md) | Things learned on the real Polestar 3 (the same in both apps) |
-| [`AAOS_LOG.md`](AAOS_LOG.md) | A diary of every change and what was checked (older entries in `AAOS_LOG_ARCHIVE.md`) |
+| `handover/` (on your Mac only, not on GitHub) | A diary of every chat and what was checked, and the current to-do list |
 | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` | Where AI assistants start reading |
 | `.github/skills/` | The step-by-step recipes that the prompts above run |
 

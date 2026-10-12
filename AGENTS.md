@@ -13,7 +13,7 @@ Before ANY code change, parent update, build or release, read `AAOS_FORK.md`: ru
 | Build or upload a release | `.github/skills/aaos-release/SKILL.md`, which uses `AAOS_RELEASE.md` (every release raises the version) |
 | Record an upload | `.github/skills/aaos-uploaded/SKILL.md` |
 | Manifest, media card, launch behaviour, screen edges, Play | `AAOS_CAR_NOTES.md` first (facts learned on the real car) |
-| Past changes and evidence | `AAOS_LOG.md` (older entries in `AAOS_LOG_ARCHIVE.md`), only when needed |
+| Past changes and evidence | git history, and the owner's private session log (`AAOS_FORK.md` section 10), only when needed |
 
 Claude Code and GitHub Copilot also list the recipes as `/aaos-sync`, `/aaos-tweak`, `/aaos-release` and `/aaos-uploaded`. Any text below this block comes from the parent project; follow its coding rules too.
 <!-- AAOS-FORK:END -->
