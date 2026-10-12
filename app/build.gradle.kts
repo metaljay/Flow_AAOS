@@ -48,8 +48,8 @@ android {
         minSdk = 26
         targetSdk = 36
         // Increment versionCode for every Play upload; Play rejects a code already used by a track.
-        versionCode = 39
-        versionName = "2.2.20"
+        versionCode = 40
+        versionName = "2.2.21"
 
         buildConfigField("int", "NIGHTLY_RUN", "0")
         // Last.fm keys come from the CI secrets; builds without them ask the viewer for their own key.
