@@ -92,4 +92,4 @@ Run the lines one at a time (one flavour at a time saves memory). Always use fla
 | `app/src/test/.../ui/theme/FlowTypographyTest.kt` | C5 | expects our larger type scale | Keep our sizes in the assertions |
 | `res/drawable/ic_launcher_foreground.xml`, `ic_launcher_dynamic_foreground.xml` | C7 | red play mark | Keep ours |
 | `README.md`, `AGENTS.md` | C10 | owner README; fork block at the top of AGENTS | Keep our README and block; take the parent's text below the block |
-| `CLAUDE.md`, `GEMINI.md`, `.claude/skills`, `.github/skills/aaos-*`, `AAOS_*.md` | C10 | fork-owned agent entry points, recipes and docs | Keep ours (the parent's `.gitignore` ignores `.claude/` and `claude.md`; these are tracked anyway, never delete them) |
+| `CLAUDE.md`, `GEMINI.md`, `.claude/skills`, `.github/skills/aaos-*`, `AAOS_*.md`, `docs/agents/`, `CONTEXT.md`, `docs/adr/` | C10 | fork-owned agent entry points, recipes and docs | Keep ours (the parent's `.gitignore` ignores `.claude/` and `claude.md`; these are tracked anyway, never delete them) |

@@ -16,6 +16,22 @@ Before ANY code change, parent update, build or release, read `AAOS_FORK.md`: ru
 | Past changes and evidence | git history, and the owner's private session log (`AAOS_FORK.md` section 10), only when needed |
 
 Claude Code and GitHub Copilot also list the recipes as `/aaos-sync`, `/aaos-tweak`, `/aaos-release` and `/aaos-uploaded`. Any text below this block comes from the parent project; follow its coding rules too.
+
+## Agent skills
+
+### Issue tracker
+
+GitHub Issues on this fork (`metaljay/Flow_AAOS`, public), managed with the `gh` CLI; never the parent's. See `docs/agents/issue-tracker.md`.
+
+### Triage labels
+
+The five default triage labels, used as-is: `needs-triage`, `needs-info`, `ready-for-agent`, `ready-for-human`, `wontfix`. See `docs/agents/triage-labels.md`.
+
+### Domain docs
+
+Single-context: one `CONTEXT.md` and `docs/adr/` at the repo root, created when they're first needed. See `docs/agents/domain.md`.
+
+These files, and `CONTEXT.md` and `docs/adr/` once they exist, are fork-owned: keep them accurate, like the `AAOS_*.md` files.
 <!-- AAOS-FORK:END -->
 
 ## graphify

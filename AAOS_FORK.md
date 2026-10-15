@@ -92,7 +92,7 @@ The owner has no coding experience, copy-pastes messages between chats, and depe
 | C7 | Launcher icon | Red YouTube play mark, 48 x 32 dp on the 108 dp grid. |
 | C8 | Car media card | The car's home screen card shows Flow's last video or song; no `androidx.car.app.launchable`. |
 | C9 | Bundle packaging | ABI-split workaround for bundle tasks stays. |
-| C10 | Fork docs | README, AGENTS fork block, agent entry points, recipes and `AAOS_*.md` files stay. |
+| C10 | Fork docs | README, AGENTS fork block, agent entry points, recipes, agent-skill docs and `AAOS_*.md` files stay. |
 
 Each one has a detail block in Part 2: what and why, where it lives, how to redo it after a parent update, and how to check it.
 
@@ -210,6 +210,6 @@ Each block uses the same four headings. **After a parent update** is what the sy
 ### C10. Fork docs
 
 - **What and why:** these files are the memory that survives between agent chats and the owner's only way to steer agents.
-- **Where:** `README.md` (contract in section 9); the fork block at the top of `AGENTS.md`; `CLAUDE.md`, `GEMINI.md`; `.claude/skills` (a link to `.github/skills`); `.github/skills/aaos-*`; every `AAOS_*.md` file.
+- **Where:** `README.md` (contract in section 9); the fork block at the top of `AGENTS.md`; `CLAUDE.md`, `GEMINI.md`; `.claude/skills` (a link to `.github/skills`); `.github/skills/aaos-*`; `docs/agents/`, plus `CONTEXT.md` and `docs/adr/` once they exist; every `AAOS_*.md` file.
 - **After a parent update:** keep ours; in `AGENTS.md` keep our block at the top and take the parent's text below it. The parent's `.gitignore` ignores `.claude/` and `claude.md`; these are tracked anyway, never delete them.
 - **Check:** the files exist and the README banner is intact.
