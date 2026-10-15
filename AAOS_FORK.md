@@ -128,7 +128,7 @@ Keep code, file paths and jargon out of sections 1 to 5 apart from the prompts. 
 
 Shared (both repos):
 
-- Builds run on the owner's Mac with Android Studio. The Development folder holds both repos side by side; the release key `Key.jks` and the `For upload to Play Console` folder sit in `Android-Release` beside them for signed bundles (outside git).
+- Builds run on the owner's Mac with Android Studio. Both repos sit side by side in the owner's code folder (outside iCloud), with the `Play Console` folder beside them (outside git): the release key `Key.jks`, the signed bundles (one folder per app) and the store artwork.
 - Emulator used for checks: `Automotive_Large_Portrait` (1280 x 1606). It does not prove Polestar 3 behaviour. If `adb` or the emulator is unavailable, say so; never claim device verification from a compile.
 - If tests fail with "Unsupported class file major version 71", the default Java is too new: rerun with Android Studio's bundled Java (`JAVA_HOME="/Applications/Android Studio.app/Contents/jbr/Contents/Home"` in front). It is an environment problem, not real failures.
 

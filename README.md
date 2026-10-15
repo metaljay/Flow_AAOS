@@ -82,7 +82,7 @@ The assistant makes the change, checks the app still builds, records what it did
 
 1. The assistant raises the version number (Play needs a higher one for every upload) and checks the build.
 2. It gives you click-by-click steps to sign the file in Android Studio. When that's done, reply `Bundle built`.
-3. It puts the file in the **For upload to Play Console** folder, opens that folder, and gives you the clicks for Google Play Console. When Play accepts it, reply `Uploaded` and it records the upload.
+3. It puts the file, clearly named, in the app's folder inside **Play Console** (next to the project folders), opens that folder, and gives you the clicks for Google Play Console. When Play accepts it, reply `Uploaded` and it records the upload.
 4. Install or update the app from the Play Store in the car.
 
 ### If something goes wrong
