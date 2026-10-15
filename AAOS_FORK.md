@@ -55,7 +55,7 @@ The recipes are plain instructions any AI agent can follow. Claude Code and GitH
 
 ## 5. Permissions and safety rails (shared)
 
-Agents may edit files, build, run tests, commit, push to `origin/main` once the work is verified, and create and delete `sync/` branches. Agents must **never**:
+Agents may edit files, build, run tests, commit, push to `origin/main` once the work is verified, create and delete `sync/` branches, and create, comment on, label and close issues on the fork (`docs/agents/issue-tracker.md`). Agents must **never**:
 
 - force-push or rewrite history on `main`;
 - push to the parent or merge anything towards it;
@@ -65,7 +65,7 @@ Agents may edit files, build, run tests, commit, push to `origin/main` once the 
 - say something is "verified" without stating exactly what was run and what was not (compiled / unit-tested / emulator / real car);
 - put personal names, usernames, emails or absolute paths into any file, commit message or log.
 
-Commit with small, clear messages (`type(scope): description`). Stage files by name; do not use `git add -A`.
+Commit with small, clear messages (`type(scope): description`). Stage files by name; do not use `git add -A`. If a pull request is ever merged on GitHub, merge it with `gh pr merge --author-email "$(git config user.email)"`: otherwise GitHub stamps the merge commit with the account's main email.
 
 ## 6. Talking to the owner (shared)
 
