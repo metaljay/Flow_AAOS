@@ -59,8 +59,8 @@ internal fun NavController.navigateToTab(
 /** The first tab a video opened from the Shorts tab can play over: any visible tab but Shorts itself. */
 internal fun shortsExitRoute(tabs: List<FlowTab>): String = (tabs.firstOrNull { it != FlowTab.Shorts } ?: FlowTab.Home).route
 
-/** Search is a tab, but it keeps the back-button layout of the other search screens, so no bar. */
-internal fun FlowTab?.showsNavigationBar(): Boolean = this != null && this != FlowTab.Search
+/** AAOS fork: every tab keeps the bar, so search results are never a dead end in the car. */
+internal fun FlowTab?.showsNavigationBar(): Boolean = this != null
 
 internal fun youtubeChannelUrl(channelIdOrHandle: String): String? {
     val value = channelIdOrHandle.trim()

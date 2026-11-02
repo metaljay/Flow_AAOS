@@ -85,6 +85,9 @@ Run the lines one at a time (one flavour at a time saves memory). Always use fla
 | `app/src/main/AndroidManifest.xml`, `res/xml/automotive_app_desc.xml` | C2, C3, C8 | AAOS features and metadata, car launcher, `distractionOptimized`, camera optional, car media service and provider | Keep every AAOS entry; give any new parent activity the same metadata |
 | `service/FlowCarMediaSession.kt`, `FlowCarMediaBrowserService.kt`, `FlowCarMediaArtworkProvider.kt`, `FlowApplication.kt` (one `startObserving` call), `res/values/aaos_car_media_strings.xml` | C8 | car media card mirroring the video and music players | Keep; if the parent renames `GlobalPlayerState.currentVideo`, `EnhancedPlayerManager.playerState` or `EnhancedMusicPlayerManager.currentTrack`/`playerState`, re-point the observers |
 | `ui/components/layout/navigation/FlowNavigationChrome.kt`, `FlowNavigationBar.kt` | C4 | bottom navigation forced, larger icons | The parent's side rail must not return |
+| `ui/NavigationDestinations.kt`, `app/src/test/.../ui/NavigationDestinationsTest.kt` | C4 | the Search tab keeps the bottom bar | Keep ours |
+| `MainActivity.kt`, `utils/CarDisplayScale.kt` | C11 | one call in `attachBaseContext` scales the whole app; the scale lives in the fork-only file | Keep the call; take the parent's for the rest |
+| `shared/FlowSearchField.kt`, `ui/components/search/SearchTopBar.kt` | C5, C6, C11 | taller search field, larger buttons, 16 dp side padding | Re-apply sizes |
 | `ui/components/layout/topbar/*` | C5, C6 | 72 dp bars, larger actions, 12 dp end inset | Keep screens on the shared component |
 | `ui/theme/Type.kt` | C5 | larger typography | Re-apply our scale on the parent's new scale |
 | `ui/screens/home/HomeScreen.kt` | C5 | larger logo and search; logo 12 dp start inset | Re-apply |

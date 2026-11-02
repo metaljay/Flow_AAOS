@@ -86,13 +86,14 @@ The owner has no coding experience, copy-pastes messages between chats, and depe
 | C1 | Play identity | Release application ID stays exactly `com.JF_Flow`; namespace stays the parent's. |
 | C2 | AAOS manifest | Automotive features, car launcher entry, automotive app descriptor and `distractionOptimized` stay. |
 | C3 | Camera optional | Both camera features stay `required="false"` so the car can install the app. |
-| C4 | Bottom navigation | Navigation stays at the bottom at every window size; no side rail. |
+| C4 | Bottom navigation | Navigation stays at the bottom at every window size and on search; no side rail. |
 | C5 | Large-display legibility | Larger type, 72 dp bars, larger Home logo, player, Shorts and music controls. |
 | C6 | Display safe area | Touch targets at least 16 dp from the left and right window edges. |
 | C7 | Launcher icon | Red YouTube play mark, 48 x 32 dp on the 108 dp grid. |
 | C8 | Car media card | The car's home screen card shows Flow's last video or song; no `androidx.car.app.launchable`. |
 | C9 | Bundle packaging | ABI-split workaround for bundle tasks stays. |
 | C10 | Fork docs | README, AGENTS fork block, agent entry points, recipes, agent-skill docs and `AAOS_*.md` files stay. |
+| C11 | Whole-app size scale | Everything in the app is drawn 1.5 times larger for the car touchscreen. |
 
 Each one has a detail block in Part 2: what and why, where it lives, how to redo it after a parent update, and how to check it.
 
@@ -166,8 +167,8 @@ Each block uses the same four headings. **After a parent update** is what the sy
 
 ### C4. Bottom navigation at every window size
 
-- **What and why:** the car window is wide, and the parent switches to a side rail on wide screens. We keep Home, Shorts, Music, Subscriptions and Library at the bottom, with a 72 dp minimum bar height above the system navigation inset and larger icons and labels. The overflow destination still works when more tabs are enabled than fit.
-- **Where:** `ui/components/layout/navigation/FlowNavigationChrome.kt`, `FlowNavigationBar.kt`.
+- **What and why:** the car window is wide, and the parent switches to a side rail on wide screens. We keep Home, Shorts, Music, Subscriptions and Library at the bottom, with a 72 dp minimum bar height above the system navigation inset and larger icons and labels. The overflow destination still works when more tabs are enabled than fit. The Search tab keeps the bar too (the parent hides it there).
+- **Where:** `ui/components/layout/navigation/FlowNavigationChrome.kt`, `FlowNavigationBar.kt`; `ui/NavigationDestinations.kt` (`showsNavigationBar`) and its test.
 - **After a parent update:** the parent's adaptive side rail must not come back; re-apply the forced bottom bar to the parent's new navigation code.
 - **Check:** emulator: navigation at the bottom on every screen; overflow destination reachable.
 
@@ -180,8 +181,8 @@ Each block uses the same four headings. **After a parent update** is what the sy
 
 ### C6. Display safe area
 
-- **What and why:** the Polestar 3 screen's rounded corners and bezel cover the outer edge of the app window (`AAOS_CAR_NOTES.md`). Every touch target (not just its icon) sits at least 16 dp from the left and right window edges, and icons about 24 to 28 dp in. The top bar's trailing actions end with a 12 dp inset (`FlowTopBarDefaults.ActionsEndInset`, applied once in `FlowTopBar` so every screen gets it); the settings cog was only partly tappable at 4 dp (owner report 2026-10-05).
-- **Where:** `ui/components/layout/topbar/FlowTopBarDefaults.kt`, `FlowTopBar.kt`; any new edge control.
+- **What and why:** the Polestar 3 screen's rounded corners and bezel cover the outer edge of the app window (`AAOS_CAR_NOTES.md`). Every touch target (not just its icon) sits at least 16 dp from the left and right window edges, and icons about 24 to 28 dp in. The top bar's trailing actions end with a 12 dp inset and its back button starts with one (`FlowTopBarDefaults.ActionsEndInset`, `BackStartInset`, applied once in `FlowTopBar` so every screen gets them); the settings cog was only partly tappable at 4 dp (owner report 2026-10-05). The search bar has 16 dp side padding. These sizes are before the C11 scale.
+- **Where:** `ui/components/layout/topbar/FlowTopBarDefaults.kt`, `FlowTopBar.kt`; `ui/components/search/SearchTopBar.kt`; any new edge control.
 - **After a parent update:** check new or moved top bars, side buttons and player controls against the rule.
 - **Check:** emulator screenshot: the settings cog sits about 32 px from the right edge (it was about 20 px).
 
@@ -213,3 +214,10 @@ Each block uses the same four headings. **After a parent update** is what the sy
 - **Where:** `README.md` (contract in section 9); the fork block at the top of `AGENTS.md`; `CLAUDE.md`, `GEMINI.md`; `.claude/skills` (a link to `.github/skills`); `.github/skills/aaos-*`; `docs/agents/`, plus `CONTEXT.md` and `docs/adr/` once they exist; every `AAOS_*.md` file.
 - **After a parent update:** keep ours; in `AGENTS.md` keep our block at the top and take the parent's text below it. The parent's `.gitignore` ignores `.claude/` and `claude.md`; these are tracked anyway, never delete them.
 - **Check:** the files exist and the README banner is intact.
+
+### C11. Whole-app size scale
+
+- **What and why:** Flow's buttons were hard to tap in the car (owner report 2026-11-02). Google's car guidance asks for touch targets of at least 76 x 76 dp (64 x 64 dp for parked video apps), 24 dp margins and 24 dp text. One setting makes every screen 1.5 times larger, including new parent screens, instead of resizing each control. The dp numbers elsewhere in this file are before this scale, so 56 dp draws at 84. The search field is 56 dp tall with 56 dp buttons.
+- **Where:** `utils/CarDisplayScale.kt` (the 1.5 lives here); one `applyOverrideConfiguration` call in `MainActivity.attachBaseContext`; `ui/components/shared/FlowSearchField.kt`, `ui/components/search/SearchTopBar.kt`.
+- **After a parent update:** keep the `MainActivity` call and re-apply the search sizes. If the parent adds another user-facing activity, give it the same call.
+- **Check:** emulator: Home, search, video player, Music and Settings are larger with nothing cut off, the search bar's buttons are at least 84 px tall at density 160, and nothing tappable sits within 16 dp of the left or right edge.

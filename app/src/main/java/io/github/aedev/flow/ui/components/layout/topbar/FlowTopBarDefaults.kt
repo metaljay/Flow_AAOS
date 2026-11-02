@@ -28,6 +28,9 @@ object FlowTopBarDefaults {
     /** AAOS fork: keeps the trailing actions clear of the Polestar 3 display's rounded right edge. */
     val ActionsEndInset: Dp = 12.dp
 
+    /** AAOS fork: the same clearance for the back button at the left edge. */
+    val BackStartInset: Dp = 12.dp
+
     /**
      * Internal because [TopAppBarColors] is an experimental Material type: exposing it would force
      * every calling screen to opt in, which is exactly what this component exists to avoid.

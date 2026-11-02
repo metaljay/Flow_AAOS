@@ -44,6 +44,7 @@ import io.github.aedev.flow.ui.startup.ThemeSettings
 import io.github.aedev.flow.ui.startup.themeSettings
 import io.github.aedev.flow.utils.AppLanguageManager
 import io.github.aedev.flow.utils.FlowCrashHandler
+import io.github.aedev.flow.utils.carDisplayConfiguration
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -129,6 +130,7 @@ class MainActivity : ComponentActivity() {
 
     override fun attachBaseContext(newBase: Context) {
         super.attachBaseContext(AppLanguageManager.wrapContext(newBase, AppLanguageManager.resolveLanguageTag(newBase)))
+        applyOverrideConfiguration(carDisplayConfiguration(newBase))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {

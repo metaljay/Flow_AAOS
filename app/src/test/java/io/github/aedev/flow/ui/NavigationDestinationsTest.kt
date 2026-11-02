@@ -55,8 +55,8 @@ class NavigationDestinationsTest {
     }
 
     @Test
-    fun searchIsTheOnlyTabWithoutTheBar() {
-        FlowTab.entries.forEach { tab -> assertEquals(tab != FlowTab.Search, tab.showsNavigationBar()) }
+    fun everyTabHasTheBar() {
+        FlowTab.entries.forEach { tab -> assertTrue(tab.showsNavigationBar()) }
         assertFalse((null as FlowTab?).showsNavigationBar())
         assertTrue(FlowTab.Home.showsNavigationBar())
     }

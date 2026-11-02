@@ -63,7 +63,7 @@ import kotlinx.coroutines.flow.drop
  *
  * Built on [BasicTextField] rather than `SearchBarDefaults.InputField` because every overload of
  * that API applies `Modifier.sizeIn(minWidth = 360.dp, minHeight = 56.dp, maxWidth = 720.dp)`
- * internally and exposes no height parameter, so the 40 dp pill this app uses is not reachable
+ * internally and exposes no height parameter, so the slimmer pill this app uses is not reachable
  * through it. Everything else — shape, colours, type, motion — still comes from the theme.
  */
 @Composable
@@ -268,7 +268,7 @@ private fun ReleaseFocusWhenKeyboardCloses() {
     LaunchedEffect(imeVisible) { if (!imeVisible) focusManager.clearFocus() }
 }
 
-private val PillHeight = 40.dp
+private val PillHeight = 56.dp
 private val PillStartPadding = 16.dp
 private val PillLeadingPadding = 12.dp
 private val PillEndPadding = 4.dp
