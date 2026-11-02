@@ -340,18 +340,20 @@ class HomeChipFeeds
                 runCatching { channelMemory.storedUploads() }.getOrDefault(emptyList())
 
         private suspend fun interestVideos(interest: InterestChip): List<Video> {
+            val clusters = interest.clusters.toHashSet()
             val history = feedSources.historySeedInputs()
             val clusterOf = FlowNeuroEngine.clusterKeys(history.map { it.asVideo() })
             val seeds =
                 GraphSeedSelector
-                    .select(history.filter { clusterOf[it.id] == interest.representative }, HomeChipParams.RELATED_SEEDS)
+                    .select(history.filter { clusterOf[it.id] in clusters }, HomeChipParams.RELATED_SEEDS)
             val stored = storedUploads().filter { !it.isShort }
             val storedClusters = FlowNeuroEngine.clusterKeys(stored)
             val pool =
                 search(interestQueries(interest)) +
                     related(seeds) +
-                    stored.filter { storedClusters[it.id] == interest.representative }
-            return ranked(pool).take(HomeChipParams.MAX_VIDEOS)
+                    stored.filter { storedClusters[it.id] in clusters }
+            val outside = interest.category?.let { FlowNeuroEngine.outsideCategory(pool, it) }.orEmpty()
+            return ranked(pool.filterNot { it.id in outside }).take(HomeChipParams.MAX_VIDEOS)
         }
 
         private suspend fun newToYou(): List<Video> {
@@ -393,8 +395,7 @@ class HomeChipFeeds
                     features = setOf(YouTubeSearchParams.Feature.LIVE),
                 )
             val pool =
-                storedUploads().filter { it.isLive } +
-                    search(interests.take(2).mapNotNull { interestQueries(it, 1).firstOrNull() }, liveParams)
+                storedUploads().filter { it.isLive } + search(liveQueries(interests), liveParams)
             return ranked(pool.filter { it.isLive && !it.isUpcoming }).take(HomeChipParams.MAX_VIDEOS)
         }
 

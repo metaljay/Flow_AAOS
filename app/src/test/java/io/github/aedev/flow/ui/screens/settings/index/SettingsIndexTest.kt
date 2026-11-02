@@ -19,9 +19,10 @@ class SettingsIndexTest {
     }
 
     @Test
-    fun `every page but the custom theme editor has an entry`() {
+    fun `every page but the editors, which need something to open, has an entry`() {
         val pages = all.mapNotNull(DestinationIndex::destinationOf).toSet()
-        assertEquals(SettingsDestination.entries.toSet() - SettingsDestination.HOME - SettingsDestination.CUSTOM_THEME_EDIT, pages)
+        val editors = setOf(SettingsDestination.CUSTOM_THEME_EDIT, SettingsDestination.PROFILE_EDIT)
+        assertEquals(SettingsDestination.entries.toSet() - SettingsDestination.HOME - editors, pages)
     }
 
     @Test
@@ -57,5 +58,34 @@ class SettingsIndexTest {
             listOf(SettingsDestination.APPEARANCE, SettingsDestination.THEME, SettingsDestination.CUSTOM_THEME),
             SettingsDestination.CUSTOM_THEME.path,
         )
+    }
+
+    @Test
+    fun `a tv reaches no option on a page it leaves out`() {
+        val onTv = all.filter { DestinationIndex.isReachable(it, tv = true) }
+        val hidden =
+            setOf(
+                SettingsDestination.WIDGETS,
+                SettingsDestination.LOCAL_MEDIA,
+                SettingsDestination.NOTIFICATIONS,
+            )
+        assertTrue(onTv.none { option -> option.destination.path.any { it in hidden } })
+        assertTrue(onTv.any { DestinationIndex.destinationOf(it) == SettingsDestination.REMOTE_GUIDE })
+        assertTrue(onTv.any { DestinationIndex.destinationOf(it) == SettingsDestination.DOWNLOADS })
+    }
+
+    @Test
+    fun `a phone reaches every option but the TV-only ones`() {
+        val unreachable = all.filterNot { DestinationIndex.isReachable(it, tv = false) }
+        assertEquals(listOf(DestinationIndex.entry(SettingsDestination.REMOTE_GUIDE), ProfilesIndex.askWhosWatching), unreachable)
+    }
+
+    @Test
+    fun `tv availability only applies on a tv`() {
+        assertTrue(SettingAvailability.NotOnTv.isAvailable(githubFeatures = true, sdk = 36))
+        assertFalse(SettingAvailability.NotOnTv.isAvailable(githubFeatures = true, sdk = 36, tv = true))
+        assertFalse(SettingAvailability.TvOnly.isAvailable(githubFeatures = true, sdk = 36))
+        assertTrue(SettingAvailability.TvOnly.shownOn(tv = true))
+        assertTrue(SettingAvailability.GithubOnly.shownOn(tv = true))
     }
 }

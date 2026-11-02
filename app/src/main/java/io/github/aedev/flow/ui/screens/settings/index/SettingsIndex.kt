@@ -21,9 +21,11 @@ internal object SettingsIndex {
             QualityIndex.all +
             ContentIndex.all +
             MusicHomeIndex.all +
+            LibrarySectionsIndex.all +
             TopicsIndex.all +
             IntegrationsIndex.all +
             ScrobblingIndex.all +
+            ProfilesIndex.all +
             BackupIndex.all +
             DownloadsIndex.all +
             LocalMediaIndex.all +

@@ -13,6 +13,7 @@ import io.github.aedev.flow.data.localmedia.LocalMediaDetails
 import io.github.aedev.flow.data.localmedia.LocalMediaIds
 import io.github.aedev.flow.data.model.Comment
 import io.github.aedev.flow.data.model.Video
+import io.github.aedev.flow.data.profile.BeforeProfileSwitch
 import io.github.aedev.flow.data.repository.SponsorBlockRepository
 import io.github.aedev.flow.data.repository.YouTubeRepository
 import io.github.aedev.flow.data.transcript.TranscriptRepository
@@ -28,8 +29,10 @@ import io.github.aedev.flow.player.EnhancedPlayerManager
 import io.github.aedev.flow.player.GlobalPlayerState
 import io.github.aedev.flow.player.LifecyclePlaybackPreferences
 import io.github.aedev.flow.player.MiniPlayerExpansionState
+import io.github.aedev.flow.player.PlaybackTarget
 import io.github.aedev.flow.player.state.EnhancedPlayerState
 import io.github.aedev.flow.player.stream.PlaybackLoadResolver
+import io.github.aedev.flow.player.stream.ResetYouTubeSession
 import io.github.aedev.flow.player.stream.UpcomingPremiereProbe
 import io.github.aedev.flow.ui.screens.player.state.*
 import io.github.aedev.flow.utils.NetworkState
@@ -82,6 +85,7 @@ class VideoPlayerViewModel
         private val localMediaDetails: LocalMediaDetails,
         private val lifecyclePlayback: LifecyclePlaybackPreferences,
         private val autoDownload: AutoDownloadTrigger,
+        private val resetYouTubeSession: ResetYouTubeSession,
         @NetworkIoDispatcher private val networkDispatcher: CoroutineDispatcher,
         @IoDispatcher private val ioDispatcher: CoroutineDispatcher,
     ) : ViewModel() {
@@ -122,6 +126,7 @@ class VideoPlayerViewModel
                 isLoadCurrent = { loads.isCurrent(it) },
                 currentLoadToken = { loads.token },
                 shortsEnabled = { loads.shortsEnabled },
+                originalTitles = { loads.originalTitles },
                 exclusions = { loads.exclusions },
             )
 
@@ -199,8 +204,9 @@ class VideoPlayerViewModel
 
         private val _expandPlayerRequest = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
         val expandPlayerRequest: SharedFlow<Unit> = _expandPlayerRequest.asSharedFlow()
+        val fullscreenOpen: StateFlow<String?> = presence.fullscreenOpen
 
-        private fun isLocalMediaId(id: String?): Boolean = LocalMediaIds.isLocal(id)
+        fun consumeFullscreenOpen(videoId: String) = presence.consumeFullscreenOpen(videoId)
 
         /** Arms the live chat for [videoId]; the drip loop itself waits for a visible panel. */
         fun maybeStartLiveChat(videoId: String) = liveChat.start(videoId)
@@ -211,8 +217,11 @@ class VideoPlayerViewModel
 
         fun setAutoplayHold(hold: Boolean) = playerManager.setAutoplayHold(hold)
 
+        private val unregisterBeforeSwitch = BeforeProfileSwitch.register(watchSessions::finalizeActiveSession)
+
         override fun onCleared() {
             super.onCleared()
+            unregisterBeforeSwitch()
             watchSessions.finalizeActiveSession()
             stopLiveChat()
         }
@@ -224,10 +233,7 @@ class VideoPlayerViewModel
 
         fun isVideoSavedToAnyPlaylist(videoId: String): Flow<Boolean> = playlistRepository.isVideoSavedToAnyPlaylistFlow(videoId)
 
-        /**
-         * Detect whether the device is currently on Wi-Fi.
-         * Used to select the correct quality preference (Wi-Fi vs cellular).
-         */
+        /** Wi-Fi or cellular, which picks the quality preference. */
         private fun detectIsWifi(): Boolean = NetworkState.isOnWifi(context)
 
         init {
@@ -239,6 +245,8 @@ class VideoPlayerViewModel
                 .debounce(QUEUE_SAVE_DEBOUNCE_MS)
                 .onEach { (videos, index) -> videoQueueStore.save(videos, index, playerManager.playerState.value.queueTitle) }
                 .launchIn(viewModelScope)
+
+            playerPreferences.liveChatEnabled.onEach(liveChat::setEnabled).launchIn(viewModelScope)
 
             combine(liveChat.messages, liveChat.isLoading, liveChat.isAvailable, ::Triple)
                 .onEach { (messages, isLoading, isAvailable) ->
@@ -310,6 +318,8 @@ class VideoPlayerViewModel
             userOpened: Boolean = true,
             startPositionMs: Long? = null,
         ) {
+            // While this device drives another one, the video plays there.
+            if (userOpened) PlaybackTarget.current?.let { return it.play(listOf(video.id), 0, music = false) }
             val isMiniPlayerCollapsed =
                 GlobalPlayerState.miniPlayerExpansionState.value == MiniPlayerExpansionState.COLLAPSED
             if (_uiState.value.shouldReopenInsteadOfPlaying(video.id, playerManager.playerState.value, isMiniPlayerCollapsed)) {
@@ -339,6 +349,8 @@ class VideoPlayerViewModel
             video: Video,
             contentUri: String,
         ) {
+            // A file on this device plays here, which ends driving another device.
+            PlaybackTarget.current?.release()
             takeOverPlayback()
             armStartPaused(video.id, userOpened = true)
             loads.prepareDeviceFile(video, contentUri)
@@ -349,6 +361,7 @@ class VideoPlayerViewModel
             userOpened: Boolean,
         ) {
             playerManager.armStartPaused(videoId.takeIf { userOpened && lifecyclePlayback.settings.startVideosPaused })
+            presence.armFullscreenOpen(videoId.takeIf { userOpened && lifecyclePlayback.settings.openVideosFullscreen })
         }
 
         /** Drops the load, the queue and the music player so this screen owns playback outright. */
@@ -387,6 +400,12 @@ class VideoPlayerViewModel
 
         fun showVideoPlayer() = presence.showVideoPlayer()
 
+        fun resetSessionAndRetry() =
+            viewModelScope.launch {
+                resetYouTubeSession()
+                retryLoadVideo()
+            }
+
         fun retryLoadVideo() {
             val videoId = _uiState.value.cachedVideo?.id ?: return
             Log.d("VideoPlayerViewModel", "Retrying video load for $videoId")
@@ -400,7 +419,7 @@ class VideoPlayerViewModel
             }
             recovery.onPlaybackRequested()
             playerManager.clearCurrentVideo()
-            _uiState.update { it.copy(error = null, errorHint = null, isLoading = true) }
+            _uiState.update { it.copy(error = null, errorHint = null, errorOffersSessionReset = false, isLoading = true) }
             loadVideoInfo(videoId, isWifi = detectIsWifi(), forceRefresh = true)
         }
 
@@ -415,11 +434,22 @@ class VideoPlayerViewModel
         ) {
             if (videos.isEmpty()) return
             val startVideo = videos.getOrNull(startIndex) ?: videos.first()
+            PlaybackTarget.current?.let { remote ->
+                if (LocalMediaIds.isLocal(
+                        startVideo.id,
+                    )
+                ) {
+                    remote.release()
+                } else {
+                    return remote.play(videos.map(Video::id), videos.indexOf(startVideo), music = false)
+                }
+            }
 
             EnhancedMusicPlayerManager.stop()
             EnhancedMusicPlayerManager.clearCurrentTrack()
 
             playerManager.armStartPaused(null)
+            presence.armFullscreenOpen(startVideo.id.takeIf { lifecyclePlayback.settings.openVideosFullscreen })
             playerManager.setQueue(videos, startIndex, title, shuffle)
 
             _uiState.update { it.resetForVideo(startVideo).copy(queueTitle = title) }
@@ -436,8 +466,7 @@ class VideoPlayerViewModel
             if (!handledByPlayer) {
                 _uiState.value.relatedVideos.firstOrNull()?.let { nextVideo ->
                     playVideo(nextVideo, userOpened = false)
-                    io.github.aedev.flow.player.GlobalPlayerState
-                        .setCurrentVideo(nextVideo)
+                    GlobalPlayerState.setCurrentVideo(nextVideo)
                 }
             }
         }
@@ -484,7 +513,7 @@ class VideoPlayerViewModel
                 channelName = channelName,
                 channelId = channelId,
                 isShort = isShort,
-                isLocal = isLocalMediaId(videoId),
+                isLocal = LocalMediaIds.isLocal(videoId),
             )
             viewModelScope.launch { watchLaterCleanup.onProgress(videoId, position, duration) }
         }
@@ -551,7 +580,7 @@ class VideoPlayerViewModel
         fun loadTranscript(trackUrl: String?) = transcripts.load(trackUrl)
 
         fun loadDescription(videoId: String) {
-            if (isLocalMediaId(videoId)) {
+            if (LocalMediaIds.isLocal(videoId)) {
                 descriptions.clear()
                 return
             }
@@ -559,7 +588,7 @@ class VideoPlayerViewModel
         }
 
         fun loadComments(videoId: String) {
-            if (isLocalMediaId(videoId)) {
+            if (LocalMediaIds.isLocal(videoId)) {
                 comments.clear()
                 return
             }
@@ -585,5 +614,5 @@ class VideoPlayerViewModel
 
         fun toggleSkipSilence(isEnabled: Boolean) = settings.toggleSkipSilence(isEnabled)
 
-        fun toggleStableVolume(isEnabled: Boolean) = settings.toggleStableVolume(isEnabled)
+        fun toggleVolumeNormalization(isEnabled: Boolean) = settings.toggleVolumeNormalization(isEnabled)
     }

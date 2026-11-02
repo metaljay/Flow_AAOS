@@ -2,7 +2,6 @@ package io.github.aedev.flow.ui.screens.music
 
 import android.content.Context
 import android.net.Uri
-import android.os.SystemClock
 import androidx.lifecycle.ViewModel
 import androidx.lifecycle.viewModelScope
 import androidx.media3.common.Player
@@ -26,18 +25,22 @@ import io.github.aedev.flow.data.recommendation.music.MusicBrainEngine
 import io.github.aedev.flow.data.recommendation.music.onRepeatShelf
 import io.github.aedev.flow.data.scrobble.Scrobbler
 import io.github.aedev.flow.player.EnhancedMusicPlayerManager
+import io.github.aedev.flow.player.PlaybackTarget
+import io.github.aedev.flow.ui.components.musicplayer.queue.QueueSwipes
 import io.github.aedev.flow.utils.PerformanceDispatcher
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.stateIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
 import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import javax.inject.Inject
-import kotlin.math.abs
 
 @HiltViewModel
 class MusicPlayerViewModel
@@ -50,6 +53,7 @@ class MusicPlayerViewModel
         private val viewHistory: ViewHistory,
         private val musicBrain: MusicBrainEngine,
         private val scrobbler: Scrobbler,
+        private val lyricsHelper: LyricsHelper,
         localLyrics: LocalLyricsReader,
     ) : ViewModel() {
         private val _uiState = MutableStateFlow(MusicPlayerUiState())
@@ -63,13 +67,17 @@ class MusicPlayerViewModel
         private val _currentPositionMs = MutableStateFlow(0L)
         val currentPositionMs: StateFlow<Long> = _currentPositionMs.asStateFlow()
 
-        private val lyricsHelper = LyricsHelper(context)
         private val playerPreferences = PlayerPreferences(context)
+
+        internal val queueSwipes: StateFlow<QueueSwipes> =
+            combine(playerPreferences.queueSwipeLeftAction, playerPreferences.queueSwipeRightAction, ::QueueSwipes)
+                .stateIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), QueueSwipes())
 
         private var isInitialized = false
         private var loadTrackJob: kotlinx.coroutines.Job? = null
-        private var pendingSeekPosition: Long? = null
-        private var pendingSeekStartedAtMs: Long = 0L
+        private val seekGuard = MusicSeekGuard()
+        private val radioSwitch = MusicRadioSwitch(viewModelScope, _uiState, playerPreferences)
+        private val playStart = MusicPlayStart(downloadManager, viewHistory, playerPreferences)
         private val lyrics =
             MusicPlayerLyrics(
                 context,
@@ -101,11 +109,7 @@ class MusicPlayerViewModel
                     _uiState.update { it.copy(lyricsTextAlign = align) }
                 }
             }
-            viewModelScope.launch {
-                playerPreferences.musicEndlessRadioEnabled.collect { enabled ->
-                    _uiState.update { it.copy(endlessRadioEnabled = enabled) }
-                }
-            }
+            radioSwitch.observe()
         }
 
         private fun initializeObservers() {
@@ -140,7 +144,7 @@ class MusicPlayerViewModel
 
             viewModelScope.launch {
                 EnhancedMusicPlayerManager.currentPosition.collect { position ->
-                    acceptedPlaybackPosition(position)?.let { acceptedPosition ->
+                    seekGuard.accept(position)?.let { acceptedPosition ->
                         _currentPositionMs.value = acceptedPosition
                     }
                 }
@@ -254,28 +258,18 @@ class MusicPlayerViewModel
                             playingFrom = context.getString(R.string.local_media_title),
                         )
                     }
+                    val startPositionMs = playStart.resumePosition(track)
                     withContext(kotlinx.coroutines.Dispatchers.Main) {
                         EnhancedMusicPlayerManager.playTrack(
                             track = track,
                             audioUrl = localUris[track.videoId]?.toString() ?: "",
                             queue = activeQueue,
+                            startPositionMs = startPositionMs,
                             sourceName = context.getString(R.string.local_media_title),
                             localUriOverrides = localUris,
                         )
                     }
-                    launch(PerformanceDispatcher.diskIO) {
-                        viewHistory.savePlaybackPosition(
-                            videoId = track.videoId,
-                            position = 0,
-                            duration = track.duration.toLong() * 1000,
-                            title = track.title,
-                            thumbnailUrl = track.thumbnailUrl,
-                            channelName = track.artist,
-                            channelId = track.channelId,
-                            isMusic = true,
-                            isLocal = true,
-                        )
-                    }
+                    launch(PerformanceDispatcher.diskIO) { playStart.recordStart(track) }
                 }
         }
 
@@ -301,9 +295,15 @@ class MusicPlayerViewModel
                 return
             }
             if (isLocalMediaId(track.videoId)) {
+                // A file on this device plays here, which ends driving another device.
+                PlaybackTarget.current?.release()
                 val localUris = (queue + track).mapNotNull { t -> LocalMediaIds.audioUri(t.videoId)?.let { t.videoId to it } }.toMap()
                 playLocalMusic(track, queue.filter { isLocalMediaId(it.videoId) }, localUris)
                 return
+            }
+            PlaybackTarget.current?.let { remote ->
+                val ids = queue.ifEmpty { listOf(track) }.map { it.videoId }
+                return remote.play(ids, ids.indexOf(track.videoId).coerceAtLeast(0), music = true)
             }
             loadTrackJob?.cancel()
             // Genre-scoped surfaces tag their source; the genre becomes listen
@@ -322,20 +322,8 @@ class MusicPlayerViewModel
                 viewModelScope.launch {
                     val finalSourceName = musicSourceLabel(context, displaySourceName, track)
                     val activeQueue = if (queue.isNotEmpty()) queue else listOf(track)
-                    val localUriOverrides =
-                        withContext(PerformanceDispatcher.diskIO) {
-                            activeQueue
-                                .mapNotNull { queuedTrack ->
-                                    val path = downloadManager.getDownloadedTrackPath(queuedTrack.videoId) ?: return@mapNotNull null
-                                    val uri =
-                                        if (path.startsWith("content://")) {
-                                            Uri.parse(path)
-                                        } else {
-                                            Uri.fromFile(java.io.File(path))
-                                        }
-                                    queuedTrack.videoId to uri
-                                }.toMap()
-                        }
+                    val localUriOverrides = playStart.downloadedUris(activeQueue)
+                    val startPositionMs = playStart.resumePosition(track)
 
                     // ─── PHASE 1: Instant start ───────────────────────────────────────────
                     _uiState.update {
@@ -357,6 +345,7 @@ class MusicPlayerViewModel
                             track = track,
                             audioUrl = "music://${track.videoId}",
                             queue = activeQueue,
+                            startPositionMs = startPositionMs,
                             sourceName = finalSourceName,
                             localUriOverrides = localUriOverrides,
                         )
@@ -375,16 +364,7 @@ class MusicPlayerViewModel
 
                         launch(PerformanceDispatcher.diskIO) {
                             playlistRepository.addToHistory(track)
-                            viewHistory.savePlaybackPosition(
-                                videoId = track.videoId,
-                                position = 0,
-                                duration = track.duration.toLong() * 1000,
-                                title = track.title,
-                                thumbnailUrl = track.thumbnailUrl,
-                                channelName = track.artist,
-                                channelId = track.channelId,
-                                isMusic = true,
-                            )
+                            playStart.recordStart(track)
                         }
 
                         launch(PerformanceDispatcher.networkIO) {
@@ -402,6 +382,16 @@ class MusicPlayerViewModel
                 InnertubeMusicService.fetchQueue(videoIds = listOf(videoId)).firstOrNull()
                     ?: MusicTrack(videoId = videoId, title = "", artist = "", thumbnailUrl = "", duration = 0)
             loadAndPlayTrack(track)
+        }
+
+        /** Plays a watch playlist such as an artist's shuffle or mix; false when YouTube returned no songs. */
+        suspend fun playWatchPlaylist(
+            playlistId: String,
+            params: String?,
+        ): Boolean {
+            val tracks = withTimeoutOrNull(10_000L) { InnertubeMusicService.fetchWatchPlaylist(playlistId, params) }.orEmpty()
+            loadAndPlayTrack(tracks.firstOrNull() ?: return false, tracks)
+            return true
         }
 
         /** Plays the On Repeat shelf in a shuffled order, as the widget's Shuffle asks. */
@@ -448,6 +438,8 @@ class MusicPlayerViewModel
             if (index != target) EnhancedMusicPlayerManager.moveMediaItem(index, target)
         }
 
+        fun removeFromQueue(index: Int): EnhancedMusicPlayerManager.RemovedQueueTrack? = EnhancedMusicPlayerManager.removeFromQueue(index)
+
         fun moveQueueTrackToEnd(index: Int) {
             val lastIndex = _uiState.value.queue.size - 1
             if (index in 0 until lastIndex) EnhancedMusicPlayerManager.moveMediaItem(index, lastIndex)
@@ -474,40 +466,16 @@ class MusicPlayerViewModel
             if (index >= 0) EnhancedMusicPlayerManager.playFromQueue(index) else loadAndPlayTrack(track)
         }
 
-        fun setEndlessRadioEnabled(enabled: Boolean) {
-            viewModelScope.launch { playerPreferences.setMusicEndlessRadioEnabled(enabled) }
-        }
+        fun setEndlessRadioEnabled(enabled: Boolean) = radioSwitch.set(enabled)
 
         fun seekTo(position: Long) {
             val duration =
                 _uiState.value.duration.takeIf { it > 0 }
                     ?: EnhancedMusicPlayerManager.getDuration().takeIf { it > 0 }
             val target = duration?.let { position.coerceIn(0L, it) } ?: position.coerceAtLeast(0L)
-            pendingSeekPosition = target
-            pendingSeekStartedAtMs = SystemClock.elapsedRealtime()
+            seekGuard.seekRequested(target)
             EnhancedMusicPlayerManager.seekTo(target)
             _currentPositionMs.value = target
-        }
-
-        private fun acceptedPlaybackPosition(position: Long): Long? {
-            val pending = pendingSeekPosition ?: return position
-            val elapsedMs = SystemClock.elapsedRealtime() - pendingSeekStartedAtMs
-            val seekHasLanded = abs(position - pending) <= SEEK_POSITION_CONFIRM_TOLERANCE_MS
-            val guardExpired = elapsedMs >= SEEK_POSITION_GUARD_MS
-
-            if (seekHasLanded) {
-                if (elapsedMs >= SEEK_POSITION_MIN_HOLD_MS) {
-                    pendingSeekPosition = null
-                }
-                return position
-            }
-
-            if (guardExpired) {
-                pendingSeekPosition = null
-                return position
-            }
-
-            return null
         }
 
         fun skipToNext() {
@@ -609,11 +577,9 @@ class MusicPlayerViewModel
 
         fun setLyricsAutoRomanize(enabled: Boolean) = lyrics.setAutoRomanize(enabled)
 
+        fun setLyricsKeepScreenOn(enabled: Boolean) = lyrics.setKeepScreenOn(enabled)
+
         override fun onCleared() {
             super.onCleared()
         }
     }
-
-private const val SEEK_POSITION_CONFIRM_TOLERANCE_MS = 1_000L
-private const val SEEK_POSITION_MIN_HOLD_MS = 250L
-private const val SEEK_POSITION_GUARD_MS = 1_500L

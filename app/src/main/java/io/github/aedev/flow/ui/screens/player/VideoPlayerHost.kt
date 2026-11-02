@@ -2,7 +2,6 @@ package io.github.aedev.flow.ui.screens.player
 
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.BackHandler
-import androidx.activity.compose.PredictiveBackHandler
 import androidx.compose.foundation.layout.*
 import androidx.compose.material3.adaptive.ExperimentalMaterial3AdaptiveApi
 import androidx.compose.material3.adaptive.currentWindowAdaptiveInfo
@@ -10,12 +9,9 @@ import androidx.compose.material3.adaptive.layout.calculatePaneScaffoldDirective
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
-import androidx.compose.ui.hapticfeedback.HapticFeedback
-import androidx.compose.ui.hapticfeedback.HapticFeedbackType
 import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
-import androidx.compose.ui.platform.LocalHapticFeedback
 import androidx.compose.ui.platform.LocalLayoutDirection
 import androidx.compose.ui.unit.dp
 import androidx.hilt.navigation.compose.hiltViewModel
@@ -28,6 +24,7 @@ import io.github.aedev.flow.data.model.Video
 import io.github.aedev.flow.player.EnhancedPlayerManager
 import io.github.aedev.flow.player.GlobalPlayerState
 import io.github.aedev.flow.player.dlna.DlnaCastManager
+import io.github.aedev.flow.ui.components.shared.PlayerHaptics
 import io.github.aedev.flow.ui.components.videoplayer.DraggablePlayerLayout
 import io.github.aedev.flow.ui.components.videoplayer.PlayerDraggableState
 import io.github.aedev.flow.ui.components.videoplayer.PlayerSheetValue
@@ -40,7 +37,6 @@ import io.github.aedev.flow.ui.utils.LocalWindowIsLandscape
 import io.github.aedev.flow.ui.utils.LocalWindowSizeClass
 import io.github.aedev.flow.utils.ThumbnailUrlResolver
 import kotlinx.coroutines.launch
-import kotlin.coroutines.cancellation.CancellationException
 
 /**
  * VideoPlayerHost - The main video player overlay that sits above everything.
@@ -162,16 +158,7 @@ fun VideoPlayerHost(
         lockModeEnabled = prefs.lockModeEnabled,
     )
 
-    val progressProvider =
-        remember {
-            {
-                if (screenState.duration > 0) {
-                    (screenState.currentPosition.toFloat() / screenState.duration.toFloat()).coerceIn(0f, 1f)
-                } else {
-                    0f
-                }
-            }
-        }
+    val progressProvider = remember(screenState) { { screenState.playbackFraction() } }
     PlayerSheetCollapseSyncEffects(
         playerSheetState = playerSheetState,
         screenState = screenState,
@@ -213,12 +200,6 @@ fun VideoPlayerHost(
 
     AutoplayCommentsHoldEffect(screenState = screenState, viewModel = playerViewModel)
 
-    // Handle Back press in Fullscreen
-    BackHandler(enabled = screenState.isFullscreen) {
-        screenState.isFullscreen = false
-        screenState.isFullscreenPortrait = false
-    }
-
     // ===== EFFECTS =====
     PlayerSheetSessionEffects(
         playerSheetState = playerSheetState,
@@ -228,31 +209,24 @@ fun VideoPlayerHost(
         onMinimize = onMinimize,
     )
 
-    // Stays enabled for the whole scrub: the sheet's currentValue flips to Collapsed halfway
-    // through, and disabling the handler mid-gesture would cancel it as if the user had backed out.
-    var backScrubInFlight by remember { mutableStateOf(false) }
-    PredictiveBackHandler(
-        enabled =
-            (playerSheetState.currentValue == PlayerSheetValue.Expanded || backScrubInFlight) &&
-                !localIsInPipMode &&
-                !screenState.isFullscreen,
-    ) { progress ->
-        backScrubInFlight = true
-        try {
-            playerSheetState.beginBackScrub()
-            progress.collect { event -> playerSheetState.scrubBack(event.progress) }
-            playerSheetState.collapse()
-        } catch (_: CancellationException) {
-            playerSheetState.expand()
-        } finally {
-            backScrubInFlight = false
-        }
-    }
+    val fullscreenOpen by playerViewModel.fullscreenOpen.collectAsStateWithLifecycle()
+    OpenInFullscreenEffect(
+        videoId = video.id,
+        requestedVideoId = fullscreenOpen,
+        playerSheetState = playerSheetState,
+        screenState = screenState,
+        isInPipMode = localIsInPipMode,
+        isVideoShapeKnown = {
+            playerState.currentVideoId == video.id && (playerState.sourceVideoAspectRatio != null || playerState.isPrepared)
+        },
+        onConsumed = playerViewModel::consumeFullscreenOpen,
+    )
 
-    BackHandler(enabled = screenState.isTouchLocked && !localIsInPipMode) {
-        screenState.revealLockOverlay()
-        screenState.onInteraction()
-    }
+    PlayerBackEffects(
+        playerSheetState = playerSheetState,
+        screenState = screenState,
+        isInPipMode = localIsInPipMode,
+    )
 
     val isMinimized by remember(playerSheetState) {
         derivedStateOf { playerSheetState.fraction > 0.5f }
@@ -393,6 +367,8 @@ fun VideoPlayerHost(
         isFullscreen = screenState.isFullscreen,
         videoAspectRatio = effectiveVideoAspectRatio,
         isPortraitFullscreen = screenState.isFullscreenPortrait,
+        ignoreRotationLock =
+            prefs.tiltFullscreenRotationLocked && !isLargeWindow && !context.orientationRequestIgnored(config),
         onEnterFullscreen = { screenState.isFullscreen = true },
         onExitFullscreen = {
             screenState.isFullscreen = false
@@ -460,13 +436,7 @@ fun VideoPlayerHost(
             isFullscreenShown = fullscreenShown,
         )
 
-    // Turning the preference off swaps Compose's own no-op implementation in over the whole
-    // player, so every control, gesture and sheet below stops vibrating without a single call
-    // site having to ask whether it should (#1066).
-    val hostHaptics = LocalHapticFeedback.current
-    CompositionLocalProvider(
-        LocalHapticFeedback provides if (prefs.hapticsEnabled) hostHaptics else SilentHapticFeedback,
-    ) {
+    PlayerHaptics(enabled = prefs.hapticsEnabled) {
         BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
             val mediaSheetHeights =
                 rememberMediaSheetHeights(
@@ -618,14 +588,4 @@ fun VideoPlayerHost(
             )
         }
     }
-}
-
-/**
- * Stands in for the platform's haptics while the player's vibration preference is off.
- *
- * Compose ships exactly this as NoHapticFeedback but keeps it internal, and the interface is a
- * single method, so there is nothing to reuse and nothing to get wrong.
- */
-private object SilentHapticFeedback : HapticFeedback {
-    override fun performHapticFeedback(hapticFeedbackType: HapticFeedbackType) = Unit
 }

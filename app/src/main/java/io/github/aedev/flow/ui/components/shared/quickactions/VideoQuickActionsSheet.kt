@@ -4,13 +4,14 @@ import android.content.ClipData
 import android.os.Build
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.outlined.PlaylistAdd
-import androidx.compose.material.icons.filled.CheckCircle
+import androidx.compose.material.icons.filled.DownloadDone
 import androidx.compose.material.icons.filled.WatchLater
 import androidx.compose.material.icons.outlined.Block
 import androidx.compose.material.icons.outlined.ChevronRight
 import androidx.compose.material.icons.outlined.ContentCopy
 import androidx.compose.material.icons.outlined.Download
 import androidx.compose.material.icons.outlined.Info
+import androidx.compose.material.icons.outlined.PlayArrow
 import androidx.compose.material.icons.outlined.PlaylistRemove
 import androidx.compose.material.icons.outlined.QueuePlayNext
 import androidx.compose.material.icons.outlined.Share
@@ -50,11 +51,13 @@ import io.github.aedev.flow.ui.components.shared.SaveVideoSheet
 import io.github.aedev.flow.ui.components.shared.card.LocalVideoCardPreferences
 import io.github.aedev.flow.ui.components.shared.card.channelAvatarUrls
 import io.github.aedev.flow.ui.components.shared.card.isWatchedProgress
+import io.github.aedev.flow.ui.components.shared.card.rememberCardTitle
 import io.github.aedev.flow.ui.components.shared.card.rememberCollaboratorChannelDisplayName
 import io.github.aedev.flow.ui.components.shared.card.rememberCollaboratorItems
 import io.github.aedev.flow.ui.components.shared.card.rememberWatchProgress
 import io.github.aedev.flow.ui.components.shared.collaboratorRows
 import io.github.aedev.flow.ui.components.shared.rememberVideoShareAction
+import io.github.aedev.flow.ui.components.shared.sharedSubscriptionBellViewModel
 import io.github.aedev.flow.utils.youtubeWatchUrl
 import kotlinx.coroutines.launch
 
@@ -64,18 +67,22 @@ private enum class VideoMenuPage { Actions, Details, Collaborators, Save }
  * A video's menu. [title] and [thumbnailUrl] are what the card shows, so a DeArrow title stays the
  * same in the menu. [showChannel] is false where the screen already is the channel. A playlist that
  * can drop the video passes [onRemoveFromCollection] with its [removeFromCollectionLabel] and icon;
- * it is the last row of the Options group.
+ * it is the last row of the Options group. [whyShown] says why a feed shows
+ * the video, on the Details page. [onPlayNow] puts Play now first in the Playback group, for a video
+ * that is not open yet, such as one shared to Flow.
  */
 @Composable
 fun VideoQuickActionsBottomSheet(
     video: Video,
     onDismiss: () -> Unit,
-    title: String = video.title,
+    title: String = rememberCardTitle(video),
     thumbnailUrl: String = video.thumbnailUrl,
     showChannel: Boolean = true,
+    whyShown: String? = null,
     onRemoveFromCollection: (() -> Unit)? = null,
     removeFromCollectionLabel: String? = null,
     removeFromCollectionIcon: ImageVector = Icons.Outlined.PlaylistRemove,
+    onPlayNow: (() -> Unit)? = null,
     viewModel: QuickActionsViewModel = sharedQuickActionsViewModel(),
 ) {
     var page by rememberSaveable(video.id) { mutableStateOf(VideoMenuPage.Actions) }
@@ -96,7 +103,7 @@ fun VideoQuickActionsBottomSheet(
         when (page) {
             VideoMenuPage.Details -> {
                 QuickActionsPageHeader(title = stringResource(R.string.details_metadata), onBack = toActions, onClose = close)
-                MediaDetailsPage(subject = video.toDetailsSubject(title))
+                MediaDetailsPage(subject = video.toDetailsSubject(title, whyShown))
             }
 
             VideoMenuPage.Collaborators -> {
@@ -119,7 +126,10 @@ fun VideoQuickActionsBottomSheet(
                 }
                 VideoPrimaryActions(video, viewModel, onSave = { sheet.hideThen { page = VideoMenuPage.Save } }, onDismiss = close)
                 if (!video.isShort) {
-                    QuickActionsGroup(title = stringResource(R.string.playback_header), rows = playbackRows(video, viewModel, close))
+                    QuickActionsGroup(
+                        title = stringResource(R.string.playback_header),
+                        rows = playbackRows(video, viewModel, close, onPlayNow),
+                    )
                 }
                 if (showChannel && video.channelId.isNotBlank()) {
                     QuickActionsGroup(
@@ -159,7 +169,8 @@ private fun VideoPrimaryActions(
     onDismiss: () -> Unit,
 ) {
     val watchLaterIds by viewModel.watchLaterIds.collectAsStateWithLifecycle()
-    val share = rememberVideoShareAction()
+    val downloadedIds by viewModel.downloadedVideoIds.collectAsStateWithLifecycle()
+    val isDownloaded = video.id in downloadedIds
     QuickActionsPrimaryGroup(
         listOf(
             QuickPrimaryAction(icon = Icons.AutoMirrored.Outlined.PlaylistAdd, label = stringResource(R.string.save), onClick = onSave),
@@ -171,11 +182,15 @@ private fun VideoPrimaryActions(
                 onClick = { viewModel.toggleWatchLater(video) },
             ),
             QuickPrimaryAction(
-                icon = Icons.Outlined.Share,
-                label = stringResource(R.string.share),
+                icon = Icons.Outlined.Download,
+                checkedIcon = Icons.Filled.DownloadDone,
+                label = stringResource(if (isDownloaded) R.string.downloaded else R.string.download),
+                checked = isDownloaded,
                 onClick = {
-                    share(video.id, video.title, video.isShort)
-                    onDismiss()
+                    if (!isDownloaded) {
+                        viewModel.requestDownload(video)
+                        onDismiss()
+                    }
                 },
             ),
         ),
@@ -187,8 +202,20 @@ private fun playbackRows(
     video: Video,
     viewModel: QuickActionsViewModel,
     onDismiss: () -> Unit,
+    onPlayNow: (() -> Unit)?,
 ): List<QuickActionRow> =
-    listOf(
+    listOfNotNull(
+        onPlayNow?.let { play ->
+            actionRow(
+                "play_now",
+                Icons.Outlined.PlayArrow,
+                stringResource(R.string.shared_link_play_now),
+                stringResource(R.string.shared_link_play_now_desc),
+            ) {
+                play()
+                onDismiss()
+            }
+        },
         actionRow(
             "play_next",
             Icons.Outlined.QueuePlayNext,
@@ -220,6 +247,8 @@ private fun channelRow(
 ): QuickActionRow {
     val channelLabel = rememberCollaboratorChannelDisplayName(video.channelName, collaborators)
     val subscribedChannelIds by viewModel.subscribedChannelIds.collectAsStateWithLifecycle()
+    val bell = sharedSubscriptionBellViewModel()
+    val notifyingChannelIds by bell.notifyingChannelIds.collectAsStateWithLifecycle()
     val navigator = LocalMediaNavigator.current
     val isCollaboration = collaborators.size > 1
     val ringColor = MaterialTheme.colorScheme.surfaceContainerHigh
@@ -264,6 +293,8 @@ private fun channelRow(
                             isSubscribed = video.channelId in subscribedChannelIds,
                             onSubscribeClick = toggle,
                             onUnsubscribeClick = toggle,
+                            isNotificationsEnabled = video.channelId in notifyingChannelIds,
+                            onNotificationChange = { bell.setNotifications(video.channelId, it) },
                             size = FlowSubscribeButtonSize.Compact,
                         )
                     }
@@ -325,25 +356,13 @@ private fun moreRows(
     onDismiss: () -> Unit,
     onOpenDetails: () -> Unit,
 ): List<QuickActionRow> {
-    val downloadedIds by viewModel.downloadedVideoIds.collectAsStateWithLifecycle()
-    val isDownloaded = video.id in downloadedIds
     val clipboard = LocalClipboard.current
     val scope = rememberCoroutineScope()
-    val downloadedLabel = stringResource(R.string.downloaded)
+    val share = rememberVideoShareAction()
     return listOf(
-        QuickActionRow("download") { shape ->
-            FlowNavRow(
-                title = if (isDownloaded) downloadedLabel else stringResource(R.string.download),
-                leadingIcon = if (isDownloaded) Icons.Filled.CheckCircle else Icons.Outlined.Download,
-                onClick = {
-                    viewModel.requestDownload(video)
-                    onDismiss()
-                },
-                enabled = !isDownloaded,
-                showChevron = false,
-                stateDescription = if (isDownloaded) downloadedLabel else null,
-                shape = shape,
-            )
+        actionRow("share", Icons.Outlined.Share, stringResource(R.string.share)) {
+            share(video.id, video.title, video.isShort)
+            onDismiss()
         },
         actionRow("copy_link", Icons.Outlined.ContentCopy, stringResource(R.string.copy_video_link)) {
             scope.launch {
@@ -384,16 +403,19 @@ internal fun actionRow(
         )
     }
 
-private fun Video.toDetailsSubject(displayTitle: String) =
-    MediaDetailsSubject(
-        videoId = id,
-        title = displayTitle,
-        author = channelName,
-        channelId = channelId,
-        viewCount = viewCount,
-        likeCount = likeCount,
-        uploadDate = uploadDate,
-        timestamp = timestamp,
-        timestampIsExact = timestampIsExact,
-        durationSeconds = duration,
-    )
+private fun Video.toDetailsSubject(
+    displayTitle: String,
+    whyShown: String?,
+) = MediaDetailsSubject(
+    videoId = id,
+    title = displayTitle,
+    author = channelName,
+    channelId = channelId,
+    viewCount = viewCount,
+    likeCount = likeCount,
+    uploadDate = uploadDate,
+    timestamp = timestamp,
+    timestampIsExact = timestampIsExact,
+    durationSeconds = duration,
+    whyShown = whyShown,
+)

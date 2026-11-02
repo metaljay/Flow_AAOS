@@ -30,19 +30,16 @@ import androidx.compose.ui.unit.sp
 import io.github.aedev.flow.R
 import io.github.aedev.flow.data.model.RichTextTarget
 import io.github.aedev.flow.data.model.Video
-import io.github.aedev.flow.innertube.pages.VideoDescriptionFactoid
+import io.github.aedev.flow.data.model.plainRichText
 import io.github.aedev.flow.innertube.pages.VideoDescriptionPage
 import io.github.aedev.flow.ui.components.layout.navigation.LocalMediaNavigator
 import io.github.aedev.flow.ui.components.shared.FlowBottomSheet
 import io.github.aedev.flow.ui.components.shared.FlowSheetHeader
+import io.github.aedev.flow.ui.components.shared.card.LocalVideoCardPreferences
 import io.github.aedev.flow.ui.components.shared.defaultSheetExpandedHeight
-import io.github.aedev.flow.ui.components.shared.rememberDateDisplaySettings
 import io.github.aedev.flow.ui.components.shared.rememberFlowBottomSheetState
 import io.github.aedev.flow.ui.components.shared.rememberRichTextInlineContent
 import io.github.aedev.flow.ui.openYouTubeUrl
-import io.github.aedev.flow.utils.DateContext
-import io.github.aedev.flow.utils.formatLikeCount
-import io.github.aedev.flow.utils.formatViewCount
 import io.github.aedev.flow.utils.toAnnotatedString
 
 @OptIn(ExperimentalLayoutApi::class)
@@ -81,7 +78,10 @@ fun FlowDescriptionBottomSheet(
     val linkColor = tint.accent
     val textColor = MaterialTheme.colorScheme.onSurface
 
-    val richDescription = descriptionPage?.description
+    // With original titles on, the description the player sent wins over the translated one (#1230).
+    val showOriginal = LocalVideoCardPreferences.current.originalTitlesEnabled && video.description.isNotBlank()
+    val richDescription =
+        if (showOriginal) remember(video.description) { plainRichText(video.description) } else descriptionPage?.description
     val descriptionEmoji = rememberRichTextInlineContent(richDescription)
     val descriptionText =
         remember(richDescription, video.description, linkColor, textColor) {
@@ -168,29 +168,7 @@ fun FlowDescriptionBottomSheet(
                 )
             }
 
-            val dateSettings = rememberDateDisplaySettings()
-            val stats =
-                descriptionPage?.factoids?.takeIf { it.isNotEmpty() }
-                    ?: listOf(
-                        VideoDescriptionFactoid(
-                            value = formatLikeCount(video.likeCount.toInt()),
-                            label = stringResource(R.string.likes),
-                        ),
-                        VideoDescriptionFactoid(
-                            value = formatViewCount(descriptionPage?.viewCount ?: video.viewCount),
-                            label = stringResource(R.string.views),
-                        ),
-                        VideoDescriptionFactoid(
-                            value =
-                                dateSettings.format(
-                                    descriptionPage?.publishedDateText ?: video.uploadDate,
-                                    DateContext.DESCRIPTION,
-                                    video.timestamp,
-                                    video.timestampIsExact,
-                                ),
-                            label = stringResource(R.string.uploaded),
-                        ),
-                    )
+            val stats = descriptionPage?.factoids?.takeIf { it.isNotEmpty() } ?: fallbackFactoids(video, descriptionPage)
 
             Row(horizontalArrangement = Arrangement.spacedBy(CardSpacing)) {
                 stats.forEach { factoid ->

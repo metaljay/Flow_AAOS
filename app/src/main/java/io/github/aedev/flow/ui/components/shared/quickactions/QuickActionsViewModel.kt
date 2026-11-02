@@ -17,6 +17,7 @@ import io.github.aedev.flow.data.video.AutoDownloadTrigger
 import io.github.aedev.flow.data.video.VideoDownloadManager
 import io.github.aedev.flow.data.video.VideoDownloadOptions
 import io.github.aedev.flow.data.video.VideoDownloadOptionsLoader
+import io.github.aedev.flow.player.EnhancedMusicPlayerManager
 import io.github.aedev.flow.player.EnhancedPlayerManager
 import io.github.aedev.flow.utils.ThumbnailUrlResolver
 import kotlinx.coroutines.CancellationException
@@ -224,9 +225,20 @@ class QuickActionsViewModel
             emit(R.string.play_next_toast)
         }
 
+        /**
+         * [video], known only by its id as a shared link brings it, filled in from the watch response.
+         * That response is cached, so playing the video afterwards does not fetch it again.
+         */
+        suspend fun loadLinkedVideo(video: Video): Video? = repository.enrichFromWatchMetadata(video)
+
         fun addVideoToQueue(video: Video) {
             playerManager.get().addVideoToQueue(video)
             emit(R.string.added_to_queue_toast)
+        }
+
+        /** A video shared to Download with Flow: its title and channel first, which name the file. */
+        fun requestLinkedDownload(video: Video) {
+            viewModelScope.launch { requestDownload(loadLinkedVideo(video) ?: video) }
         }
 
         /** Loads [video]'s formats, then opens the download dialog; a second tap while loading is ignored. */
@@ -288,6 +300,10 @@ class QuickActionsViewModel
 
                         is QuickActionUndo.QueueRemoval -> {
                             playerManager.get().restoreRemovedVideo(undo.entry)
+                        }
+
+                        is QuickActionUndo.MusicQueueRemoval -> {
+                            EnhancedMusicPlayerManager.restoreToQueue(undo.removed)
                         }
 
                         is QuickActionUndo.AutoDownload -> {

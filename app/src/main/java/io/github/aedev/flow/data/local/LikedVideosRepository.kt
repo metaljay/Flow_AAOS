@@ -6,13 +6,17 @@ import androidx.datastore.preferences.core.MutablePreferences
 import androidx.datastore.preferences.core.Preferences
 import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
+import io.github.aedev.flow.data.profile.StoreScope
 import kotlinx.coroutines.flow.Flow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.map
 import kotlinx.serialization.Serializable
 import kotlinx.serialization.json.Json
 
-internal val Context.likedVideosDataStore: DataStore<Preferences> by safePreferencesDataStore(name = "liked_videos")
+internal val Context.likedVideosDataStore: DataStore<Preferences> by safePreferencesDataStore(
+    name = "liked_videos",
+    scope = StoreScope.PROFILE_LIBRARY,
+)
 
 class LikedVideosRepository private constructor(
     private val dataStore: DataStore<Preferences>,
@@ -161,7 +165,8 @@ class LikedVideosRepository private constructor(
         val orderKey = stringPreferencesKey(LIKED_VIDEOS_ORDER_KEY)
         val order = this[orderKey].orEmpty().split(",").filter(String::isNotEmpty)
         likes.forEach { like ->
-            this[videoKey(like.videoId)] = serializeVideo(like)
+            val stored = this[videoKey(like.videoId)]?.let(::deserializeVideo)
+            this[videoKey(like.videoId)] = serializeVideo(stored?.let(like::keepingDetailsOf) ?: like)
             this[likeStateKey(like.videoId)] = "LIKED"
         }
         val likedAt = likes.associate { it.videoId to it.likedAt }
@@ -171,7 +176,8 @@ class LikedVideosRepository private constructor(
     }
 
     /**
-     * Get all liked videos (mixed)
+     * Every liked video, newest like first. Read by like date rather than the stored order, which
+     * older backup restores wrote back to front.
      */
     fun getAllLikedVideos(): Flow<List<LikedVideoInfo>> =
         dataStore.data.map { preferences ->
@@ -179,11 +185,10 @@ class LikedVideosRepository private constructor(
             if (orderString.isEmpty()) {
                 emptyList()
             } else {
-                val orderList = orderString.split(",")
-                orderList.mapNotNull { videoId ->
-                    val videoData = preferences[videoKey(videoId)]
-                    videoData?.let { deserializeVideo(it) }
-                }
+                orderString
+                    .split(",")
+                    .mapNotNull { videoId -> preferences[videoKey(videoId)]?.let(::deserializeVideo) }
+                    .newestLikeFirst()
             }
         }
 
@@ -240,6 +245,9 @@ internal fun restoredOrder(
     }
     return result
 }
+
+/** Newest like first; equal dates keep their stored order. */
+internal fun List<LikedVideoInfo>.newestLikeFirst(): List<LikedVideoInfo> = sortedByDescending { it.likedAt }
 
 @Serializable
 data class LikedVideoInfo(

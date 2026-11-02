@@ -1,5 +1,7 @@
 package io.github.aedev.flow.player
 
+import io.github.aedev.flow.data.local.DEFAULT_BACKGROUND_PLAY_ENABLED
+import io.github.aedev.flow.data.local.DEFAULT_KEEP_PLAYING_AFTER_SWIPE
 import io.github.aedev.flow.data.local.PlayerPreferences
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.Flow
@@ -9,15 +11,18 @@ import javax.inject.Inject
 import javax.inject.Singleton
 
 /**
- * The playback preferences read synchronously: by the activity lifecycle callbacks, and by opening a
- * video, which has to know whether to start before any stream is handed to the player.
+ * The playback preferences read synchronously: by the activity lifecycle callbacks, by opening a
+ * video, which has to know whether to start before any stream is handed to the player, and by the
+ * media services when Flow is swiped away, which can happen after the activity is gone.
  */
 data class LifecyclePlaybackSettings(
     val autoPipEnabled: Boolean = false,
-    val backgroundPlayEnabled: Boolean = false,
+    val backgroundPlayEnabled: Boolean = DEFAULT_BACKGROUND_PLAY_ENABLED,
     val shortsBackgroundPlay: Boolean = false,
     val shortsPipEnabled: Boolean = false,
     val startVideosPaused: Boolean = false,
+    val openVideosFullscreen: Boolean = false,
+    val keepPlayingAfterSwipe: Boolean = DEFAULT_KEEP_PLAYING_AFTER_SWIPE,
 )
 
 /**
@@ -51,17 +56,26 @@ class LifecyclePlaybackPreferences internal constructor(
 
 private fun PlayerPreferences.lifecyclePlaybackSettings(): Flow<LifecyclePlaybackSettings> =
     combine(
-        autoPipEnabled,
-        backgroundPlayEnabled,
-        shortsBackgroundPlay,
-        shortsPipEnabled,
+        combine(
+            autoPipEnabled,
+            backgroundPlayEnabled,
+            shortsBackgroundPlay,
+            shortsPipEnabled,
+        ) { autoPip, backgroundPlay, shortsBackgroundPlay, shortsPip ->
+            LifecyclePlaybackSettings(
+                autoPipEnabled = autoPip,
+                backgroundPlayEnabled = backgroundPlay,
+                shortsBackgroundPlay = shortsBackgroundPlay,
+                shortsPipEnabled = shortsPip,
+            )
+        },
         startVideosPaused,
-    ) { autoPip, backgroundPlay, shortsBackgroundPlay, shortsPip, startPaused ->
-        LifecyclePlaybackSettings(
-            autoPipEnabled = autoPip,
-            backgroundPlayEnabled = backgroundPlay,
-            shortsBackgroundPlay = shortsBackgroundPlay,
-            shortsPipEnabled = shortsPip,
+        openVideosFullscreen,
+        keepPlayingAfterSwipe,
+    ) { settings, startPaused, openFullscreen, keepPlaying ->
+        settings.copy(
             startVideosPaused = startPaused,
+            openVideosFullscreen = openFullscreen,
+            keepPlayingAfterSwipe = keepPlaying,
         )
     }

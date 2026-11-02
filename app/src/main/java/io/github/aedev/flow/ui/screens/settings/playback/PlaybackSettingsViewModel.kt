@@ -1,12 +1,19 @@
 package io.github.aedev.flow.ui.screens.settings.playback
 
+import android.content.Context
 import dagger.hilt.android.lifecycle.HiltViewModel
+import dagger.hilt.android.qualifiers.ApplicationContext
+import io.github.aedev.flow.data.local.DEFAULT_BACKGROUND_PLAY_ENABLED
+import io.github.aedev.flow.data.local.DEFAULT_KEEP_PLAYING_AFTER_SWIPE
+import io.github.aedev.flow.data.local.DEFAULT_SPEED_SWIPE_STEP
 import io.github.aedev.flow.data.local.DoubleTapSeekZone
 import io.github.aedev.flow.data.local.PlayerOverlayPreferences
 import io.github.aedev.flow.data.local.PlayerPreferences
 import io.github.aedev.flow.data.local.PlayerRelatedCardStyle
-import io.github.aedev.flow.data.lyrics.LyricsProviderRegistry
+import io.github.aedev.flow.data.local.SpeedSwipeSide
+import io.github.aedev.flow.data.lyrics.LyricsProviderOrder
 import io.github.aedev.flow.player.stream.CaptionTrackResolver
+import io.github.aedev.flow.service.HeadphoneResume
 import io.github.aedev.flow.ui.screens.settings.SettingsViewModel
 import kotlinx.coroutines.flow.combine
 import kotlinx.coroutines.flow.map
@@ -23,14 +30,17 @@ data class LyricsProviderState(
 class PlaybackSettingsViewModel
     @Inject
     constructor(
+        @ApplicationContext private val context: Context,
         private val preferences: PlayerPreferences,
     ) : SettingsViewModel() {
         private val overlay = PlayerOverlayPreferences()
-        private val lyricsRegistry = LyricsProviderRegistry.default()
 
-        val backgroundPlay = preferences.backgroundPlayEnabled.asState(false)
+        val backgroundPlay = preferences.backgroundPlayEnabled.asState(DEFAULT_BACKGROUND_PLAY_ENABLED)
+        val keepPlayingAfterSwipe = preferences.keepPlayingAfterSwipe.asState(DEFAULT_KEEP_PLAYING_AFTER_SWIPE)
         val autoplay = preferences.autoplayEnabled.asState(true)
         val startPaused = preferences.startVideosPaused.asState(false)
+        val openFullscreen = preferences.openVideosFullscreen.asState(false)
+        val tiltFullscreen = preferences.tiltFullscreenRotationLocked.asState(false)
         val queueAutoplay = preferences.queueAutoplayEnabled.asState(true)
         val autoplayCountdown = preferences.autoplayCountdownSeconds.asState(0)
         val loopAll = preferences.videoLoopEnabled.asState(false)
@@ -54,6 +64,8 @@ class PlaybackSettingsViewModel
         val rememberBrightness = preferences.rememberBrightnessEnabled.asState(false)
         val volumeGesture = preferences.volumeSwipeGesturesEnabled.asState(true)
         val volumeBoost = preferences.allowVolumeBoost.asState(false)
+        val speedSwipeSide = preferences.speedSwipeSide.asState(SpeedSwipeSide.OFF)
+        val speedSwipeStep = preferences.speedSwipeStep.asState(DEFAULT_SPEED_SWIPE_STEP)
         val seekGesture = preferences.seekSwipeGesturesEnabled.asState(true)
         val haptics = preferences.playerHapticsEnabled.asState(true)
         val controlsWhileLoading = preferences.showControlsWhileLoading.asState(overlay.showControlsWhileLoading)
@@ -67,8 +79,9 @@ class PlaybackSettingsViewModel
         val speedIndicator = preferences.overlaySpeedIndicatorEnabled.asState(overlay.speedIndicatorEnabled)
         val commentsButton = preferences.overlayCommentsEnabled.asState(overlay.commentsEnabled)
         val sponsorBlockButton = preferences.overlaySponsorBlockEnabled.asState(overlay.sponsorBlockEnabled)
+        val nextPrevButtons = preferences.overlayNextPrevEnabled.asState(overlay.nextPrevButtonsEnabled)
 
-        val autoPip = preferences.autoPipEnabled.asState(false)
+        val autoPip = preferences.autoPipEnabled.asState(true)
         val continueWatchingMiniPlayer = preferences.miniPlayerContinueWatchingEnabled.asState(true)
         val restoreMusicMiniPlayer = preferences.showRestoredMusicMiniPlayer.asState(true)
         val openMusicPlayerOnPlay = preferences.openMusicPlayerOnPlay.asState(false)
@@ -81,6 +94,7 @@ class PlaybackSettingsViewModel
         val relatedCardStyle = preferences.playerRelatedCardStyle.asState(PlayerRelatedCardStyle.FULL_WIDTH)
         val titleLines = preferences.videoTitleMaxLines.asState(1)
         val comments = preferences.commentsEnabled.asState(true)
+        val liveChat = preferences.liveChatEnabled.asState(true)
         val commentsPreview = preferences.commentsPreviewEnabled.asState(true)
 
         val shortsContent = preferences.shortsContentEnabled.asState(true)
@@ -95,14 +109,29 @@ class PlaybackSettingsViewModel
         val endlessRadio = preferences.musicEndlessRadioEnabled.asState(true)
         val musicVideoSwitch = preferences.musicVideoSwitch.asState(false)
         val pauseMusicWhenMuted = preferences.pauseMusicWhenMuted.asState(false)
+        val musicResume = preferences.musicResumeLongTracks.asState(false)
+        val resumeFromHeadphones = preferences.resumeFromHeadphones.asState(true)
+        val musicSideSwipes = preferences.musicSideSwipes.asState(false)
+        val normalizeVolume = preferences.videoVolumeNormalizationEnabled.asState(true)
         val lyricsProviders =
             combine(preferences.lyricsProviderOrder, preferences.allLyricsProviderEnabledStates()) { order, enabled ->
-                lyricsRegistry.getOrderedProviders(order).map { LyricsProviderState(it.name, enabled[it.name] ?: true) }
-            }.asState(lyricsRegistry.getOrderedProviders("").map { LyricsProviderState(it.name, true) })
+                LyricsProviderOrder.resolve(order).map { LyricsProviderState(it, enabled[it] ?: true) }
+            }.asState(LyricsProviderOrder.DEFAULT.map { LyricsProviderState(it, true) })
 
         fun setBackgroundPlay(value: Boolean) = write { preferences.setBackgroundPlayEnabled(value) }
 
+        fun setKeepPlayingAfterSwipe(value: Boolean) = write { preferences.setKeepPlayingAfterSwipe(value) }
+
+        fun setResumeFromHeadphones(value: Boolean) {
+            if (!value) HeadphoneResume.set(context, allowed = false)
+            write { preferences.setResumeFromHeadphones(value) }
+        }
+
         fun setStartPaused(value: Boolean) = write { preferences.setStartVideosPaused(value) }
+
+        fun setOpenFullscreen(value: Boolean) = write { preferences.setOpenVideosFullscreen(value) }
+
+        fun setTiltFullscreen(value: Boolean) = write { preferences.setTiltFullscreenRotationLocked(value) }
 
         fun setAutoplay(value: Boolean) = write { preferences.setAutoplayEnabled(value && !loopAll.value) }
 
@@ -142,6 +171,10 @@ class PlaybackSettingsViewModel
 
         fun setSeekZone(zone: DoubleTapSeekZone) = write { preferences.setDoubleTapSeekZone(zone) }
 
+        fun setSpeedSwipeSide(side: SpeedSwipeSide) = write { preferences.setSpeedSwipeSide(side) }
+
+        fun setSpeedSwipeStep(step: Float) = write { preferences.setSpeedSwipeStep(step) }
+
         fun setBrightnessGesture(value: Boolean) = write { preferences.setBrightnessSwipeGesturesEnabled(value) }
 
         fun setRememberBrightness(value: Boolean) = write { preferences.setRememberBrightnessEnabled(value) }
@@ -178,6 +211,8 @@ class PlaybackSettingsViewModel
 
         fun setSponsorBlockButton(value: Boolean) = write { preferences.setOverlaySponsorBlockEnabled(value) }
 
+        fun setNextPrevButtons(value: Boolean) = write { preferences.setOverlayNextPrevEnabled(value) }
+
         fun setAutoPip(value: Boolean) = write { preferences.setAutoPipEnabled(value) }
 
         fun setContinueWatchingMiniPlayer(value: Boolean) = write { preferences.setMiniPlayerContinueWatchingEnabled(value) }
@@ -199,6 +234,8 @@ class PlaybackSettingsViewModel
         fun setTitleLines(value: Int) = write { preferences.setVideoTitleMaxLines(value) }
 
         fun setComments(value: Boolean) = write { preferences.setCommentsEnabled(value) }
+
+        fun setLiveChat(value: Boolean) = write { preferences.setLiveChatEnabled(value) }
 
         fun setCommentsPreview(value: Boolean) = write { preferences.setCommentsPreviewEnabled(value) }
 
@@ -222,13 +259,18 @@ class PlaybackSettingsViewModel
 
         fun setPauseMusicWhenMuted(value: Boolean) = write { preferences.setPauseMusicWhenMuted(value) }
 
+        fun setMusicResume(value: Boolean) = write { preferences.setMusicResumeLongTracks(value) }
+
+        fun setMusicSideSwipes(value: Boolean) = write { preferences.setMusicSideSwipes(value) }
+
+        fun setNormalizeVolume(value: Boolean) = write { preferences.setVideoVolumeNormalizationEnabled(value) }
+
         fun setLyricsProviderEnabled(
             name: String,
             enabled: Boolean,
         ) = write { preferences.setLyricsProviderEnabled(name, enabled) }
 
-        fun setLyricsProviderOrder(names: List<String>) =
-            write { preferences.setLyricsProviderOrder(lyricsRegistry.serializeProviderOrder(names)) }
+        fun setLyricsProviderOrder(names: List<String>) = write { preferences.setLyricsProviderOrder(LyricsProviderOrder.serialize(names)) }
 
         companion object {
             const val ORIGINAL_AUDIO = "original"

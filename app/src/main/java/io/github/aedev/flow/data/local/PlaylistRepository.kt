@@ -24,8 +24,8 @@ class PlaylistRepository
         private val videoDao: VideoDao,
     ) {
         constructor(context: android.content.Context) : this(
-            AppDatabase.getDatabase(context).playlistDao(),
-            AppDatabase.getDatabase(context).videoDao(),
+            AppDatabase.profile(context).playlistDao(),
+            AppDatabase.profile(context).videoDao(),
         )
 
         // Watch Later Logic (using a special hardcoded playlist ID "watch_later")
@@ -39,7 +39,7 @@ class PlaylistRepository
         }
 
         suspend fun updateVideoMetadata(video: Video) {
-            videoDao.upsertMetadata(listOf(normalizedEntity(video)))
+            videoDao.mergeMetadata(listOf(normalizedEntity(video)))
         }
 
         private fun normalizedEntity(video: Video): VideoEntity {
@@ -290,6 +290,12 @@ class PlaylistRepository
                 )
             playlistDao.insertPlaylist(entity)
         }
+
+        /** Moves a stored playlist to the music library, or back to the video library. */
+        suspend fun moveToLibrary(
+            playlistId: String,
+            isMusic: Boolean,
+        ) = playlistDao.setPlaylistIsMusic(playlistId, isMusic)
 
         suspend fun unsaveExternalPlaylist(playlistId: String) {
             val entity = playlistDao.getPlaylist(playlistId)

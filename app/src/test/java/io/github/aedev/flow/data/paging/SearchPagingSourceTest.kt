@@ -7,11 +7,18 @@ import io.github.aedev.flow.data.local.Duration
 import io.github.aedev.flow.data.local.SearchFilter
 import io.github.aedev.flow.data.local.SortType
 import io.github.aedev.flow.data.local.UploadDate
+import io.github.aedev.flow.data.local.WatchState
 import io.github.aedev.flow.data.recommendation.FeedExclusions
 import io.github.aedev.flow.innertube.pages.SearchFixture
+import io.github.aedev.flow.innertube.pages.renderer.FeedShelfStyle
+import io.github.aedev.flow.innertube.pages.renderer.videoOrNull
 import io.github.aedev.flow.innertube.pages.search.SearchHeader
+import io.github.aedev.flow.innertube.pages.search.SearchSection
 import io.github.aedev.flow.innertube.pages.search.toSearchResultsPage
 import kotlinx.coroutines.test.runTest
+import kotlinx.serialization.json.Json
+import kotlinx.serialization.json.JsonObject
+import kotlinx.serialization.json.jsonObject
 import org.junit.Test
 
 class SearchPagingSourceTest {
@@ -41,7 +48,8 @@ class SearchPagingSourceTest {
         shortsEnabled: Boolean = true,
         onHeader: (SearchHeader) -> Unit = {},
         blocked: Set<String> = emptySet(),
-    ) = SearchPagingSource("sam sulek", filter, shortsEnabled, onHeader, loader) { FeedExclusions(blockedChannelIds = blocked) }
+        watched: WatchedVideoLookup = WatchedVideoLookup { emptySet() },
+    ) = SearchPagingSource("sam sulek", filter, shortsEnabled, onHeader, loader, watched) { FeedExclusions(blockedChannelIds = blocked) }
 
     private suspend fun SearchPagingSource.loadPage(key: String? = null) =
         load(PagingSource.LoadParams.Refresh(key, 20, false)) as PagingSource.LoadResult.Page
@@ -153,6 +161,36 @@ class SearchPagingSourceTest {
         }
 
     @Test
+    fun `the shorts filter lays its shorts strips out as single shorts`() =
+        runTest {
+            val page = source(RecordingLoader(listOf(SearchFixture.TYPE_SHORTS)), SearchFilter(contentType = ContentType.SHORTS)).loadPage()
+
+            assertThat(page.data).isNotEmpty()
+            assertThat(page.data.all { it is SearchResultItem.VideoResult && it.video.isShort }).isTrue()
+            assertThat(page.data.videoIds()).containsAtLeastElementsIn(SearchFixture(SearchFixture.TYPE_SHORTS).stripShortIds())
+        }
+
+    @Test
+    fun `a later shorts filter page keeps its shorts although its strips reuse the first page's ids`() =
+        runTest {
+            val first = SearchFixture(SearchFixture.TYPE_SHORTS)
+            val ids = first.stripShortIds()
+            val second = Json.parseToJsonElement(ids.fold(first.toString()) { text, id -> text.replace(id, id.reversed()) }).jsonObject
+            val pages = mutableListOf(first, second)
+            val paging =
+                SearchPagingSource(
+                    query = "sam sulek",
+                    filter = SearchFilter(contentType = ContentType.SHORTS),
+                    loadPage = SearchPageLoader { _, _, _ -> pages.removeAt(0).toSearchResultsPage() },
+                )
+
+            val one = paging.loadPage()
+            val two = paging.loadPage(one.nextKey)
+
+            assertThat(two.data.videoIds()).containsAtLeastElementsIn(ids.map { it.reversed() })
+        }
+
+    @Test
     fun `builds one token for a combination of filters`() =
         runTest {
             val loader = RecordingLoader(listOf(SearchFixture.COMBINED_FILTERS))
@@ -251,6 +289,121 @@ class SearchPagingSourceTest {
         assertThat(visible).containsExactly(channel)
     }
 
+    @Test
+    fun `without a watch filter a page is still one request`() =
+        runTest {
+            val loader = RecordingLoader(listOf(SearchFixture.ALL_SAM_SULEK))
+            source(loader, watched = { videos -> videos.mapTo(HashSet()) { it.id } }).loadPage()
+
+            assertThat(loader.calls).hasSize(1)
+        }
+
+    @Test
+    fun `Watched keeps only watched videos and drops channels and playlists`() =
+        runTest {
+            val all = source(RecordingLoader(listOf(SearchFixture.ALL_SAM_SULEK))).loadPage()
+            val loose = all.data.filterIsInstance<SearchResultItem.VideoResult>().map { it.video.id }
+            val watchedId = loose.first()
+
+            val page =
+                source(
+                    RecordingLoader(listOf(SearchFixture.ALL_SAM_SULEK)),
+                    SearchFilter(watchState = WatchState.WATCHED),
+                    watched = { videos -> videos.map { it.id }.filter { it == watchedId }.toSet() },
+                ).loadPage()
+
+            assertThat(page.data.filterIsInstance<SearchResultItem.VideoResult>().map { it.video.id }).containsExactly(watchedId)
+            assertThat(page.data.filterIsInstance<SearchResultItem.ChannelResult>()).isEmpty()
+            assertThat(page.data.filterIsInstance<SearchResultItem.PlaylistResult>()).isEmpty()
+        }
+
+    @Test
+    fun `Unwatched drops watched videos and keeps the rest`() =
+        runTest {
+            val all = source(RecordingLoader(listOf(SearchFixture.ALL_SAM_SULEK))).loadPage()
+            val watchedId =
+                all.data
+                    .filterIsInstance<SearchResultItem.VideoResult>()
+                    .first()
+                    .video.id
+
+            val page =
+                source(
+                    RecordingLoader(listOf(SearchFixture.ALL_SAM_SULEK)),
+                    SearchFilter(watchState = WatchState.UNWATCHED),
+                    watched = { setOf(watchedId) },
+                ).loadPage()
+
+            assertThat(page.data.filterIsInstance<SearchResultItem.VideoResult>().none { it.video.id == watchedId }).isTrue()
+            assertThat(page.data).hasSize(all.data.size - 1)
+        }
+
+    @Test
+    fun `a thinned page reads on, at most three requests per load`() =
+        runTest {
+            val loader = RecordingLoader(listOf(SearchFixture.ALL_SAM_SULEK, SearchFixture.ALL_CONTINUATION))
+            val page = source(loader, SearchFilter(watchState = WatchState.WATCHED)).loadPage()
+
+            assertThat(loader.calls).hasSize(3)
+            assertThat(page.data).isEmpty()
+            assertThat(loader.calls[1].third).isNotNull()
+        }
+
+    @Test
+    fun `a watch filter that keeps finding nothing ends the search after two loads`() =
+        runTest {
+            val loader = RecordingLoader(listOf(SearchFixture.ALL_SAM_SULEK, SearchFixture.ALL_CONTINUATION))
+            val paging = source(loader, SearchFilter(watchState = WatchState.WATCHED))
+
+            val first = paging.loadPage()
+            val second = paging.loadPage(first.nextKey)
+
+            assertThat(first.nextKey).isNotNull()
+            assertThat(second.nextKey).isNull()
+            assertThat(loader.calls).hasSize(6)
+        }
+
+    @Test
+    fun `a load that finds a match keeps the search going`() =
+        runTest {
+            val loader = RecordingLoader(listOf(SearchFixture.ALL_SAM_SULEK, SearchFixture.ALL_CONTINUATION))
+            val paging = source(loader, SearchFilter(watchState = WatchState.UNWATCHED))
+
+            val first = paging.loadPage()
+            val second = paging.loadPage(first.nextKey)
+
+            assertThat(first.data).isNotEmpty()
+            assertThat(second.nextKey).isNotNull()
+        }
+
+    @Test
+    fun `channel and playlist searches ignore the watch filter`() =
+        runTest {
+            val loader = RecordingLoader(listOf(SearchFixture.TYPE_CHANNELS))
+            val page =
+                source(loader, SearchFilter(contentType = ContentType.CHANNELS, watchState = WatchState.WATCHED)).loadPage()
+
+            assertThat(loader.calls).hasSize(1)
+            assertThat(page.data).isNotEmpty()
+        }
+
+    @Test
+    fun `a strip keeps only the videos the watch filter allows`() {
+        val shelf =
+            SearchResultItem.ShelfResult(
+                id = "s1",
+                title = "Latest",
+                kind = SearchShelfKind.VIDEOS,
+                videos = listOf(video("UC1").copy(id = "a"), video("UC1").copy(id = "b")),
+            )
+
+        val watched = listOf(shelf).withWatchState(WatchState.WATCHED, setOf("a"))
+        val unwatched = listOf(shelf).withWatchState(WatchState.UNWATCHED, setOf("a", "b"))
+
+        assertThat((watched.single() as SearchResultItem.ShelfResult).videos.map { it.id }).containsExactly("a")
+        assertThat(unwatched).isEmpty()
+    }
+
     private fun video(channelId: String) =
         io.github.aedev.flow.data.model.Video(
             id = "v1",
@@ -278,6 +431,16 @@ class SearchPagingSourceTest {
         runTest {
             assertThat(source(RecordingLoader(listOf(SearchFixture.ALL_SAM_SULEK))).getRefreshKey(mockState())).isNull()
         }
+
+    private fun List<SearchResultItem>.videoIds() = filterIsInstance<SearchResultItem.VideoResult>().map { it.video.id }
+
+    private fun JsonObject.stripShortIds() =
+        toSearchResultsPage()
+            .sections
+            .filterIsInstance<SearchSection.Strip>()
+            .filter { it.shelf.style == FeedShelfStyle.Grid }
+            .flatMap { strip -> strip.shelf.items.mapNotNull { it.videoOrNull()?.id } }
+            .distinct()
 
     private fun mockState() = androidx.paging.PagingState<String, SearchResultItem>(emptyList(), null, PAGING_CONFIG, 0)
 

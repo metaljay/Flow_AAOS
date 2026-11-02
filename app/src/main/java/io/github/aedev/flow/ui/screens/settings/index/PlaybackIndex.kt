@@ -1,6 +1,7 @@
 package io.github.aedev.flow.ui.screens.settings.index
 
 import io.github.aedev.flow.R
+import io.github.aedev.flow.ui.components.settings.SettingAvailability
 import io.github.aedev.flow.ui.components.settings.SettingEntry
 import io.github.aedev.flow.ui.components.settings.SettingsDestination
 
@@ -15,6 +16,14 @@ internal object PlaybackIndex {
             section = R.string.playback_header,
             destination = page,
         )
+    val keepPlayingAfterSwipe =
+        SettingEntry(
+            key = "playback.keep_playing_after_swipe",
+            title = R.string.player_settings_keep_playing_after_swipe,
+            summary = R.string.player_settings_keep_playing_after_swipe_subtitle,
+            section = R.string.playback_header,
+            destination = page,
+        )
     val startPaused =
         SettingEntry(
             key = "playback.start_paused",
@@ -23,6 +32,24 @@ internal object PlaybackIndex {
             keywords = R.string.settings_keywords_autoplay,
             section = R.string.playback_header,
             destination = page,
+        )
+    val openFullscreen =
+        SettingEntry(
+            key = "playback.open_fullscreen",
+            title = R.string.player_settings_open_fullscreen,
+            summary = R.string.player_settings_open_fullscreen_subtitle,
+            section = R.string.playback_header,
+            destination = page,
+        )
+    val tiltFullscreen =
+        SettingEntry(
+            key = "playback.tilt_fullscreen",
+            title = R.string.player_settings_tilt_fullscreen,
+            summary = R.string.player_settings_tilt_fullscreen_subtitle,
+            keywords = R.string.settings_keywords_tilt_fullscreen,
+            section = R.string.playback_header,
+            destination = page,
+            availability = SettingAvailability.NotOnTv,
         )
     val autoplay =
         SettingEntry(
@@ -130,79 +157,12 @@ internal object PlaybackIndex {
             section = R.string.settings_section_speed,
             destination = page,
         )
-    val doubleTapSeek =
+    val normalizeVolume =
         SettingEntry(
-            key = "playback.double_tap_seek",
-            title = R.string.player_settings_double_tap_seek,
-            keywords = R.string.settings_keywords_gestures,
-            section = R.string.player_appearance_gestures_header,
-            destination = page,
-        )
-    val seekZoneWidth =
-        SettingEntry(
-            key = "playback.seek_zone_width",
-            title = R.string.player_settings_seek_zone_width,
-            keywords = R.string.settings_keywords_gestures,
-            section = R.string.player_appearance_gestures_header,
-            destination = page,
-        )
-    val brightnessGesture =
-        SettingEntry(
-            key = "playback.brightness_gesture",
-            title = R.string.player_appearance_brightness_gesture_title,
-            summary = R.string.player_appearance_brightness_gesture_subtitle,
-            keywords = R.string.settings_keywords_gestures,
-            section = R.string.player_appearance_gestures_header,
-            destination = page,
-        )
-    val rememberBrightness =
-        SettingEntry(
-            key = "playback.remember_brightness",
-            title = R.string.player_appearance_remember_brightness_title,
-            summary = R.string.player_appearance_remember_brightness_subtitle,
-            section = R.string.player_appearance_gestures_header,
-            destination = page,
-        )
-    val volumeGesture =
-        SettingEntry(
-            key = "playback.volume_gesture",
-            title = R.string.player_appearance_volume_gesture_title,
-            summary = R.string.player_appearance_volume_gesture_subtitle,
-            keywords = R.string.settings_keywords_gestures,
-            section = R.string.player_appearance_gestures_header,
-            destination = page,
-        )
-    val volumeBoost =
-        SettingEntry(
-            key = "playback.volume_boost",
-            title = R.string.player_appearance_volume_boost_title,
-            summary = R.string.player_appearance_volume_boost_subtitle,
-            section = R.string.player_appearance_gestures_header,
-            destination = page,
-        )
-    val seekGesture =
-        SettingEntry(
-            key = "playback.seek_gesture",
-            title = R.string.player_appearance_seek_gesture_title,
-            summary = R.string.player_appearance_seek_gesture_subtitle,
-            keywords = R.string.settings_keywords_gestures,
-            section = R.string.player_appearance_gestures_header,
-            destination = page,
-        )
-    val haptics =
-        SettingEntry(
-            key = "playback.haptics",
-            title = R.string.player_appearance_haptics_title,
-            summary = R.string.player_appearance_haptics_subtitle,
-            section = R.string.player_appearance_gestures_header,
-            destination = page,
-        )
-    val controlsWhileLoading =
-        SettingEntry(
-            key = "playback.controls_while_loading",
-            title = R.string.player_appearance_controls_while_loading_title,
-            summary = R.string.player_appearance_controls_while_loading_subtitle,
-            section = R.string.player_appearance_gestures_header,
+            key = "playback.normalize_volume",
+            title = R.string.player_settings_normalize_volume,
+            summary = R.string.player_settings_normalize_volume_summary,
+            section = R.string.eq_settings_section,
             destination = page,
         )
     val castButton =
@@ -275,6 +235,15 @@ internal object PlaybackIndex {
             key = "playback.sponsorblock_button",
             title = R.string.player_settings_overlay_sponsorblock,
             summary = R.string.player_settings_overlay_sponsorblock_subtitle,
+            section = R.string.settings_section_player_buttons,
+            destination = page,
+        )
+    val nextPrevButtons =
+        SettingEntry(
+            key = "playback.next_prev_buttons",
+            title = R.string.player_settings_overlay_next_prev,
+            summary = R.string.player_settings_overlay_next_prev_subtitle,
+            keywords = R.string.settings_keywords_next_prev,
             section = R.string.settings_section_player_buttons,
             destination = page,
         )
@@ -374,6 +343,14 @@ internal object PlaybackIndex {
             section = R.string.settings_section_watch_page,
             destination = page,
         )
+    val liveChat =
+        SettingEntry(
+            key = "playback.live_chat",
+            title = R.string.content_settings_live_chat_enabled_title,
+            summary = R.string.content_settings_live_chat_enabled_subtitle,
+            section = R.string.settings_section_watch_page,
+            destination = page,
+        )
     val disableShortsPlayer =
         SettingEntry(
             key = "playback.disable_shorts_player",
@@ -437,6 +414,30 @@ internal object PlaybackIndex {
             section = R.string.settings_section_music,
             destination = page,
         )
+    val musicResume =
+        SettingEntry(
+            key = "playback.music_resume",
+            title = R.string.settings_music_resume_title,
+            summary = R.string.settings_music_resume_summary,
+            section = R.string.settings_section_music,
+            destination = page,
+        )
+    val resumeFromHeadphones =
+        SettingEntry(
+            key = "playback.resume_from_headphones",
+            title = R.string.settings_resume_from_headphones_title,
+            summary = R.string.settings_resume_from_headphones_summary,
+            section = R.string.settings_section_music,
+            destination = page,
+        )
+    val musicSideSwipes =
+        SettingEntry(
+            key = "playback.music_side_swipes",
+            title = R.string.settings_music_side_swipes_title,
+            summary = R.string.settings_music_side_swipes_summary,
+            section = R.string.settings_section_music,
+            destination = page,
+        )
     val musicVideoSwitch =
         SettingEntry(
             key = "playback.music_video_switch",
@@ -457,13 +458,17 @@ internal object PlaybackIndex {
     val all =
         listOf(
             backgroundPlay,
+            keepPlayingAfterSwipe,
             startPaused,
+            openFullscreen,
+            tiltFullscreen,
             autoplay,
             queueAutoplay,
             autoplayCountdown,
             loopAll,
             skipSilence,
             playDuringCalls,
+            normalizeVolume,
             rememberSpeed,
             musicNormalSpeed,
             speedPerChannel,
@@ -471,45 +476,44 @@ internal object PlaybackIndex {
             speedPresets,
             speedSlider,
             longPressSpeed,
-            doubleTapSeek,
-            seekZoneWidth,
-            brightnessGesture,
-            rememberBrightness,
-            volumeGesture,
-            volumeBoost,
-            seekGesture,
-            haptics,
-            controlsWhileLoading,
-            castButton,
-            captionsButton,
-            pipButton,
-            autoplayButton,
-            sleepTimerButton,
-            lockButton,
-            speedIndicator,
-            commentsButton,
-            sponsorBlockButton,
-            autoPip,
-            continueWatchingMiniPlayer,
-            restoreMusicMiniPlayer,
-            openMusicPlayerOnPlay,
-            audioLanguage,
-            subtitleLanguage,
-            autoCaptions,
-            relatedVideos,
-            relatedCardStyle,
-            titleLines,
-            comments,
-            commentsPreview,
-            disableShortsPlayer,
-            shortsPlayerPrompt,
-            shortsPlaybackMode,
-            shortsBackgroundPlay,
-            shortsPip,
-            shortsContinueIntoFeed,
-            endlessRadio,
-            pauseMusicWhenMuted,
-            musicVideoSwitch,
-            lyricsProviders,
-        )
+        ) +
+            PlaybackGesturesIndex.all +
+            listOf(
+                castButton,
+                captionsButton,
+                pipButton,
+                autoplayButton,
+                sleepTimerButton,
+                lockButton,
+                speedIndicator,
+                commentsButton,
+                sponsorBlockButton,
+                nextPrevButtons,
+                autoPip,
+                continueWatchingMiniPlayer,
+                restoreMusicMiniPlayer,
+                openMusicPlayerOnPlay,
+                audioLanguage,
+                subtitleLanguage,
+                autoCaptions,
+                relatedVideos,
+                relatedCardStyle,
+                titleLines,
+                comments,
+                commentsPreview,
+                liveChat,
+                disableShortsPlayer,
+                shortsPlayerPrompt,
+                shortsPlaybackMode,
+                shortsBackgroundPlay,
+                shortsPip,
+                shortsContinueIntoFeed,
+                endlessRadio,
+                pauseMusicWhenMuted,
+                musicResume,
+                resumeFromHeadphones,
+                musicSideSwipes,
+                musicVideoSwitch,
+                lyricsProviders,
+            )
 }

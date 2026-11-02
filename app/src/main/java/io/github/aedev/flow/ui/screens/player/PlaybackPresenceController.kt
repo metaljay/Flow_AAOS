@@ -7,10 +7,13 @@ import io.github.aedev.flow.data.video.SavedVideoQueue
 import io.github.aedev.flow.player.EnhancedMusicPlayerManager
 import io.github.aedev.flow.player.EnhancedPlayerManager
 import io.github.aedev.flow.player.GlobalPlayerState
+import io.github.aedev.flow.service.MusicServiceState
 import io.github.aedev.flow.ui.screens.player.state.VideoPlayerUiState
 import kotlinx.coroutines.CoroutineDispatcher
 import kotlinx.coroutines.CoroutineScope
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.StateFlow
+import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
@@ -37,11 +40,28 @@ internal class PlaybackPresenceController(
     // The queue the restored video was playing in, so resuming it carries on with the rest.
     private var restoredQueue: SavedVideoQueue? = null
 
+    private val _fullscreenOpen = MutableStateFlow<String?>(null)
+
+    /**
+     * The video the viewer just opened that the player takes to fullscreen once its sheet is up. It
+     * is held until the screen applies it, because the screen is not composed yet when a first
+     * video is opened.
+     */
+    val fullscreenOpen: StateFlow<String?> = _fullscreenOpen.asStateFlow()
+
+    fun armFullscreenOpen(videoId: String?) {
+        _fullscreenOpen.value = videoId
+    }
+
+    fun consumeFullscreenOpen(videoId: String) {
+        _fullscreenOpen.compareAndSet(videoId, null)
+    }
+
     /** Brings the last unfinished video back as a mini player, unless music already owns it. */
     fun restoreLastWatchedSession() {
         scope.launch {
             if (!playerPreferences.miniPlayerContinueWatchingEnabled.first()) return@launch
-            if (EnhancedMusicPlayerManager.currentTrack.value != null) return@launch
+            if (EnhancedMusicPlayerManager.currentTrack.value != null || MusicServiceState.isRunning) return@launch
             val lastVideo = withContext(ioDispatcher) { viewHistory.getLatestUnfinishedVideo() } ?: return@launch
             if (uiState.value.cachedVideo != null) return@launch
             uiState.update { it.copy(cachedVideo = lastVideo.toVideo(), isRestoredSession = true) }
@@ -77,6 +97,7 @@ internal class PlaybackPresenceController(
         val queue = restoredQueue
         restoredQueue = null
         if (queue != null) resumeQueue(queue.videos, queue.index, queue.title) else resumePlayback(video)
+        armFullscreenOpen(null)
     }
 
     fun dismissContinueWatching() {

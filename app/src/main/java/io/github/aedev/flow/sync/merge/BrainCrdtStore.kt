@@ -5,6 +5,7 @@ import androidx.datastore.preferences.core.edit
 import androidx.datastore.preferences.core.stringPreferencesKey
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.aedev.flow.data.local.safePreferencesDataStore
+import io.github.aedev.flow.data.profile.StoreScope
 import io.github.aedev.flow.sync.canonical.BrainLwwMaps
 import io.github.aedev.flow.sync.canonical.BrainSets
 import io.github.aedev.flow.sync.canonical.CanonicalBrain
@@ -17,7 +18,7 @@ import kotlinx.serialization.json.Json
 import javax.inject.Inject
 import javax.inject.Singleton
 
-private val Context.brainCrdtDataStore by safePreferencesDataStore(name = "sync_brain_crdt")
+private val Context.brainCrdtDataStore by safePreferencesDataStore(name = "sync_brain_crdt", scope = StoreScope.PROFILE_PRIVATE)
 
 /**
  * The sync-owned CRDT state that the FlowNeuro brain itself cannot hold, persisted alongside it:
@@ -50,6 +51,9 @@ data class BrainCrdtState(
     val channelStrikes: Map<String, Lww<CanonicalChannelStrike>> = emptyMap(),
     val deviceVectors: Map<String, DeviceVectors> = emptyMap(),
     val syncedLww: BrainLwwMaps = BrainLwwMaps(),
+    /** The key spec and key language the topic-keyed state above is written in; see [BrainKeyRekey]. */
+    val keySpec: Int = 1,
+    val keyLanguage: String = "",
 ) {
     companion object {
         /**

@@ -3,6 +3,9 @@ package io.github.aedev.flow.sync
 import android.content.Context
 import dagger.hilt.android.qualifiers.ApplicationContext
 import io.github.aedev.flow.R
+import io.github.aedev.flow.data.profile.ProfileRepository
+import io.github.aedev.flow.data.profile.SyncProfile
+import io.github.aedev.flow.data.recommendation.NeuroKeySpec
 import io.github.aedev.flow.sync.apply.PeerInfo
 import io.github.aedev.flow.sync.apply.ReceivedCollection
 import io.github.aedev.flow.sync.apply.SyncApplier
@@ -35,6 +38,7 @@ import kotlinx.coroutines.SupervisorJob
 import kotlinx.coroutines.flow.MutableStateFlow
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
+import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withTimeoutOrNull
 import okhttp3.OkHttpClient
@@ -63,6 +67,7 @@ class SyncManager
         private val okHttpClient: OkHttpClient,
         private val deviceIdentity: DeviceIdentity,
         private val applier: SyncApplier,
+        private val profiles: ProfileRepository,
     ) {
         private val scope = CoroutineScope(SupervisorJob() + Dispatchers.IO)
 
@@ -99,7 +104,7 @@ class SyncManager
             collections: List<String>,
         ) {
             if (job?.isActive == true) return
-            job = scope.launch { runHost(role, collections) }
+            job = scope.launch { if (!refusedOutsideSyncProfile()) runHost(role, collections) }
         }
 
         /** Become the client (scan a QR) in the given [role]. [collections] is only used when SENDER. */
@@ -109,7 +114,18 @@ class SyncManager
             collections: List<String>,
         ) {
             if (job?.isActive == true) return
-            job = scope.launch { runClient(role, qrText, collections) }
+            job = scope.launch { if (!refusedOutsideSyncProfile()) runClient(role, qrText, collections) }
+        }
+
+        /** A session is pairing, transferring or merging. */
+        val isBusy: Boolean get() = job?.isActive == true
+
+        // The screen already says so; this keeps any other caller from syncing another profile's data.
+        private suspend fun refusedOutsideSyncProfile(): Boolean {
+            if (SyncProfile.syncsHere(context)) return false
+            val name = SyncProfile.name(profiles.state.first(), context)
+            _state.value = SyncState.Failed(context.getString(R.string.sync_default_only_title, name))
+            return true
         }
 
         fun extendPairingForManualShare(): String? {
@@ -315,7 +331,7 @@ class SyncManager
                     sessionId = sessionId,
                     sasDigits = sas,
                     localHello = hello,
-                    localCaps = androidCapabilities(),
+                    localCaps = androidCapabilities(applier.neuroKeyLanguage()),
                     localSelection = selection,
                     callbacks = callbacks,
                     buildPayload = { cols: List<String> -> applier.exportPayload(cols, node, hlc) },
@@ -351,14 +367,15 @@ class SyncManager
                 }
             }
 
-        private fun androidCapabilities() =
+        private fun androidCapabilities(keyLanguage: String) =
             Capabilities(
                 mapOf(
                     SyncCollection.WATCH_HISTORY to Capability(1, produce = true, consume = true),
                     SyncCollection.PLAYLISTS to Capability(1, produce = true, consume = true),
                     SyncCollection.LIKES to Capability(1, produce = true, consume = true),
                     SyncCollection.SETTINGS to Capability(1, produce = true, consume = true),
-                    SyncCollection.FLOW_NEURO_BRAIN to Capability(13, produce = true, consume = true),
+                    SyncCollection.FLOW_NEURO_BRAIN to
+                        Capability(13, produce = true, consume = true, keySpec = NeuroKeySpec.VERSION, keyLanguage = keyLanguage),
                     SyncCollection.SUBSCRIBED_CHANNELS to Capability(1, produce = true, consume = true),
                     SyncCollection.SUBSCRIPTIONS to Capability(1, produce = true, consume = true),
                     SyncCollection.MUSIC_BRAIN to Capability(1, produce = true, consume = true),

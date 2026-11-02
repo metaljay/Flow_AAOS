@@ -2,15 +2,20 @@ package io.github.aedev.flow.ui.screens.settings.appearance.player
 
 import androidx.compose.animation.core.animateDpAsState
 import androidx.compose.foundation.background
+import androidx.compose.foundation.layout.Arrangement
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.Row
 import androidx.compose.foundation.layout.fillMaxHeight
 import androidx.compose.foundation.layout.fillMaxWidth
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
+import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.material3.ExperimentalMaterial3Api
+import androidx.compose.material3.Icon
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.SliderDefaults
+import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.remember
@@ -25,19 +30,27 @@ import io.github.aedev.flow.R
 import io.github.aedev.flow.data.local.GestureOverlayStyle
 import io.github.aedev.flow.data.local.MiniBarSwipeAction
 import io.github.aedev.flow.data.local.MusicPlayerBackgroundStyle
+import io.github.aedev.flow.data.local.QueueSwipeAction
 import io.github.aedev.flow.data.local.SliderStyle
+import io.github.aedev.flow.ui.components.musicplayer.common.musicPlayerTurnsLight
+import io.github.aedev.flow.ui.components.musicplayer.common.playerBackdropColors
 import io.github.aedev.flow.ui.components.musicplayer.controls.ExpressivePlayerSlider
 import io.github.aedev.flow.ui.components.musicplayer.controls.ExpressiveWavySlider
 import io.github.aedev.flow.ui.components.musicplayer.controls.SquigglySlider
 import io.github.aedev.flow.ui.components.musicplayer.controls.expressiveSliderSpec
 import io.github.aedev.flow.ui.components.musicplayer.full.PlayerBackground
+import io.github.aedev.flow.ui.components.musicplayer.queue.containerColor
+import io.github.aedev.flow.ui.components.musicplayer.queue.contentColor
+import io.github.aedev.flow.ui.components.musicplayer.queue.icon
+import io.github.aedev.flow.ui.components.musicplayer.queue.labelRes
+import io.github.aedev.flow.ui.components.musicplayer.queue.rowSwipe
+import io.github.aedev.flow.ui.components.shared.GestureLevelHudPreview
 import io.github.aedev.flow.ui.components.shared.MediaMiniBarDefaults
 import io.github.aedev.flow.ui.components.shared.MediaMiniBarSwipeReveal
 import io.github.aedev.flow.ui.components.shared.MiniBarReveal
 import io.github.aedev.flow.ui.components.shared.icon
 import io.github.aedev.flow.ui.components.shared.isDestructive
 import io.github.aedev.flow.ui.components.shared.labelRes
-import io.github.aedev.flow.ui.components.videoplayer.overlay.GestureLevelHudPreview
 import io.github.aedev.flow.ui.theme.PlayerGround
 
 private const val PREVIEW_PROGRESS = 0.4f
@@ -139,17 +152,22 @@ internal fun SeekbarWidthPreview(padding: Dp) {
 
 /**
  * The music player's own background in [style], painted around Flow's icon in place of album art,
- * so the preview is exactly what the player draws rather than a sketch of it.
+ * so the preview is exactly what the player draws rather than a sketch of it. [followLightTheme]
+ * is the player's light switch, so a light app theme previews the light version.
  */
 @Composable
-internal fun MusicBackgroundPreview(style: MusicPlayerBackgroundStyle) {
+internal fun MusicBackgroundPreview(
+    style: MusicPlayerBackgroundStyle,
+    followLightTheme: Boolean,
+) {
     val context = LocalContext.current
     val artwork = remember { "android.resource://${context.packageName}/${R.drawable.ic_launcher_foreground}" }
+    val scheme = MaterialTheme.colorScheme
+    val light = musicPlayerTurnsLight(style, followLightTheme, scheme.surface)
     PlayerBackground(
         thumbnailUrl = artwork,
         style = style,
-        paletteBaseColor = MaterialTheme.colorScheme.primary,
-        paletteAccentColor = MaterialTheme.colorScheme.tertiary,
+        backdrop = remember(scheme, light) { playerBackdropColors(scheme.primary, scheme.tertiary, light) },
         modifier =
             Modifier
                 .fillMaxWidth()
@@ -193,3 +211,29 @@ internal fun MiniBarSwipePreview(
         )
     }
 }
+
+/** What a queue row swiped towards that side uncovers. */
+@Composable
+internal fun QueueSwipePreview(
+    action: QueueSwipeAction,
+    towardsLeft: Boolean,
+) {
+    val swipe = action.rowSwipe
+    Row(
+        modifier =
+            Modifier
+                .fillMaxWidth()
+                .height(QueueSwipePreviewHeight)
+                .clip(CircleShape)
+                .background(swipe.containerColor)
+                .padding(horizontal = QueueSwipePreviewPadding),
+        horizontalArrangement = Arrangement.spacedBy(QueueSwipePreviewPadding / 2, if (towardsLeft) Alignment.End else Alignment.Start),
+        verticalAlignment = Alignment.CenterVertically,
+    ) {
+        Icon(imageVector = swipe.icon, contentDescription = null, tint = swipe.contentColor)
+        Text(text = stringResource(swipe.labelRes), style = MaterialTheme.typography.titleSmall, color = swipe.contentColor)
+    }
+}
+
+private val QueueSwipePreviewHeight = 56.dp
+private val QueueSwipePreviewPadding = 20.dp

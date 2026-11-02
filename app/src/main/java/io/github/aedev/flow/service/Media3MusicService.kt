@@ -18,6 +18,7 @@ import androidx.media3.common.C
 import androidx.media3.common.MediaItem
 import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackException
+import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
 import androidx.media3.datasource.DefaultDataSource
@@ -27,6 +28,7 @@ import androidx.media3.exoplayer.analytics.AnalyticsListener
 import androidx.media3.exoplayer.audio.AudioSink
 import androidx.media3.exoplayer.audio.DefaultAudioSink
 import androidx.media3.exoplayer.source.DefaultMediaSourceFactory
+import androidx.media3.exoplayer.source.ShuffleOrder
 import androidx.media3.exoplayer.util.EventLogger
 import androidx.media3.session.CommandButton
 import androidx.media3.session.DefaultMediaNotificationProvider
@@ -35,6 +37,7 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.MediaLibraryService
 import androidx.media3.session.MediaSession
 import androidx.media3.session.SessionCommand
+import androidx.media3.session.SessionError
 import androidx.media3.session.SessionResult
 import com.google.common.collect.ImmutableList
 import com.google.common.util.concurrent.Futures
@@ -52,19 +55,26 @@ import io.github.aedev.flow.data.localmedia.LocalMediaIds
 import io.github.aedev.flow.data.music.YouTubeMusicService
 import io.github.aedev.flow.data.music.model.MusicTrack
 import io.github.aedev.flow.data.newmusic.InnertubeMusicService
+import io.github.aedev.flow.data.profile.ActiveProfile
+import io.github.aedev.flow.data.profile.ProfileSwitchGate
 import io.github.aedev.flow.data.recommendation.music.MusicBrainEngine
 import io.github.aedev.flow.data.scrobble.ScrobbleRules
 import io.github.aedev.flow.extensions.setOffloadEnabled
 import io.github.aedev.flow.innertube.YouTube
 import io.github.aedev.flow.innertube.models.WatchEndpoint
-import io.github.aedev.flow.player.EnhancedMusicPlayerManager
+import io.github.aedev.flow.player.LifecyclePlaybackPreferences
+import io.github.aedev.flow.player.MusicFailureStreak
 import io.github.aedev.flow.player.MusicLoadErrorPolicy
 import io.github.aedev.flow.player.MusicMutePause
 import io.github.aedev.flow.player.MusicPlaybackDiagnostics
 import io.github.aedev.flow.player.MusicPlaybackRecoveryPlanner
 import io.github.aedev.flow.player.MusicQueuePlanner
 import io.github.aedev.flow.player.MusicRadioPlanner
+import io.github.aedev.flow.player.MusicResumeTracker
+import io.github.aedev.flow.player.PlaylistQueueOrder
+import io.github.aedev.flow.player.audio.AudioSessionAnnouncer
 import io.github.aedev.flow.player.audio.AudioSessionRegistry
+import io.github.aedev.flow.player.audio.LoudnessGain
 import io.github.aedev.flow.player.audio.eq.EqualizerAudioProcessor
 import io.github.aedev.flow.player.audio.shouldHandleAudioFocus
 import io.github.aedev.flow.player.datasource.YouTubeHttpDataSource
@@ -75,8 +85,13 @@ import io.github.aedev.flow.player.factory.LoadControlFactory
 import io.github.aedev.flow.player.musicvideo.MusicMediaSourceFactory
 import io.github.aedev.flow.player.musicvideo.MusicVideoFormats
 import io.github.aedev.flow.player.musicvideo.MusicVideoSwitch
+import io.github.aedev.flow.player.restoredMusicQueue
 import io.github.aedev.flow.player.sessionArtworkBitmapLoader
 import io.github.aedev.flow.player.stream.ClientGateTracker
+import io.github.aedev.flow.player.stream.PlaybackBlock
+import io.github.aedev.flow.service.auto.AutoBrowseTree
+import io.github.aedev.flow.service.auto.AutoLibrary
+import io.github.aedev.flow.service.auto.AutoLibraryBrowser
 import io.github.aedev.flow.utils.MusicPlayerUtils
 import io.github.aedev.flow.utils.NetworkConnectivityObserver
 import io.github.aedev.flow.utils.NetworkState
@@ -90,9 +105,9 @@ import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.withContext
 import java.util.Locale
+import java.util.concurrent.atomic.AtomicBoolean
 import javax.inject.Inject
 import kotlin.math.min
-import kotlin.math.pow
 
 @AndroidEntryPoint
 class Media3MusicService : MediaLibraryService() {
@@ -101,9 +116,6 @@ class Media3MusicService : MediaLibraryService() {
         private const val ACTION_TOGGLE_SHUFFLE = "ACTION_TOGGLE_SHUFFLE"
         private const val ACTION_TOGGLE_REPEAT = "ACTION_TOGGLE_REPEAT"
         private const val ACTION_STOP = "ACTION_STOP"
-        private const val AUTO_ROOT_ID = "flow_auto_root"
-        private const val AUTO_QUEUE_ID = "flow_auto_queue"
-        private const val AUTO_CURRENT_ID = "flow_auto_current"
 
         private const val MAX_RETRY_PER_SONG = 5
         private const val BASE_RETRY_DELAY_MS = 3000L
@@ -139,14 +151,14 @@ class Media3MusicService : MediaLibraryService() {
          * Stops playback and the service from inside it. Sent through the controller, it lands after
          * the player commands the caller already queued, which a direct stopService() overtakes.
          */
-        fun requestStop(controller: MediaController) {
+        fun requestStop(controller: MediaController): ListenableFuture<SessionResult> =
             controller.sendCustomCommand(CommandStop, Bundle.EMPTY)
-        }
     }
 
     private lateinit var mediaLibrarySession: MediaLibrarySession
     private lateinit var player: ExoPlayer
     private val equalizer = EqualizerAudioProcessor()
+    private val carTreeRefreshed = AtomicBoolean(false)
     private val musicAudioAttributes =
         AudioAttributes
             .Builder()
@@ -154,16 +166,21 @@ class Media3MusicService : MediaLibraryService() {
             .setUsage(C.USAGE_MEDIA)
             .build()
     private var handlesAudioFocus = true
+    private var applyingSavedShuffle = false
     private lateinit var connectivityObserver: NetworkConnectivityObserver
 
     private var wakeLock: PowerManager.WakeLock? = null
     private var wifiLock: WifiManager.WifiLock? = null
 
     /**
-     * Coroutine job that defers WakeLock/WifiLock release by 30 seconds after playback pauses.
+     * Coroutine job that defers WakeLock/WifiLock release by 12 seconds after playback pauses.
      * Prevents the CPU from entering deep sleep during brief buffering/focus-loss events.
      */
     private var lockReleaseJob: Job? = null
+
+    private var offloadState = MusicOffloadState()
+    private var appliedOffload: Boolean? = null
+    private var isOffloaded = false
 
     private var automixJob: Job? = null
 
@@ -186,10 +203,6 @@ class Media3MusicService : MediaLibraryService() {
     // playlist has moved on, so the retry must not re-target whatever is current by then.
     private var pendingNetworkRetry: MusicPlaybackRecoveryPlanner.FailedItem? = null
 
-    // A radio the user started by name outruns the passive endless-radio toggle: that switch
-    // governs queues that run out on their own, not a station the user asked for.
-    private var explicitRadioRequest = false
-
     // Queue-end continuation: appends go through the manager's MediaController and
     // land asynchronously, so a resume at STATE_ENDED must wait for the timeline.
     private var radioResumeWhenAppended = false
@@ -200,12 +213,17 @@ class Media3MusicService : MediaLibraryService() {
 
     private val recentlyFailedSongs = LinkedHashSet<String>()
 
+    private val failureStreak = MusicFailureStreak()
+
     private var pendingRetryJob: Job? = null
 
     private var waitingForNetwork = false
 
     @Inject
     lateinit var downloadUtil: DownloadUtil
+
+    @Inject
+    lateinit var lifecyclePlaybackPreferences: LifecyclePlaybackPreferences
 
     @Inject
     lateinit var legacySongs: LegacySongDownloads
@@ -232,10 +250,29 @@ class Media3MusicService : MediaLibraryService() {
 
     @Inject
     lateinit var audioSessions: AudioSessionRegistry
+    private var audioSessionAnnouncer: AudioSessionAnnouncer? = null
+
+    @Inject
+    lateinit var autoLibrary: AutoLibrary
+
+    @Inject
+    lateinit var musicDownloads: io.github.aedev.flow.data.music.DownloadManager
+
+    private val autoBrowser by lazy { AutoLibraryBrowser(this, lifecycleScope, autoLibrary) }
+
+    @Inject
+    lateinit var queuePersistence: QueuePersistence
+
+    @Inject
+    lateinit var musicResume: MusicResumeTracker
+
+    @Inject
+    lateinit var lyricsHelper: io.github.aedev.flow.data.lyrics.LyricsHelper
 
     @OptIn(UnstableApi::class)
     override fun onCreate() {
         super.onCreate()
+        MusicServiceState.isRunning = true
 
         recordForegroundStartFailures("music-service")
 
@@ -306,41 +343,10 @@ class Media3MusicService : MediaLibraryService() {
         lifecycleScope.launch { player.repeatMode = prefs.musicRepeatMode.first() }
         videoSwitch.attach(lifecycleScope, prefs.musicVideoSwitch)
 
-        lifecycleScope.launch(Dispatchers.IO) {
-            restoreSavedQueueStateIfNeeded()
-        }
-
         lifecycleScope.launch {
             prefs.playDuringCalls
                 .distinctUntilChanged()
                 .collectLatest(::applyPlayDuringCallsPreference)
-        }
-    }
-
-    private suspend fun restoreSavedQueueStateIfNeeded() {
-        if (!::player.isInitialized) return
-        // The player may only be read on the main thread; mediaItemCount is checked below inside withContext(Main).
-
-        val savedState = QueuePersistence.getInstance(applicationContext).restoreQueue() ?: return
-        if (savedState.queue.isEmpty()) return
-
-        withContext(Dispatchers.Main) {
-            if (!::player.isInitialized) return@withContext
-            if (player.mediaItemCount > 0) return@withContext
-
-            EnhancedMusicPlayerManager.initialize(
-                applicationContext,
-                { videoId -> LocalMediaIds.isLocal(videoId) },
-            )
-
-            val mediaItems = savedState.queue.map { it.toAutoMediaItem() }
-            val startIndex = savedState.currentIndex.coerceIn(0, mediaItems.size - 1)
-            val startPositionMs = savedState.currentPosition
-
-            player.setMediaItems(mediaItems, startIndex, startPositionMs)
-            player.prepare()
-
-            Log.d(TAG, "Restored saved queue to service player: ${mediaItems.size} items, index=$startIndex, pos=$startPositionMs")
         }
     }
 
@@ -351,7 +357,7 @@ class Media3MusicService : MediaLibraryService() {
             mediaId
                 ?.takeIf { loudnessNormalizationEnabled && !LocalMediaIds.isLocal(it) }
                 ?.let(MusicPlayerUtils::cachedLoudnessGainDb)
-        player.volume = if (gainDb == null) 1f else 10.0.pow(gainDb / 20.0).toFloat()
+        player.volume = LoudnessGain.volume(gainDb)
     }
 
     private fun applyPlayDuringCallsPreference(playDuringCalls: Boolean) {
@@ -399,8 +405,31 @@ class Media3MusicService : MediaLibraryService() {
     private fun observeEqualizer() {
         lifecycleScope.launch { equalizerRepository.processingSpec.collect(equalizer::setSpec) }
         lifecycleScope.launch {
-            equalizerRepository.needsProcessing.collect { processing -> player.setOffloadEnabled(!processing) }
+            equalizerRepository.needsProcessing.collect { processing -> updateOffload { it.copy(processing = processing) } }
         }
+    }
+
+    /** Applies [change] to what offload depends on; tracks are reselected only when the answer flips. */
+    private fun updateOffload(change: (MusicOffloadState) -> MusicOffloadState) {
+        offloadState = change(offloadState)
+        val allowed = offloadState.allowed
+        if (allowed == appliedOffload) return
+        appliedOffload = allowed
+        player.setOffloadEnabled(allowed)
+    }
+
+    @OptIn(UnstableApi::class)
+    private fun observeOffload() {
+        lifecycleScope.launch {
+            prefs.musicAudioOffloadEnabled.collect { enabled -> updateOffload { it.copy(enabledByUser = enabled) } }
+        }
+        player.addAudioOffloadListener(
+            object : ExoPlayer.AudioOffloadListener {
+                override fun onOffloadedPlayback(isOffloadedPlayback: Boolean) {
+                    isOffloaded = isOffloadedPlayback
+                }
+            },
+        )
     }
 
     private fun initializePlayer() {
@@ -444,17 +473,28 @@ class Media3MusicService : MediaLibraryService() {
                 .build()
 
         // Expose audio session ID for external audio processors (James DSP, etc.)
-        currentAudioSessionId = player.audioSessionId
-        Log.i(TAG, "Audio session initialized - Session ID: $currentAudioSessionId")
-        audioSessions.open(player.audioSessionId, AudioEffect.CONTENT_TYPE_MUSIC)
+        audioSessionAnnouncer =
+            AudioSessionAnnouncer(audioSessions, AudioEffect.CONTENT_TYPE_MUSIC) { sessionId ->
+                currentAudioSessionId = sessionId
+                Log.i(TAG, "Audio session initialized - Session ID: $sessionId")
+            }.also { it.attach(player) }
 
-        player.setOffloadEnabled(!equalizerRepository.needsProcessing.value)
+        updateOffload { it.copy(processing = equalizerRepository.needsProcessing.value) }
+        observeOffload()
         setVideoDecoding(false)
+        // Shuffle rearranges the queue itself, so the list on screen is the play order. With this
+        // order, the player's shuffle flag reorders nothing on its own, whichever controller sets it.
+        player.setShuffleOrder(ShuffleOrder.UnshuffledShuffleOrder(0))
+        musicResume.attach(player)
 
         player.addListener(
             object : Player.Listener {
                 override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
                     updateNotification()
+                    // A connected app rearranges the queue it shows; without one (a media button
+                    // started the service), this order is the only one, so rearrange it here.
+                    val appConnected = io.github.aedev.flow.player.EnhancedMusicPlayerManager.playerInstance.value != null
+                    if (shuffleModeEnabled && !applyingSavedShuffle && !appConnected) shuffleFromCurrentItem()
                 }
 
                 override fun onRepeatModeChanged(repeatMode: Int) {
@@ -473,15 +513,9 @@ class Media3MusicService : MediaLibraryService() {
                     if (!versionSwap) {
                         finalizeListenSession()
                         startListenSession(mediaItem?.mediaId)
+                        if (reason == Player.MEDIA_ITEM_TRANSITION_REASON_PLAYLIST_CHANGED) failureStreak.reset()
                     }
                     applyLoudnessGain()
-
-                    if (
-                        reason == Player.MEDIA_ITEM_TRANSITION_REASON_AUTO ||
-                        reason == Player.MEDIA_ITEM_TRANSITION_REASON_REPEAT
-                    ) {
-                        player.seekTo(0L)
-                    }
 
                     mediaItem?.let { item ->
                         val videoId = item.mediaId
@@ -500,14 +534,13 @@ class Media3MusicService : MediaLibraryService() {
                             }
                         }
 
-                        if (!versionSwap && !videoId.isNullOrBlank() && !title.isNullOrBlank() && !artist.isNullOrBlank()) {
+                        val wantsLyrics = !versionSwap && !videoId.isNullOrBlank() && !LocalMediaIds.isLocal(videoId)
+                        if (wantsLyrics && !title.isNullOrBlank() && !artist.isNullOrBlank()) {
                             lifecycleScope.launch(Dispatchers.IO) {
                                 try {
                                     Log.d(TAG, "Pre-warming lyrics cache in background for: $videoId - \"$title\"")
-                                    val helper =
-                                        io.github.aedev.flow.data.lyrics
-                                            .LyricsHelper(this@Media3MusicService)
-                                    helper.getLyrics(videoId, title, artist, 180, null, this@Media3MusicService)
+                                    val durationSeconds = ((item.mediaMetadata.durationMs ?: 0L) / 1000L).toInt()
+                                    lyricsHelper.getLyrics(videoId, title, artist, durationSeconds, null)
                                 } catch (e: Exception) {
                                     Log.w(TAG, "Lyrics pre-warm background task encountered error: ${e.message}")
                                 }
@@ -562,6 +595,7 @@ class Media3MusicService : MediaLibraryService() {
                         refreshLearnDuration()
                         if (player.isPlaying) scheduleScrobbleCheck()
                         applyLoudnessGain()
+                        failureStreak.reset()
                         player.currentMediaItem?.mediaId?.let { mediaId ->
                             val lastErrorAt = lastPlaybackErrorAtMap[mediaId] ?: 0L
                             if (System.currentTimeMillis() - lastErrorAt > RECOVERY_SUCCESS_GRACE_MS) {
@@ -578,7 +612,15 @@ class Media3MusicService : MediaLibraryService() {
                     reason: Int,
                 ) {
                     updateLocks(isPlaybackActive())
-                    if (playWhenReady) pausedForMute = false
+                    if (playWhenReady) {
+                        pausedForMute = false
+                        updateOffload { it.copy(pausedLong = false) }
+                    }
+                }
+
+                override fun onPlaybackParametersChanged(playbackParameters: PlaybackParameters) {
+                    val changed = MusicOffloadState.changesPlayback(playbackParameters.speed, playbackParameters.pitch)
+                    updateOffload { it.copy(playbackChanged = changed) }
                 }
 
                 override fun onDeviceVolumeChanged(
@@ -615,6 +657,9 @@ class Media3MusicService : MediaLibraryService() {
                     updateLocks(isPlaybackActive())
                     widgetPublisher.publish(player)
                     if (isPlaying) {
+                        lifecycleScope.launch {
+                            HeadphoneResume.set(this@Media3MusicService, prefs.resumeFromHeadphones.first())
+                        }
                         val playingId = player.currentMediaItem?.mediaId
                         if (learnMediaId == null) learnMediaId = playingId?.let(videoSwitch::listenId)
                         if (learnTrack?.videoId != learnMediaId) learnTrack = listenTrack(playingId)
@@ -819,13 +864,21 @@ class Media3MusicService : MediaLibraryService() {
         if (MusicLoadErrorPolicy.isUnavailable(error)) {
             Log.w(TAG, "$mediaId is unavailable on every client, skipping without retries")
             PlayerDiagnostics.logWarning(TAG, "music $mediaId unavailable on every client, skipped")
-            handleFinalFailure(failed, getString(R.string.music_playback_warning_unavailable))
+            handleFinalFailure(failed, getString(R.string.music_playback_warning_unavailable), gone = true)
+            return
+        }
+
+        MusicLoadErrorPolicy.viewerBlockOf(error)?.let { block ->
+            Log.w(TAG, "$mediaId refused to this viewer: $block")
+            PlayerDiagnostics.logWarning(TAG, "music $mediaId refused: $block")
+            // Every next song would hit the same limit, and each try deepens it.
+            handleFinalFailure(failed, blockWarning(block), keepSkipping = block != PlaybackBlock.RATE_LIMITED)
             return
         }
 
         if (recentlyFailedSongs.contains(mediaId)) {
             Log.w(TAG, "$mediaId is in recently failed list, skipping to next")
-            skipPastFailedItem(failed)
+            skipOrStop(failed, gone = false)
             return
         }
 
@@ -902,6 +955,13 @@ class Media3MusicService : MediaLibraryService() {
         player.seekTo(index, if (fromStart) 0L else failed.resumePositionMs)
         player.prepare()
         player.play()
+    }
+
+    private fun shuffleFromCurrentItem() {
+        val order = List(player.mediaItemCount) { it }
+        if (order.size < 2) return
+        val target = PlaylistQueueOrder.shuffleFromCurrent(order, player.currentMediaItemIndex).items
+        PlaylistQueueOrder.movesTo(order, target)?.forEach { (from, to) -> player.moveMediaItem(from, to) }
     }
 
     private fun skipPastFailedItem(failed: MusicPlaybackRecoveryPlanner.FailedItem) {
@@ -1167,9 +1227,34 @@ class Media3MusicService : MediaLibraryService() {
             }
     }
 
+    private fun blockWarning(block: PlaybackBlock): String =
+        getString(
+            when (block) {
+                PlaybackBlock.REGION -> R.string.error_geo_restricted
+                PlaybackBlock.RATE_LIMITED -> R.string.music_playback_warning_rate_limited
+                else -> R.string.music_playback_warning_members_or_paid
+            },
+        )
+
+    private fun skipOrStop(
+        failed: MusicPlaybackRecoveryPlanner.FailedItem,
+        gone: Boolean,
+        keepSkipping: Boolean = true,
+    ) {
+        if (keepSkipping && failureStreak.skipAfter(gone, player.mediaItemCount)) {
+            skipPastFailedItem(failed)
+        } else {
+            Log.w(TAG, "Stopping on ${failed.mediaId} instead of skipping through more failing songs")
+            PlayerDiagnostics.logWarning(TAG, "music stopped on ${failed.mediaId} after a failure streak")
+            player.pause()
+        }
+    }
+
     private fun handleFinalFailure(
         failed: MusicPlaybackRecoveryPlanner.FailedItem,
         warning: String = getString(R.string.music_playback_warning_final),
+        gone: Boolean = false,
+        keepSkipping: Boolean = true,
     ) {
         val mediaId = failed.mediaId
         Log.w(TAG, "All retries exhausted for $mediaId, marking as failed")
@@ -1180,7 +1265,7 @@ class Media3MusicService : MediaLibraryService() {
             recentlyFailedSongs.iterator().next().let { recentlyFailedSongs.remove(it) }
         }
         recentlyFailedSongs.add(mediaId)
-        skipPastFailedItem(failed)
+        skipOrStop(failed, gone, keepSkipping)
     }
 
     private fun notifyMusicWarning(message: String) {
@@ -1189,6 +1274,7 @@ class Media3MusicService : MediaLibraryService() {
     }
 
     private fun stopPlaybackAndService() {
+        HeadphoneResume.set(this, allowed = false)
         retryJobCancel()
         waitingForNetwork = false
         if (::player.isInitialized) {
@@ -1240,7 +1326,7 @@ class Media3MusicService : MediaLibraryService() {
 
         mediaLibrarySession =
             MediaLibrarySession
-                .Builder(this, player, LibrarySessionCallback())
+                .Builder(this, sessionPlayer(), LibrarySessionCallback())
                 .setSessionActivity(pendingIntent)
                 .setBitmapLoader(sessionArtworkBitmapLoader(this))
                 .build()
@@ -1250,7 +1336,20 @@ class Media3MusicService : MediaLibraryService() {
         updateNotification()
     }
 
-    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? = mediaLibrarySession
+    /** The session's player: a resume from a controller turns offload back on before playback starts. */
+    private fun sessionPlayer(): Player =
+        SessionPlayer(player, { mediaLibrarySession.controllerForCurrentRequest }) {
+            updateOffload { it.copy(pausedLong = false) }
+        }.also { it.follow(lifecycleScope) }
+
+    override fun onGetSession(controllerInfo: MediaSession.ControllerInfo): MediaLibrarySession? =
+        mediaLibrarySession.takeUnless {
+            ProfileSwitchGate.isSwitching ||
+                controllerInfo.declinesMediaButtonStart(
+                    hasMediaItem = ::player.isInitialized && player.currentMediaItem != null,
+                    canResume = queuePersistence.hasSavedQueueFile() && HeadphoneResume.isAllowed(this),
+                )
+        }
 
     /**
      * Prevent aggressive OEM ROMs (Xiaomi MIUI, Samsung OneUI, Huawei EMUI, CRDroid)
@@ -1258,7 +1357,7 @@ class Media3MusicService : MediaLibraryService() {
      *
      * Without this override Android calls stopSelf() via the default onTaskRemoved,
      * which destroys the foreground service and stops background music playback.
-     * Overriding without calling super keeps the service alive.
+     * Overriding without calling super keeps the service alive, also while a song is still loading.
      *
      * When nothing is playing it stops the way Media3's default does: a raw stopSelf() leaves the
      * user-engaged timeout armed, so the notification update for that pause can put the stopped
@@ -1266,18 +1365,28 @@ class Media3MusicService : MediaLibraryService() {
      */
     @OptIn(UnstableApi::class)
     override fun onTaskRemoved(rootIntent: Intent?) {
-        if (::player.isInitialized && player.isPlaying) {
-            return
-        }
+        val keepsPlaying =
+            ::player.isInitialized &&
+                player.keepsPlayingOnTaskRemoved(lifecyclePlaybackPreferences.settings.keepPlayingAfterSwipe, isPlaybackOngoing())
+        PlayerDiagnostics.logInfo(TAG, "onTaskRemoved keepsPlaying=$keepsPlaying ${taskRemovalSnapshot()}")
+        if (keepsPlaying) return
         pauseAllPlayersAndStopSelf()
     }
 
+    private fun taskRemovalSnapshot(): String {
+        if (!::player.isInitialized) return "player=none"
+        return "state=${player.playbackState} pwr=${player.playWhenReady} items=${player.mediaItemCount} " +
+            "ongoing=${runCatching { isPlaybackOngoing() }.getOrDefault(false)}"
+    }
+
     override fun onDestroy() {
+        MusicServiceState.isRunning = false
         // Flush the in-flight listen session before the player goes away.
         finalizeListenSession()
 
         // Clear audio session ID so external processors know we're gone
-        audioSessions.close(currentAudioSessionId)
+        audioSessionAnnouncer?.detach()
+        audioSessionAnnouncer = null
         currentAudioSessionId = 0
         Log.i(TAG, "Audio session destroyed")
 
@@ -1296,6 +1405,7 @@ class Media3MusicService : MediaLibraryService() {
             mediaLibrarySession.release()
         }
         if (::player.isInitialized) {
+            musicResume.saveCurrent(player)
             player.release()
         }
         releaseLocks()
@@ -1336,6 +1446,9 @@ class Media3MusicService : MediaLibraryService() {
                 delay(12_000L)
                 if (!isPlaybackActive()) {
                     releaseLocks()
+                    // The system keeps the audio hardware awake for as long as a paused offloaded
+                    // track exists (#1367); leaving offload makes the player release it.
+                    if (isOffloaded) updateOffload { it.copy(pausedLong = true) }
                     if (!isAppInForeground()) {
                         stopSelf()
                     }
@@ -1402,7 +1515,7 @@ class Media3MusicService : MediaLibraryService() {
         radioAnchors = emptyList()
         usedRadioAnchors = emptySet()
         radioResumeWhenAppended = false
-        explicitRadioRequest = context.explicit
+        manager.setRadioStationActive(context.explicit)
         startRadio(currentId)
     }
 
@@ -1482,11 +1595,11 @@ class Media3MusicService : MediaLibraryService() {
      * nothing the user sees is replaced — and refills the pool in the background.
      */
     private fun maybeExtendRadio() {
-        if (!radioAutoplayEnabled && !explicitRadioRequest) return
+        val manager = io.github.aedev.flow.player.EnhancedMusicPlayerManager
+        if (!radioAutoplayEnabled && !manager.radioStationActive.value) return
         if (!::player.isInitialized) return
         // Repeat already produces an endless queue — matching desktop.
         if (player.repeatMode != Player.REPEAT_MODE_OFF) return
-        val manager = io.github.aedev.flow.player.EnhancedMusicPlayerManager
         val ended = player.playbackState == Player.STATE_ENDED
         // Shuffle keeps meaning "shuffle MY queue" while it plays, but once the
         // shuffled queue is exhausted the radio still has to carry on.
@@ -1591,6 +1704,7 @@ class Media3MusicService : MediaLibraryService() {
                 .setDisplayName(getString(if (isLiked) R.string.unlike else R.string.like))
                 .setCustomIconResId(if (isLiked) R.drawable.ic_like_filled else R.drawable.ic_like)
                 .setSessionCommand(CommandToggleLike)
+                .setSlots(CommandButton.SLOT_OVERFLOW)
                 .setEnabled(true)
                 .build()
 
@@ -1609,6 +1723,7 @@ class Media3MusicService : MediaLibraryService() {
                 .setDisplayName(getString(R.string.shuffle))
                 .setCustomIconResId(if (shuffleOn) R.drawable.ic_shuffle_on else R.drawable.ic_shuffle)
                 .setSessionCommand(CommandToggleShuffle)
+                .setSlots(CommandButton.SLOT_OVERFLOW)
                 .build()
 
         val repeatButton =
@@ -1617,6 +1732,7 @@ class Media3MusicService : MediaLibraryService() {
                 .setDisplayName(getString(R.string.repeat))
                 .setCustomIconResId(repeatIconResId)
                 .setSessionCommand(CommandToggleRepeat)
+                .setSlots(CommandButton.SLOT_OVERFLOW)
                 .build()
 
         val closeButton =
@@ -1625,28 +1741,59 @@ class Media3MusicService : MediaLibraryService() {
                 .setDisplayName(getString(R.string.close))
                 .setCustomIconResId(R.drawable.ic_close)
                 .setSessionCommand(CommandStop)
+                .setSlots(CommandButton.SLOT_OVERFLOW)
                 .setEnabled(true)
                 .build()
 
-        mediaLibrarySession.setCustomLayout(listOf(likeButton, shuffleButton, repeatButton, closeButton))
+        // The Android 13+ card shows only the first two overflow buttons next to previous and next;
+        // the rest stay for older notifications, Auto and Wear (#1347).
+        mediaLibrarySession.setMediaButtonPreferences(listOf(shuffleButton, repeatButton, likeButton, closeButton))
     }
 
     @OptIn(UnstableApi::class)
     private inner class LibrarySessionCallback : MediaLibrarySession.Callback {
+        @OptIn(UnstableApi::class)
+        override fun onPlaybackResumption(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            isForPlayback: Boolean,
+        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
+            if (ProfileSwitchGate.isSwitching) return Futures.immediateFailedFuture(IllegalStateException("Switching profile"))
+            val result = SettableFuture.create<MediaSession.MediaItemsWithStartPosition>()
+            lifecycleScope.launch {
+                val restored = withContext(Dispatchers.IO) { queuePersistence.restoreQueue() }?.let(::restoredMusicQueue)
+                when {
+                    restored == null -> {
+                        result.setException(IllegalStateException("No saved music queue to resume"))
+                    }
+
+                    // A play on an empty player asked for this, but a song the app or a link started
+                    // while the saved queue was read is newer, and resuming would replace it.
+                    isForPlayback && player.currentMediaItem != null -> {
+                        Log.d(TAG, "Resumption skipped: ${player.currentMediaItem?.mediaId} started while the saved queue was read")
+                        result.setException(IllegalStateException("A newer queue started while resuming"))
+                    }
+
+                    else -> {
+                        // A queue saved shuffled is already in its shuffled order. System UI asking for
+                        // the recent item only shows it, so the live player's flag stays as it is.
+                        if (isForPlayback) {
+                            applyingSavedShuffle = true
+                            player.shuffleModeEnabled = restored.shuffleEnabled
+                            applyingSavedShuffle = false
+                        }
+                        result.set(musicResumptionItems(restored))
+                    }
+                }
+            }
+            return result
+        }
+
         override fun onGetLibraryRoot(
             session: MediaLibrarySession,
             browser: MediaSession.ControllerInfo,
             params: MediaLibraryService.LibraryParams?,
-        ): ListenableFuture<LibraryResult<MediaItem>> =
-            Futures.immediateFuture(
-                LibraryResult.ofItem(
-                    browsableMediaItem(
-                        mediaId = AUTO_ROOT_ID,
-                        title = getString(R.string.app_name),
-                    ),
-                    params,
-                ),
-            )
+        ): ListenableFuture<LibraryResult<MediaItem>> = switchingError() ?: autoBrowser.root(browser, params)
 
         override fun onGetChildren(
             session: MediaLibrarySession,
@@ -1655,101 +1802,67 @@ class Media3MusicService : MediaLibraryService() {
             page: Int,
             pageSize: Int,
             params: MediaLibraryService.LibraryParams?,
-        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> {
-            val items =
-                when (parentId) {
-                    AUTO_ROOT_ID -> {
-                        listOf(
-                            browsableMediaItem(AUTO_QUEUE_ID, "Queue"),
-                            browsableMediaItem(AUTO_CURRENT_ID, "Now playing"),
-                        )
-                    }
-
-                    AUTO_QUEUE_ID -> {
-                        val managerQueue = EnhancedMusicPlayerManager.queue.value
-                        if (managerQueue.isNotEmpty()) {
-                            managerQueue.map { it.toAutoMediaItem() }
-                        } else if (::player.isInitialized && player.mediaItemCount > 0) {
-                            List(player.mediaItemCount) { idx -> player.getMediaItemAt(idx) }
-                        } else {
-                            emptyList()
-                        }
-                    }
-
-                    AUTO_CURRENT_ID -> {
-                        val currentTrack = EnhancedMusicPlayerManager.currentTrack.value
-                        if (currentTrack != null) {
-                            listOf(currentTrack.toAutoMediaItem())
-                        } else if (::player.isInitialized && player.currentMediaItem != null) {
-                            listOf(player.currentMediaItem!!)
-                        } else {
-                            emptyList()
-                        }
-                    }
-
-                    else -> {
-                        emptyList()
-                    }
-                }
-
-            return Futures.immediateFuture(
-                LibraryResult.ofItemList(ImmutableList.copyOf(items), params),
-            )
-        }
-
-        @OptIn(UnstableApi::class)
-        @Suppress("DEPRECATION")
-        override fun onPlaybackResumption(
-            mediaSession: MediaSession,
-            controller: MediaSession.ControllerInfo,
-        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> {
-            val settableFuture = SettableFuture.create<MediaSession.MediaItemsWithStartPosition>()
-            lifecycleScope.launch(Dispatchers.IO) {
-                val savedState = QueuePersistence.getInstance(applicationContext).restoreQueue()
-                if (savedState != null && savedState.queue.isNotEmpty()) {
-                    val items = savedState.queue.map { it.toAutoMediaItem() }
-                    val index = savedState.currentIndex.coerceIn(0, items.size - 1)
-                    val pos = savedState.currentPosition
-                    withContext(Dispatchers.Main) {
-                        restoreSavedQueueStateIfNeeded()
-                        settableFuture.set(
-                            MediaSession.MediaItemsWithStartPosition(items, index, pos),
-                        )
-                    }
-                } else {
-                    settableFuture.set(
-                        MediaSession.MediaItemsWithStartPosition(emptyList(), 0, 0L),
-                    )
-                }
-            }
-            return settableFuture
-        }
+        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = switchingError() ?: autoBrowser.children(parentId, params)
 
         override fun onGetItem(
             session: MediaLibrarySession,
             browser: MediaSession.ControllerInfo,
             mediaId: String,
-        ): ListenableFuture<LibraryResult<MediaItem>> {
-            val track = autoTrackForMediaId(mediaId)
-            val item =
-                when {
-                    mediaId == AUTO_ROOT_ID -> browsableMediaItem(AUTO_ROOT_ID, getString(R.string.app_name))
-                    mediaId == AUTO_QUEUE_ID -> browsableMediaItem(AUTO_QUEUE_ID, "Queue")
-                    mediaId == AUTO_CURRENT_ID -> browsableMediaItem(AUTO_CURRENT_ID, "Now playing")
-                    track != null -> track.toAutoMediaItem()
-                    else -> null
-                }
+        ): ListenableFuture<LibraryResult<MediaItem>> = switchingError() ?: autoBrowser.item(mediaId)
 
-            return Futures.immediateFuture(
-                item?.let { LibraryResult.ofItem(it, null) }
-                    ?: LibraryResult.ofError(LibraryResult.RESULT_ERROR_BAD_VALUE),
-            )
-        }
+        override fun onSearch(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            query: String,
+            params: MediaLibraryService.LibraryParams?,
+        ): ListenableFuture<LibraryResult<Void>> = switchingError() ?: autoBrowser.search(session, browser, query, params)
+
+        override fun onGetSearchResult(
+            session: MediaLibrarySession,
+            browser: MediaSession.ControllerInfo,
+            query: String,
+            page: Int,
+            pageSize: Int,
+            params: MediaLibraryService.LibraryParams?,
+        ): ListenableFuture<LibraryResult<ImmutableList<MediaItem>>> = switchingError() ?: autoBrowser.searchResult(query, params)
+
+        override fun onSetMediaItems(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            mediaItems: List<MediaItem>,
+            startIndex: Int,
+            startPositionMs: Long,
+        ): ListenableFuture<MediaSession.MediaItemsWithStartPosition> =
+            if (ProfileSwitchGate.isSwitching) {
+                Futures.immediateFailedFuture(IllegalStateException("Switching profile"))
+            } else {
+                autoBrowser.setMediaItems(mediaItems, startIndex, startPositionMs)
+                    ?: super.onSetMediaItems(mediaSession, controller, mediaItems, startIndex, startPositionMs)
+            }
+
+        override fun onAddMediaItems(
+            mediaSession: MediaSession,
+            controller: MediaSession.ControllerInfo,
+            mediaItems: List<MediaItem>,
+        ): ListenableFuture<List<MediaItem>> =
+            if (ProfileSwitchGate.isSwitching) {
+                Futures.immediateFailedFuture(IllegalStateException("Switching profile"))
+            } else {
+                autoBrowser.addMediaItems(mediaItems) ?: super.onAddMediaItems(mediaSession, controller, mediaItems)
+            }
 
         override fun onConnect(
             session: MediaSession,
             controller: MediaSession.ControllerInfo,
         ): MediaSession.ConnectionResult {
+            if (ProfileSwitchGate.isSwitching) return MediaSession.ConnectionResult.reject()
+            // Music started from the car joins the app's queue, with its saving, radio and learning,
+            // even when the app was never opened (#1221).
+            if (session.isCar(controller)) {
+                MusicServiceState.carConnected()
+                io.github.aedev.flow.player.EnhancedMusicPlayerManager
+                    .initialize(applicationContext, musicDownloads::isDownloaded)
+            }
             val validCommands =
                 MediaSession.ConnectionResult.DEFAULT_SESSION_AND_LIBRARY_COMMANDS
                     .buildUpon()
@@ -1763,6 +1876,37 @@ class Media3MusicService : MediaLibraryService() {
                 .setAvailableSessionCommands(validCommands)
                 .build()
         }
+
+        override fun onPostConnect(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+        ) {
+            // A car that was browsing the previous profile may keep showing its tabs until told they changed.
+            if (session.isCar(controller) && ActiveProfile.get(this@Media3MusicService).afterSwitch &&
+                carTreeRefreshed.compareAndSet(false, true)
+            ) {
+                AutoBrowseTree.TABS.forEach { mediaLibrarySession.notifyChildrenChanged(it, Int.MAX_VALUE, null) }
+            }
+        }
+
+        override fun onDisconnected(
+            session: MediaSession,
+            controller: MediaSession.ControllerInfo,
+        ) {
+            if (session.isCar(controller)) MusicServiceState.carDisconnected()
+        }
+
+        private fun MediaSession.isCar(controller: MediaSession.ControllerInfo) =
+            isAutoCompanionController(controller) || isAutomotiveController(controller)
+
+        private fun <V : Any> switchingError(): ListenableFuture<LibraryResult<V>>? =
+            if (ProfileSwitchGate.isSwitching) {
+                Futures.immediateFuture(
+                    LibraryResult.ofError<V>(SessionError.ERROR_SESSION_DISCONNECTED),
+                )
+            } else {
+                null
+            }
 
         override fun onCustomCommand(
             session: MediaSession,
@@ -1799,61 +1943,6 @@ class Media3MusicService : MediaLibraryService() {
 
             return super.onCustomCommand(session, controller, customCommand, args)
         }
-    }
-
-    private fun browsableMediaItem(
-        mediaId: String,
-        title: String,
-    ): MediaItem =
-        MediaItem
-            .Builder()
-            .setMediaId(mediaId)
-            .setMediaMetadata(
-                MediaMetadata
-                    .Builder()
-                    .setTitle(title)
-                    .setIsBrowsable(true)
-                    .setIsPlayable(false)
-                    .setMediaType(MediaMetadata.MEDIA_TYPE_FOLDER_MIXED)
-                    .build(),
-            ).build()
-
-    private fun MusicTrack.toAutoMediaItem(): MediaItem {
-        val artwork =
-            highResThumbnailUrl
-                .ifBlank { thumbnailUrl }
-                .takeIf { it.isNotBlank() }
-                ?.let(Uri::parse)
-
-        val isLocal = LocalMediaIds.isLocal(videoId)
-        val builder =
-            MediaItem
-                .Builder()
-                .setMediaId(videoId)
-                .setUri(LocalMediaIds.audioUri(videoId) ?: Uri.parse("music://$videoId"))
-                .setMediaMetadata(
-                    MediaMetadata
-                        .Builder()
-                        .setTitle(title)
-                        .setArtist(artist)
-                        .setArtworkUri(artwork)
-                        .setIsBrowsable(false)
-                        .setIsPlayable(true)
-                        .setMediaType(MediaMetadata.MEDIA_TYPE_MUSIC)
-                        .build(),
-                )
-
-        if (!isLocal) {
-            builder.setCustomCacheKey(videoId)
-        }
-
-        return builder.build()
-    }
-
-    private fun autoTrackForMediaId(mediaId: String): MusicTrack? {
-        val manager = io.github.aedev.flow.player.EnhancedMusicPlayerManager
-        return manager.queue.value.firstOrNull { it.videoId == mediaId }
-            ?: manager.currentTrack.value?.takeIf { it.videoId == mediaId }
     }
 
     @OptIn(UnstableApi::class)

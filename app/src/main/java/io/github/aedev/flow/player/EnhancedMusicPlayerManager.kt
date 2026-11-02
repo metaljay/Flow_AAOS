@@ -5,8 +5,8 @@ import android.content.Context
 import android.net.Uri
 import android.util.Log
 import androidx.annotation.OptIn
+import androidx.core.os.bundleOf
 import androidx.media3.common.MediaItem
-import androidx.media3.common.MediaMetadata
 import androidx.media3.common.PlaybackParameters
 import androidx.media3.common.Player
 import androidx.media3.common.util.UnstableApi
@@ -14,10 +14,12 @@ import androidx.media3.session.MediaController
 import androidx.media3.session.SessionToken
 import com.google.common.util.concurrent.ListenableFuture
 import com.google.common.util.concurrent.MoreExecutors
+import io.github.aedev.flow.R
 import io.github.aedev.flow.data.local.AudioSettingsPersistence
 import io.github.aedev.flow.data.local.QueuePersistence
 import io.github.aedev.flow.data.localmedia.LocalMediaIds
 import io.github.aedev.flow.data.music.model.MusicTrack
+import io.github.aedev.flow.player.error.PlayerDiagnostics
 import io.github.aedev.flow.player.musicvideo.MusicVideoItems
 import io.github.aedev.flow.player.musicvideo.MusicVideoPlanner
 import io.github.aedev.flow.service.Media3MusicService
@@ -33,10 +35,12 @@ import kotlinx.coroutines.flow.asSharedFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.launch
+import kotlinx.coroutines.withContext
 import kotlinx.coroutines.withTimeoutOrNull
 import org.schabi.newpipe.extractor.stream.AudioStream
 import java.util.concurrent.ConcurrentHashMap
 import java.util.concurrent.ExecutionException
+import java.util.concurrent.TimeUnit
 import kotlin.math.pow
 
 @OptIn(UnstableApi::class)
@@ -69,6 +73,15 @@ object EnhancedMusicPlayerManager {
         _radioLoading.value = loading
     }
 
+    private val _radioStationActive = MutableStateFlow(false)
+
+    /** A radio the user started by name: it outruns the endless-radio setting, for this session only. */
+    val radioStationActive: StateFlow<Boolean> = _radioStationActive.asStateFlow()
+
+    fun setRadioStationActive(active: Boolean) {
+        _radioStationActive.value = active
+    }
+
     private var appContext: Context? = null
 
     private val _playerInstance = MutableStateFlow<Player?>(null)
@@ -84,10 +97,20 @@ object EnhancedMusicPlayerManager {
 
     private var retryCount = 0
     private const val MAX_RETRIES = 3
+    private const val STOP_COMMAND_TIMEOUT_MS = 1_500L
     private var positionUpdateJob: kotlinx.coroutines.Job? = null
 
     // Persistence
     private var queuePersistence: QueuePersistence? = null
+
+    /** The restored track and where it stopped, used once by the next play of that same track. */
+    private var resumePosition: Pair<String, Long>? = null
+
+    /** A song started before the controller connected, such as a link opening the app; sent on connect. */
+    private var playBeforeConnect: (() -> Unit)? = null
+
+    /** Counts started queues, so a saved queue read meanwhile knows a newer one replaced it. */
+    private var queueStarts = 0
     private var audioSettingsPersistence: AudioSettingsPersistence? = null
 
     // Audio Settings State
@@ -137,7 +160,12 @@ object EnhancedMusicPlayerManager {
     private val _playbackWarnings = MutableSharedFlow<String>(extraBufferCapacity = 1)
     val playbackWarnings: SharedFlow<String> = _playbackWarnings.asSharedFlow()
 
+    /** Emitted after every seek, however it was asked for, so other devices hear the new position at once. */
+    private val _seekEvent = MutableSharedFlow<Unit>(extraBufferCapacity = 1)
+    val seekEvent: SharedFlow<Unit> = _seekEvent.asSharedFlow()
+
     // Queue
+
     private val _queue = MutableStateFlow<List<MusicTrack>>(emptyList())
     val queue: StateFlow<List<MusicTrack>> = _queue.asStateFlow()
 
@@ -241,8 +269,28 @@ object EnhancedMusicPlayerManager {
         queuePersistence = QueuePersistence.getInstance(context)
         audioSettingsPersistence = AudioSettingsPersistence.getInstance(context)
 
-        val sessionToken = SessionToken(context, ComponentName(context, Media3MusicService::class.java))
-        controllerFuture = MediaController.Builder(context, sessionToken).buildAsync()
+        connectController(context)
+        startPositionUpdates()
+    }
+
+    /**
+     * Builds the controller for the music service. False when Android reports the service missing,
+     * which happens when the component is disabled on the device (a blocker app, some ROMs): Media3
+     * then throws from the token, and that has to cost music playback, not the app (#1439).
+     */
+    private fun connectController(context: Context): Boolean {
+        val sessionToken =
+            try {
+                SessionToken(context, ComponentName(context, Media3MusicService::class.java))
+            } catch (e: IllegalArgumentException) {
+                PlayerDiagnostics.logError("EnhancedMusicPlayer", "music service unavailable: ${e.message}", e)
+                return false
+            }
+        controllerFuture =
+            MediaController
+                .Builder(context, sessionToken)
+                .setConnectionHints(bundleOf(APP_CONTROLLER_HINT to true))
+                .buildAsync()
 
         controllerFuture?.addListener({
             try {
@@ -252,8 +300,15 @@ object EnhancedMusicPlayerManager {
                 if (controller != null) {
                     setupPlayerListener(controller)
 
+                    val startedBeforeConnect = playBeforeConnect
+                    playBeforeConnect = null
                     scope.launch {
-                        restoreSavedQueue()
+                        if (startedBeforeConnect != null) {
+                            Log.d("EnhancedMusicPlayer", "Starting the song asked for before the controller connected")
+                            startedBeforeConnect()
+                        } else {
+                            restoreSavedQueue()
+                        }
                         restoreAudioSettings()
                     }
 
@@ -281,15 +336,23 @@ object EnhancedMusicPlayerManager {
                 e.printStackTrace()
             }
         }, MoreExecutors.directExecutor())
-
-        startPositionUpdates()
+        return true
     }
 
     private fun setupPlayerListener(controller: Player) {
-        // The service owns repeat; the button shows what the player will actually do.
+        // The service owns repeat and shuffle; the buttons show what the player will actually do.
         _repeatMode.value = RepeatMode.fromPlayer(controller.repeatMode)
+        _shuffleEnabled.value = controller.shuffleModeEnabled
         controller.addListener(
             object : Player.Listener {
+                override fun onPositionDiscontinuity(
+                    oldPosition: Player.PositionInfo,
+                    newPosition: Player.PositionInfo,
+                    reason: Int,
+                ) {
+                    if (reason == Player.DISCONTINUITY_REASON_SEEK) _seekEvent.tryEmit(Unit)
+                }
+
                 override fun onPlaybackStateChanged(playbackState: Int) {
                     updatePlayerState()
                     if (playbackState == Player.STATE_ENDED) {
@@ -327,6 +390,13 @@ object EnhancedMusicPlayerManager {
                     _repeatMode.value = RepeatMode.fromPlayer(repeatMode)
                 }
 
+                // Every shuffle, from the app, the card, a headset or the car, lands here.
+                override fun onShuffleModeEnabledChanged(shuffleModeEnabled: Boolean) {
+                    val turnedOn = shuffleModeEnabled && !_shuffleEnabled.value
+                    _shuffleEnabled.value = shuffleModeEnabled
+                    if (turnedOn) shuffleQueue() else triggerQueueSave()
+                }
+
                 override fun onPlayerError(error: androidx.media3.common.PlaybackException) {
                     Log.e("EnhancedMusicPlayer", "Player error: ${error.errorCodeName} (${error.errorCode})", error)
                     showPlaybackWarning(
@@ -361,6 +431,8 @@ object EnhancedMusicPlayerManager {
                 }
             _currentTrack.value = track
             _currentQueueIndex.value = resolvedIndex.coerceAtLeast(0)
+        } else {
+            adoptPlayerQueue(controller)
         }
         if (
             pendingPlayNextMediaId == trackId &&
@@ -371,6 +443,22 @@ object EnhancedMusicPlayerManager {
         ) {
             clearPendingPlayNext()
         }
+    }
+
+    /**
+     * The app sets its queue before it hands the player any item, so an item it does not know was
+     * loaded by someone else, such as the car (#1221). The player's items become the queue, so the
+     * app shows, saves and extends what is actually playing.
+     */
+    private fun adoptPlayerQueue(controller: Player) {
+        val adopted = adoptedQueue((0 until controller.mediaItemCount).map(controller::getMediaItemAt))
+        if (adopted.isEmpty()) return
+        val index = controller.currentMediaItemIndex.coerceIn(0, adopted.lastIndex)
+        Log.d("EnhancedMusicPlayer", "Adopting a queue of ${adopted.size} the app did not set")
+        _queue.value = adopted
+        _currentQueueIndex.value = index
+        _currentTrack.value = adopted[index]
+        triggerQueueSave()
     }
 
     private fun enforcePendingPlayNext(
@@ -479,28 +567,7 @@ object EnhancedMusicPlayerManager {
         track: MusicTrack,
         uri: Uri = streamUri(track.videoId),
         useCacheKey: Boolean = !LocalMediaIds.isLocal(track.videoId),
-    ): MediaItem {
-        val builder =
-            MediaItem
-                .Builder()
-                .setUri(uri)
-                .setMediaId(track.videoId)
-                .setMediaMetadata(
-                    MediaMetadata
-                        .Builder()
-                        .setTitle(track.title)
-                        .setArtist(track.artist)
-                        .setArtworkUri(Uri.parse(track.highResThumbnailUrl))
-                        .build(),
-                )
-
-        if (useCacheKey) {
-            builder.setCustomCacheKey(track.videoId)
-        }
-
-        return builder
-            .build()
-    }
+    ): MediaItem = musicMediaItem(track, uri, useCacheKey)
 
     private fun clearPendingPlayNext() {
         pendingPlayNextMediaId = null
@@ -610,9 +677,23 @@ object EnhancedMusicPlayerManager {
         sourceName: String? = null,
         localUriOverrides: Map<String, Uri> = emptyMap(),
     ) {
+        val context = appContext
+        if (player == null && controllerFuture == null && context != null && !connectController(context)) {
+            showPlaybackWarning(context.getString(R.string.music_service_disabled))
+            return
+        }
+        queueStarts++
+        if (player == null && controllerFuture != null) {
+            playBeforeConnect = { playTrack(track, audioUrl, queue, startIndex, startPositionMs, sourceName, localUriOverrides) }
+        }
+        val restoredStart = resumePosition?.takeIf { (id, _) -> id == track.videoId && startPositionMs == 0L }?.second
+        resumePosition = null
         player?.stop()
         player?.clearMediaItems()
         clearPendingPlayNext()
+        // A new queue ends a named station even when it shares tracks with it, which the service
+        // would read as the same session. Start radio re-marks it from its pending seed.
+        _radioStationActive.value = false
 
         _playerState.value = _playerState.value.copy(isPreparing = false)
 
@@ -636,7 +717,7 @@ object EnhancedMusicPlayerManager {
 
         val startIdx = if (startIndex >= 0) startIndex else activeQueue.indexOfFirst { it.videoId == track.videoId }.coerceAtLeast(0)
 
-        player?.setMediaItems(mediaItems, startIdx, startPositionMs)
+        player?.setMediaItems(mediaItems, startIdx, restoredStart ?: startPositionMs)
         player?.prepare()
         player?.play()
 
@@ -650,7 +731,7 @@ object EnhancedMusicPlayerManager {
         if (pendingPlayNextMediaId != null && newQueue.none { it.videoId == pendingPlayNextMediaId }) {
             clearPendingPlayNext()
         }
-        triggerQueueSave()
+        queueEdited()
 
         scope.launch {
             val currentMediaId = player?.currentMediaItem?.mediaId
@@ -708,7 +789,7 @@ object EnhancedMusicPlayerManager {
                     }
                 }
             }
-            triggerQueueSave()
+            queueEdited()
         }
     }
 
@@ -746,6 +827,12 @@ object EnhancedMusicPlayerManager {
         }
     }
 
+    /** Saves an edited queue, and hands it to the device the user drives from here, if any. */
+    private fun queueEdited() {
+        triggerQueueSave()
+        PlaybackTarget.current?.setQueue(_queue.value.map { it.videoId })
+    }
+
     private fun triggerQueueSave() {
         val currentQ = _queue.value
         if (currentQ.isNotEmpty()) {
@@ -766,42 +853,49 @@ object EnhancedMusicPlayerManager {
      */
     private suspend fun restoreSavedQueue() {
         try {
-            val savedState = queuePersistence?.restoreQueue() ?: return
-
-            if (savedState.queue.isEmpty()) return
-
-            Log.d("EnhancedMusicPlayer", "Restoring saved queue: ${savedState.queue.size} tracks")
-
-            _queue.value = savedState.queue
-            _currentQueueIndex.value = savedState.currentIndex.coerceIn(0, savedState.queue.size - 1)
-            _shuffleEnabled.value = savedState.shuffleEnabled
-            _automixItems.value = savedState.automix
-
-            val currentTrack =
-                savedState.currentTrackId?.let { id ->
-                    savedState.queue.find { it.videoId == id }
-                } ?: savedState.queue.getOrNull(savedState.currentIndex)
-
-            currentTrack?.let {
-                _currentTrack.value = it
-                if (it.duration > 0) {
-                    _playerState.value = _playerState.value.copy(duration = it.duration * 1000L)
-                }
+            val starts = queueStarts
+            val restored = queuePersistence?.restoreQueue()?.let(::restoredMusicQueue) ?: return
+            if (queueStarts != starts) {
+                Log.d("EnhancedMusicPlayer", "Saved queue skipped: a newer queue started while it was read")
+                return
             }
+            val controller = player
+            val loadedItem = controller?.currentMediaItem
+            // The system media controls may already have resumed this queue in the service.
+            val resumedBySystem = loadedItem != null && restored.queue.any { it.videoId == loadedItem.mediaId }
+            if (loadedItem != null && !resumedBySystem) return
 
-            val p = player
-            if (p != null && p.mediaItemCount == 0) {
-                val mediaItems = savedState.queue.map { buildMediaItem(it) }
-                val startIndex = savedState.currentIndex.coerceIn(0, mediaItems.size - 1)
-                val startPositionMs = savedState.currentPosition
-                p.setMediaItems(mediaItems, startIndex, startPositionMs)
-                p.prepare()
-                _currentPosition.value = startPositionMs
-                _playerState.value = _playerState.value.copy(position = startPositionMs)
-                Log.d(
-                    "EnhancedMusicPlayer",
-                    "Populated ${mediaItems.size} saved items onto player at index=$startIndex, pos=$startPositionMs",
-                )
+            Log.d("EnhancedMusicPlayer", "Restoring saved queue: ${restored.queue.size} tracks")
+
+            // The service may have rearranged a resumed queue (a shuffle while the app was closed).
+            val playerOrder = controller?.let { c -> List(c.mediaItemCount) { c.getMediaItemAt(it).mediaId } }
+            _queue.value =
+                playerOrder
+                    ?.takeIf { resumedBySystem }
+                    ?.let { order -> PlaylistQueueOrder.alignTo(restored.queue, order) { it.videoId } }
+                    ?: restored.queue
+            _currentQueueIndex.value = restored.index
+            _automixItems.value = restored.automix
+            // A queue the service resumed already carries its shuffle; otherwise it comes back with it.
+            if (!resumedBySystem) applySavedShuffle(controller, restored.shuffleEnabled)
+
+            if (controller != null && loadedItem != null) {
+                syncCurrentTrackFromMediaItem(controller, loadedItem)
+                // Already playing when this controller connected, so no change callback reports it.
+                updatePlayerState()
+                if (controller.isPlaying) startPositionUpdates()
+                return
+            }
+            restored.track?.let {
+                _currentTrack.value = it
+                _currentPosition.value = restored.resumePositionMs
+                resumePosition = it.videoId to restored.resumePositionMs
+                val state = _playerState.value
+                _playerState.value =
+                    state.copy(
+                        position = restored.resumePositionMs,
+                        duration = if (it.duration > 0) it.duration * 1000L else state.duration,
+                    )
             }
         } catch (e: Exception) {
             Log.e("EnhancedMusicPlayer", "Failed to restore queue", e)
@@ -813,23 +907,31 @@ object EnhancedMusicPlayerManager {
      * Uses cached position from StateFlow for thread safety.
      */
     fun saveQueueNow() {
-        scope.launch(Dispatchers.IO) {
-            val currentQ = _queue.value
-            if (currentQ.isNotEmpty()) {
-                queuePersistence?.saveQueueImmediate(
-                    queue = currentQ,
-                    currentIndex = _currentQueueIndex.value,
-                    currentPosition = _currentPosition.value, // Use StateFlow for thread safety
-                    currentTrackId = _currentTrack.value?.videoId,
-                    shuffleEnabled = _shuffleEnabled.value,
-                    repeatMode = _repeatMode.value.savedCode,
-                    automix = _automixItems.value,
-                )
-            }
+        scope.launch(Dispatchers.IO) { persistQueueNow() }
+    }
+
+    /** [saveQueueNow], awaited: a profile switch saves the queue before the player stops and clears it. */
+    suspend fun persistQueueNow() {
+        queuePersistence?.cancelPendingSave()
+        val currentQ = _queue.value
+        if (currentQ.isNotEmpty()) {
+            queuePersistence?.saveQueueImmediate(
+                queue = currentQ,
+                currentIndex = _currentQueueIndex.value,
+                currentPosition = _currentPosition.value, // Use StateFlow for thread safety
+                currentTrackId = _currentTrack.value?.videoId,
+                shuffleEnabled = _shuffleEnabled.value,
+                repeatMode = _repeatMode.value.savedCode,
+                automix = _automixItems.value,
+            )
         }
     }
 
     fun togglePlayPause() {
+        PlaybackTarget.current?.let { remote ->
+            remote.command(if (remote.playing) "pause" else "play")
+            return
+        }
         scope.launch {
             player?.let { p ->
                 if (p.mediaItemCount == 0 && _currentTrack.value != null) {
@@ -872,7 +974,58 @@ object EnhancedMusicPlayerManager {
             }
         }
 
+        queueEdited()
+    }
+
+    /**
+     * Replaces the queue with [tracks] around the track playing, which goes on uninterrupted, as a
+     * linked device's `cmd queue` asks. False when nothing is loaded.
+     */
+    fun replaceQueue(tracks: List<MusicTrack>): Boolean {
+        val current = _currentTrack.value ?: return false
+        val (before, after) = aroundCurrent(tracks) { it.videoId == current.videoId }
+        _queue.value = before + current + after
+        player?.replaceAround(before.map { buildMediaItem(it) }, after.map { buildMediaItem(it) })
         triggerQueueSave()
+        return true
+    }
+
+    /** Fills in the queued songs that were known only by their id with [details]' titles, artists and art. */
+    fun fillDetails(details: Map<String, MusicTrack>) {
+        val current = _currentTrack.value ?: return
+        val filled = _queue.value.map { track -> details[track.videoId]?.takeIf { track.title.isEmpty() } ?: track }
+        if (filled == _queue.value && current.title.isNotEmpty()) return
+        details[current.videoId]?.takeIf { current.title.isEmpty() }?.let { _currentTrack.value = it }
+        replaceQueue(filled)
+    }
+
+    /**
+     * Shows the music session of the device the user drives from here: its queue and song, loaded
+     * but stopped, so the players show it and playing here later starts from it. The session reports
+     * that device's play state and position ([PlaybackTarget.followed]).
+     */
+    fun follow(
+        tracks: List<MusicTrack>,
+        index: Int,
+        position: Long,
+        duration: Long,
+    ) {
+        val track = tracks.getOrNull(index) ?: return
+        scope.launch {
+            player?.let { p ->
+                if (_queue.value.map { it.videoId } != tracks.map { it.videoId } || p.mediaItemCount != tracks.size) {
+                    p.stop()
+                    p.setMediaItems(tracks.map { buildMediaItem(it) }, index, position)
+                } else if (p.currentMediaItemIndex != index) {
+                    p.seekTo(index, position)
+                }
+            }
+            clearPendingPlayNext()
+            _queue.value = tracks
+            _currentQueueIndex.value = index
+            _currentTrack.value = track
+            _playerState.value = _playerState.value.copy(duration = duration, isPreparing = false)
+        }
     }
 
     fun addToQueue(track: MusicTrack) {
@@ -884,10 +1037,11 @@ object EnhancedMusicPlayerManager {
             p.addMediaItem(buildMediaItem(track))
         }
 
-        triggerQueueSave()
+        queueEdited()
     }
 
     fun playNext() {
+        PlaybackTarget.current?.let { return it.command("next") }
         val queue = _queue.value
         val idx = currentPlaybackQueueIndex()
 
@@ -899,6 +1053,7 @@ object EnhancedMusicPlayerManager {
     }
 
     fun playPrevious() {
+        PlaybackTarget.current?.let { return it.command("previous") }
         scope.launch {
             val queue = _queue.value
             val idx = currentPlaybackQueueIndex()
@@ -918,6 +1073,7 @@ object EnhancedMusicPlayerManager {
 
     fun playFromQueue(index: Int) {
         val queue = _queue.value
+        PlaybackTarget.current?.let { return it.play(queue.map(MusicTrack::videoId), index, music = true) }
         if (index in queue.indices) {
             clearPendingPlayNext()
             val track = queue[index]
@@ -926,16 +1082,23 @@ object EnhancedMusicPlayerManager {
         }
     }
 
+    /** The saved queue is already in its shuffled order, so turning the flag back on must not reshuffle it. */
+    private fun applySavedShuffle(
+        controller: Player?,
+        enabled: Boolean,
+    ) {
+        _shuffleEnabled.value = enabled
+        if (controller != null && controller.shuffleModeEnabled != enabled) controller.shuffleModeEnabled = enabled
+    }
+
     /**
-     * Shuffle is app-owned state, not ExoPlayer's shuffle mode: enabling it physically
-     * rearranges the queue so the listed order always matches the playback order.
+     * The player's shuffle flag says whether shuffle is on; turning it on physically rearranges the
+     * queue, so the listed order always matches the playback order.
      */
     fun toggleShuffle() {
         scope.launch {
-            val enabling = !_shuffleEnabled.value
-            player?.shuffleModeEnabled = false
-            _shuffleEnabled.value = enabling
-            if (enabling) shuffleQueue()
+            val controller = player ?: return@launch
+            controller.shuffleModeEnabled = !controller.shuffleModeEnabled
         }
     }
 
@@ -954,6 +1117,7 @@ object EnhancedMusicPlayerManager {
     }
 
     fun seekTo(position: Long) {
+        PlaybackTarget.current?.let { return it.command("seek", position) }
         scope.launch {
             val duration = player?.duration?.takeIf { it > 0 } ?: _playerState.value.duration.takeIf { it > 0 }
             val target = duration?.let { position.coerceIn(0L, it) } ?: position.coerceAtLeast(0L)
@@ -1014,10 +1178,18 @@ object EnhancedMusicPlayerManager {
     }
 
     fun play() {
-        scope.launch { player?.play() }
+        PlaybackTarget.current?.let { return it.command("play") }
+        scope.launch {
+            player?.let { p ->
+                // A followed session is loaded but stopped until it plays here.
+                if (p.playbackState == Player.STATE_IDLE) p.prepare()
+                p.play()
+            }
+        }
     }
 
     fun pause() {
+        PlaybackTarget.current?.let { return it.command("pause") }
         scope.launch { player?.pause() }
     }
 
@@ -1035,9 +1207,13 @@ object EnhancedMusicPlayerManager {
         }
     }
 
-    fun setPlaybackSpeed(speed: Float) {
+    /** A slider passes [persist] false while dragging and saves once on release. */
+    fun setPlaybackSpeed(
+        speed: Float,
+        persist: Boolean = true,
+    ) {
         _playbackSpeed.value = speed
-        scope.launch { audioSettingsPersistence?.saveSpeed(speed) }
+        if (persist) scope.launch { audioSettingsPersistence?.saveSpeed(speed) }
 
         player?.let { p ->
             val currentPitch = p.playbackParameters.pitch
@@ -1045,9 +1221,12 @@ object EnhancedMusicPlayerManager {
         }
     }
 
-    fun setPlaybackPitch(semitones: Float) {
+    fun setPlaybackPitch(
+        semitones: Float,
+        persist: Boolean = true,
+    ) {
         _playbackPitch.value = semitones
-        scope.launch { audioSettingsPersistence?.savePitch(semitones) }
+        if (persist) scope.launch { audioSettingsPersistence?.savePitch(semitones) }
 
         player?.let { p ->
             val pitch = 2.0.pow(semitones.toDouble() / 12.0).toFloat()
@@ -1086,6 +1265,28 @@ object EnhancedMusicPlayerManager {
         }
     }
 
+    /**
+     * Stops music for a profile switch and lets the service end. The service handles the stop first, then the
+     * controller is released, because Android keeps a service alive while a controller is bound to it.
+     */
+    suspend fun stopForProfileSwitch() =
+        withContext(Dispatchers.Main) {
+            val controller = player
+            controller?.pause()
+            controller?.stop()
+            controller?.clearMediaItems()
+            resetQueueState()
+            positionUpdateJob?.cancel()
+            (controller as? MediaController)?.let { connected ->
+                val stopped = Media3MusicService.requestStop(connected)
+                withContext(Dispatchers.IO) { runCatching { stopped.get(STOP_COMMAND_TIMEOUT_MS, TimeUnit.MILLISECONDS) } }
+            }
+            controllerFuture?.let(MediaController::releaseFuture)
+            controllerFuture = null
+            player = null
+            _playerInstance.value = null
+        }
+
     /** Called by the service once it has stopped itself, so the UI drops the track it showed. */
     fun onServiceStopped() {
         scope.launch { resetQueueState() }
@@ -1098,6 +1299,7 @@ object EnhancedMusicPlayerManager {
         playContextGenre = null
         pendingRadioSeedId = null
         _radioLoading.value = false
+        _radioStationActive.value = false
         _currentQueueIndex.value = 0
         clearPendingPlayNext()
         _currentPosition.value = 0L
@@ -1105,29 +1307,40 @@ object EnhancedMusicPlayerManager {
         _playerState.value = MusicPlayerState()
     }
 
-    fun removeFromQueue(index: Int) {
-        removeMediaItem(index)
+    /** A song taken out of the queue, with what [restoreToQueue] needs to put it back. */
+    data class RemovedQueueTrack(
+        val track: MusicTrack,
+        val index: Int,
+        internal val queueAfter: List<String>,
+    )
+
+    /** Takes the song at [index] out of the queue; null for the playing song or an index the queue lacks. */
+    fun removeFromQueue(index: Int): RemovedQueueTrack? {
+        val removal = PlaylistQueueOrder.removeAt(_queue.value, _currentQueueIndex.value, index) ?: return null
+        _queue.value = removal.queue.items
+        _currentQueueIndex.value = removal.queue.currentIndex
+        when {
+            pendingPlayNextMediaIndex == index -> clearPendingPlayNext()
+            pendingPlayNextMediaIndex > index -> pendingPlayNextMediaIndex--
+        }
+        player?.let { p -> if (index < p.mediaItemCount) p.removeMediaItem(index) }
+        queueEdited()
+        return RemovedQueueTrack(removal.removedItem, index, removal.queue.items.map { it.videoId })
     }
 
-    fun removeMediaItem(index: Int) {
-        scope.launch {
-            val currentQ = _queue.value.toMutableList()
-            if (index in currentQ.indices) {
-                currentQ.removeAt(index)
-                _queue.value = currentQ
-                when {
-                    pendingPlayNextMediaIndex == index -> clearPendingPlayNext()
-                    pendingPlayNextMediaIndex > index -> pendingPlayNextMediaIndex--
-                }
-
-                player?.let { p ->
-                    if (index < p.mediaItemCount) {
-                        p.removeMediaItem(index)
-                    }
-                }
-                triggerQueueSave()
-            }
-        }
+    /**
+     * Puts [removed] back where it was. Songs added at the end since then are fine; any other change
+     * to the queue means its place no longer exists, and the undo does nothing.
+     */
+    fun restoreToQueue(removed: RemovedQueueTrack) {
+        val queue = _queue.value
+        if (queue.take(removed.queueAfter.size).map { it.videoId } != removed.queueAfter) return
+        val index = removed.index.coerceIn(0, queue.size)
+        _queue.value = queue.toMutableList().apply { add(index, removed.track) }
+        if (index <= _currentQueueIndex.value) _currentQueueIndex.value += 1
+        if (pendingPlayNextMediaIndex >= index) pendingPlayNextMediaIndex++
+        player?.let { p -> if (index <= p.mediaItemCount) p.addMediaItem(index, buildMediaItem(removed.track)) }
+        queueEdited()
     }
 
     fun moveMediaItem(
@@ -1135,20 +1348,18 @@ object EnhancedMusicPlayerManager {
         toIndex: Int,
     ) {
         scope.launch {
-            val currentQ = _queue.value.toMutableList()
-            if (fromIndex in currentQ.indices && toIndex in currentQ.indices) {
-                val item = currentQ.removeAt(fromIndex)
-                currentQ.add(toIndex, item)
-                _queue.value = currentQ
-                clearPendingPlayNext()
+            val moved = PlaylistQueueOrder.move(_queue.value, _currentQueueIndex.value, fromIndex, toIndex) ?: return@launch
+            _queue.value = moved.items
+            // The player reports no transition when songs move around the playing one, so the index follows here.
+            _currentQueueIndex.value = moved.currentIndex
+            clearPendingPlayNext()
 
-                player?.let { p ->
-                    if (fromIndex < p.mediaItemCount && toIndex < p.mediaItemCount) {
-                        p.moveMediaItem(fromIndex, toIndex)
-                    }
+            player?.let { p ->
+                if (fromIndex < p.mediaItemCount && toIndex < p.mediaItemCount) {
+                    p.moveMediaItem(fromIndex, toIndex)
                 }
-                triggerQueueSave()
             }
+            queueEdited()
         }
     }
 
@@ -1170,7 +1381,7 @@ object EnhancedMusicPlayerManager {
                     p.addMediaItem(insertIndex, buildMediaItem(track))
                 }
             }
-            triggerQueueSave()
+            queueEdited()
         }
     }
 }

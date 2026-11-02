@@ -6,6 +6,7 @@ import io.github.aedev.flow.data.shorts.ChannelReelIndex
 import io.github.aedev.flow.data.subscriptions.ChannelRssClient
 import io.github.aedev.flow.data.subscriptions.ChannelRssEntry
 import io.github.aedev.flow.data.subscriptions.ChannelUploadsClient
+import io.github.aedev.flow.data.subscriptions.classifiedFromVerdicts
 import io.github.aedev.flow.utils.ThumbnailUrlResolver
 import io.github.aedev.flow.utils.formatYouTubeRelativeTime
 import io.github.aedev.flow.utils.parsePremiereTimestamp
@@ -22,6 +23,15 @@ import java.util.Locale
 import java.util.concurrent.atomic.AtomicInteger
 import javax.inject.Inject
 import javax.inject.Singleton
+
+/** Which part of a refresh a chunk belongs to. Each has its own counter, so neither runs backwards. */
+enum class SubscriptionRefreshStage {
+    /** Every channel's RSS feed, eight at a time. */
+    RSS,
+
+    /** Shorts checks and channel page reads, only for the channels RSS could not settle. */
+    CHECKS,
+}
 
 /**
  * One progressive slice of a subscription refresh.
@@ -41,16 +51,34 @@ data class SubscriptionFeedChunk(
      * [failedChannelIds] (#1094, #1186).
      */
     val incompleteChannelIds: Set<String> = emptySet(),
+    val stage: SubscriptionRefreshStage = SubscriptionRefreshStage.RSS,
+    /** Channels this [stage] has finished, out of [totalChannels] it covers. */
+    val processedChannels: Int = 0,
+    val totalChannels: Int = 0,
+    /**
+     * Set once, on the chunk that opens [SubscriptionRefreshStage.CHECKS]: the channels RSS settled
+     * on its own. No later chunk changes their slice, so the caller can store them right away.
+     */
+    val rssSettledChannelIds: Set<String>? = null,
+    /**
+     * Every upload this sweep knows is a reel, including the older ones the feed leaves out (it keeps
+     * a channel's newest reel only). A cached row of one of them is filed as a Short again.
+     */
+    val reelIds: Set<String> = emptySet(),
 )
 
 /**
- * Two-phase subscription extraction.
+ * Two-stage subscription extraction.
  *
- * Phase 1 reads every channel's RSS feed: cheap, and the only source with a trustworthy publish
- * timestamp. RSS lists Shorts alongside ordinary uploads without marking either, so each channel's
- * slice is run past [ChannelReelIndex] before it is used. Phase 2 falls back to the channel tabs for
- * the channels RSS could not satisfy, which is also the only way to see livestreams — their upload
- * dates are then back-filled from the Phase 1 timestamps.
+ * The RSS stage reads every channel's feed: cheap, and the only source with a trustworthy publish
+ * timestamp. Each entry's link says whether it is a reel (#1393); an entry without one is only shown
+ * once [ChannelReelIndex] or a stored verdict says what it is, and a channel whose verdict is not at
+ * hand is held back for the checks stage rather than shown with its reels as videos (#903).
+ *
+ * The checks stage asks the Shorts tab for those held channels, then reads the channel tabs for the
+ * channels RSS could not satisfy, which is also the only way to see livestreams — their upload dates
+ * are then back-filled from the RSS timestamps. With [readAllTabs], every channel gets the tab read,
+ * which reaches further back than RSS's fifteen entries.
  */
 @Singleton
 class RssSubscriptionService
@@ -62,37 +90,25 @@ class RssSubscriptionService
     ) {
         fun fetchSubscriptionVideos(
             channelIds: List<String>,
-            maxTotal: Int = 1500,
             knownVideoIds: Set<String> = emptySet(),
             storedReelVerdicts: Map<String, Boolean> = emptyMap(),
-            onProgress: ((processedChannels: Int, totalChannels: Int) -> Unit)? = null,
+            readAllTabs: Boolean = false,
         ): Flow<SubscriptionFeedChunk> =
             flow {
                 val uniqueChannelIds = channelIds.distinct()
-                Log.i(TAG, "======== FEED FETCH START: ${uniqueChannelIds.size} channels ========")
+                Log.i(TAG, "======== FEED FETCH START: ${uniqueChannelIds.size} channels, allTabs=$readAllTabs ========")
                 if (uniqueChannelIds.isEmpty()) {
                     Log.w(TAG, "No channel IDs provided — emitting empty list")
                     emit(SubscriptionFeedChunk(emptyList(), emptySet()))
                     return@flow
                 }
 
-                val allRegular = mutableListOf<Video>()
-                val allShorts = mutableListOf<Video>()
+                val sweep = Sweep()
                 val channelExtractionCount = AtomicInteger(0)
                 val minimumDateMillis = System.currentTimeMillis() - (SUBSCRIPTION_FEED_LOOKBACK_DAYS * 86400000L)
                 Log.i(TAG, "Age cutoff: ${Date(minimumDateMillis)} (${SUBSCRIPTION_FEED_LOOKBACK_DAYS}d)")
 
-                val rssDateMap = mutableMapOf<String, Long>()
-                val rssChannelHasRecent = mutableMapOf<String, Boolean>()
-                val rssNeedsChannelFallback = mutableMapOf<String, Boolean>()
-
-                // Seeded by Phase 1 and cleared per channel as soon as Phase 2 answers for it.
-                val unreachableChannelIds = mutableSetOf<String>()
-                val failureReasons = mutableMapOf<String, String>()
-                val rssAnsweredChannelIds = mutableSetOf<String>()
-                val incompleteChannelIds = mutableSetOf<String>()
-
-                Log.i(TAG, "Phase 1: Fetching RSS feeds for all ${uniqueChannelIds.size} channels")
+                Log.i(TAG, "RSS stage: ${uniqueChannelIds.size} channels")
                 val rssChunks = uniqueChannelIds.chunked(RSS_CHUNK_SIZE)
                 for ((chunkIndex, chunk) in rssChunks.withIndex()) {
                     val results =
@@ -101,59 +117,77 @@ class RssSubscriptionService
                                 .map { channelId ->
                                     async(Dispatchers.IO) {
                                         val result = fetchRssVideos(channelId, minimumDateMillis, knownVideoIds)
-                                        val classified = classifyReels(channelId, result.videos, storedReelVerdicts)
-                                        channelId to result.copy(videos = classified ?: result.videos, reelsUnverified = classified == null)
+                                        Triple(channelId, result, knownReels(channelId, result, storedReelVerdicts))
                                     }
                                 }.awaitAll()
                         }
-                    for ((channelId, result) in results) {
-                        rssChannelHasRecent[channelId] = result.hasRecent
-                        // RSS carries only the last fifteen uploads, so a Shorts-heavy channel can fill
-                        // all of them with reels and hide its latest long-form upload entirely.
-                        rssNeedsChannelFallback[channelId] =
-                            result.needsChannelFallback || (result.hasRecentEntries && result.videos.none { !it.isShort })
-                        rssDateMap.putAll(result.videoTimestamps)
-                        if (result.failed) {
-                            unreachableChannelIds += channelId
-                            result.failureReason?.let { failureReasons[channelId] = it }
-                        } else {
-                            rssAnsweredChannelIds += channelId
-                            // Shown as uploads, but never stamped or trusted, so the next pass asks again.
-                            if (result.reelsUnverified) incompleteChannelIds += channelId
-                        }
-                        result.videos.forEach { video ->
-                            if (video.isShort) allShorts.add(video) else allRegular.add(video)
+                    for ((channelId, result, classified) in results) {
+                        sweep.hasRecent[channelId] = result.hasRecent
+                        sweep.rssDates.putAll(result.videoTimestamps)
+                        when {
+                            result.failed -> {
+                                sweep.unreachable += channelId
+                                result.failureReason?.let { sweep.reasons[channelId] = it }
+                                sweep.needsTabs += channelId
+                            }
+
+                            classified == null -> {
+                                sweep.rssAnswered += channelId
+                                sweep.held[channelId] = result
+                                if (readAllTabs && result.hasRecent) sweep.needsTabs += channelId
+                            }
+
+                            else -> {
+                                sweep.rssAnswered += channelId
+                                sweep.add(classified)
+                                if (result.needsTabs(classified, readAllTabs)) sweep.needsTabs += channelId
+                            }
                         }
                     }
-                    compactAccumulator(allRegular, MAX_REGULAR_VIDEOS)
-                    compactAccumulator(allShorts, MAX_SHORTS)
+                    sweep.compact()
                     val processed = ((chunkIndex + 1) * RSS_CHUNK_SIZE).coerceAtMost(uniqueChannelIds.size)
-                    onProgress?.invoke(processed, uniqueChannelIds.size)
-                    emit(
-                        SubscriptionFeedChunk(
-                            videos = buildFeed(allRegular, allShorts, maxTotal),
-                            failedChannelIds = unreachableChannelIds.toSet(),
-                            failedChannelReasons = failureReasons.toMap(),
-                            incompleteChannelIds = incompleteChannelIds.toSet(),
-                        ),
-                    )
+                    emit(sweep.chunk(SubscriptionRefreshStage.RSS, processed, uniqueChannelIds.size))
                     if (chunkIndex > 0 && chunkIndex % (CHANNEL_BATCH_SIZE / RSS_CHUNK_SIZE).coerceAtLeast(1) == 0) {
                         delay(CHANNEL_BATCH_DELAY.random())
                     }
                 }
-                Log.i(TAG, "Phase 1 complete: RSS dates for ${rssDateMap.size} videos")
 
-                val activeChannelIds =
-                    uniqueChannelIds.filter {
-                        rssNeedsChannelFallback[it] == true && rssChannelHasRecent[it] != false
+                val checked = uniqueChannelIds.filter { it in sweep.held || it in sweep.needsTabs }
+                val settled = sweep.rssAnswered - sweep.held.keys - sweep.needsTabs
+                Log.i(TAG, "RSS stage complete: ${settled.size} settled, ${checked.size} to check, ${sweep.rssDates.size} dates")
+                emit(sweep.chunk(SubscriptionRefreshStage.CHECKS, 0, checked.size, settled))
+
+                var processedChecks = 0
+                val shortsChecks = checked.filter { it in sweep.held && it !in sweep.needsTabs }
+                for (chunk in shortsChecks.chunked(SHORTS_CHECK_CHUNK_SIZE)) {
+                    val marked =
+                        coroutineScope {
+                            chunk
+                                .map { channelId ->
+                                    async(Dispatchers.IO) {
+                                        channelId to channelReelIndex.markReels(channelId, sweep.held.getValue(channelId).videos)
+                                    }
+                                }.awaitAll()
+                        }
+                    for ((channelId, classified) in marked) {
+                        val result = sweep.held.remove(channelId) ?: continue
+                        if (classified == null) {
+                            // Shown as uploads, but never stamped or trusted, so the next pass asks again.
+                            sweep.add(result.videos)
+                            sweep.incomplete += channelId
+                        } else {
+                            sweep.add(classified)
+                            if (result.needsTabs(classified, readAllTabs)) sweep.needsTabs += channelId
+                        }
+                        if (channelId !in sweep.needsTabs) processedChecks++
                     }
-                Log.i(TAG, "Phase 2: channel tabs for ${activeChannelIds.size} RSS fallback channels")
-
-                var processedChannels = uniqueChannelIds.size - activeChannelIds.size
-                if (processedChannels > 0) {
-                    onProgress?.invoke(processedChannels, uniqueChannelIds.size)
+                    sweep.compact()
+                    emit(sweep.chunk(SubscriptionRefreshStage.CHECKS, processedChecks, checked.size))
                 }
-                val chunks = activeChannelIds.chunked(CHANNEL_CHUNK_SIZE)
+
+                val tabChannels = checked.filter { it in sweep.needsTabs }
+                Log.i(TAG, "Checks stage: ${shortsChecks.size} Shorts checks, channel tabs for ${tabChannels.size}")
+                val chunks = tabChannels.chunked(CHANNEL_CHUNK_SIZE)
                 for ((chunkIndex, chunk) in chunks.withIndex()) {
                     if (channelExtractionCount.get() >= CHANNEL_BATCH_SIZE) {
                         Log.i(TAG, "Batch limit reached, throttling...")
@@ -166,7 +200,8 @@ class RssSubscriptionService
                             chunk
                                 .map { channelId ->
                                     async(Dispatchers.IO) {
-                                        channelId to runChannelTabFetch(channelId, minimumDateMillis, rssDateMap, channelExtractionCount)
+                                        channelId to
+                                            runChannelTabFetch(channelId, minimumDateMillis, sweep.rssDates, channelExtractionCount)
                                     }
                                 }.awaitAll()
                         }
@@ -174,53 +209,100 @@ class RssSubscriptionService
                     for ((channelId, result) in chunkResults) {
                         when {
                             !result.failed -> {
-                                unreachableChannelIds -= channelId
-                                failureReasons -= channelId
-                                incompleteChannelIds -= channelId
+                                sweep.unreachable -= channelId
+                                sweep.reasons -= channelId
+                                sweep.incomplete -= channelId
                             }
 
-                            channelId in rssAnsweredChannelIds -> {
-                                incompleteChannelIds += channelId
+                            channelId in sweep.rssAnswered -> {
+                                sweep.incomplete += channelId
                             }
 
                             else -> {
-                                unreachableChannelIds += channelId
-                                result.failureReason?.let { failureReasons[channelId] = it }
+                                sweep.unreachable += channelId
+                                result.failureReason?.let { sweep.reasons[channelId] = it }
                             }
                         }
-                        result.videos.forEach { if (it.isShort) allShorts.add(it) else allRegular.add(it) }
+                        sweep.held.remove(channelId)?.let { rss ->
+                            val reelIds = result.videos.filter { it.isShort }.mapTo(HashSet()) { it.id }
+                            sweep.add(rss.videos.map { if (it.id in reelIds) it.copy(isShort = true) else it })
+                        }
+                        sweep.add(result.videos)
                     }
-                    compactAccumulator(allRegular, MAX_REGULAR_VIDEOS)
-                    compactAccumulator(allShorts, MAX_SHORTS)
-                    processedChannels = (processedChannels + chunk.size).coerceAtMost(uniqueChannelIds.size)
-                    onProgress?.invoke(processedChannels, uniqueChannelIds.size)
+                    sweep.compact()
+                    processedChecks = (processedChecks + chunk.size).coerceAtMost(checked.size)
                     Log.d(TAG, "Chunk ${chunkIndex + 1}/${chunks.size}: +${chunkResults.sumOf { it.second.videos.size }}")
-
-                    emit(
-                        SubscriptionFeedChunk(
-                            videos = buildFeed(allRegular, allShorts, maxTotal),
-                            failedChannelIds = unreachableChannelIds.toSet(),
-                            failedChannelReasons = failureReasons.toMap(),
-                            incompleteChannelIds = incompleteChannelIds.toSet(),
-                        ),
-                    )
+                    emit(sweep.chunk(SubscriptionRefreshStage.CHECKS, processedChecks, checked.size))
                 }
 
-                emit(
-                    SubscriptionFeedChunk(
-                        videos = buildFeed(allRegular, allShorts, maxTotal),
-                        failedChannelIds = unreachableChannelIds.toSet(),
-                        failedChannelReasons = failureReasons.toMap(),
-                        incompleteChannelIds = incompleteChannelIds.toSet(),
-                    ),
-                )
+                emit(sweep.chunk(SubscriptionRefreshStage.CHECKS, checked.size, checked.size))
                 Log.i(
                     TAG,
-                    "======== FEED FETCH COMPLETE: regular=${allRegular.size.coerceAtMost(MAX_REGULAR_VIDEOS)} " +
-                        "shorts=${allShorts.size.coerceAtMost(MAX_SHORTS)} unreachable=${unreachableChannelIds.size} " +
-                        "incomplete=${incompleteChannelIds.size} ========",
+                    "======== FEED FETCH COMPLETE: regular=${sweep.regular.size} shorts=${sweep.shorts.size} " +
+                        "unreachable=${sweep.unreachable.size} incomplete=${sweep.incomplete.size} ========",
                 )
             }
+
+        /** What one sweep has gathered so far, channel by channel. */
+        private inner class Sweep {
+            val regular = mutableListOf<Video>()
+            val shorts = mutableListOf<Video>()
+            val reelIds = HashSet<String>()
+            val rssDates = mutableMapOf<String, Long>()
+            val hasRecent = mutableMapOf<String, Boolean>()
+
+            /** RSS answered, but no verdict on its reels is at hand yet. */
+            val held = LinkedHashMap<String, RssResult>()
+            val needsTabs = mutableSetOf<String>()
+            val rssAnswered = mutableSetOf<String>()
+
+            // Seeded by the RSS stage and cleared per channel as soon as the tabs answer for it.
+            val unreachable = mutableSetOf<String>()
+            val reasons = mutableMapOf<String, String>()
+            val incomplete = mutableSetOf<String>()
+
+            fun add(videos: List<Video>) {
+                videos.forEach {
+                    if (it.isShort) {
+                        shorts += it
+                        reelIds += it.id
+                    } else {
+                        regular += it
+                    }
+                }
+            }
+
+            fun compact() {
+                compactAccumulator(regular, MAX_REGULAR_VIDEOS)
+                compactAccumulator(shorts, MAX_SHORTS)
+            }
+
+            fun chunk(
+                stage: SubscriptionRefreshStage,
+                processed: Int,
+                total: Int,
+                rssSettled: Set<String>? = null,
+            ) = SubscriptionFeedChunk(
+                videos = buildSweepFeed(regular, shorts),
+                failedChannelIds = unreachable.toSet(),
+                failedChannelReasons = reasons.toMap(),
+                incompleteChannelIds = incomplete.toSet(),
+                stage = stage,
+                processedChannels = processed,
+                totalChannels = total,
+                rssSettledChannelIds = rssSettled,
+                reelIds = reelIds.toSet(),
+            )
+        }
+
+        /**
+         * RSS carries only the last fifteen uploads, so a Shorts-heavy channel can fill all of them
+         * with reels and hide its latest long-form upload entirely.
+         */
+        private fun RssResult.needsTabs(
+            classified: List<Video>,
+            readAllTabs: Boolean,
+        ): Boolean = hasRecent && (readAllTabs || needsChannelFallback || (hasRecentEntries && classified.none { !it.isShort }))
 
         private suspend fun runChannelTabFetch(
             channelId: String,
@@ -239,88 +321,14 @@ class RssSubscriptionService
                 ChannelFetchResult(emptyList(), failed = true, failureReason = "${e::class.simpleName}: ${e.message}")
             }
 
-        /** Merge regular and shorts lists with independent caps, sorted by date. */
-        private fun buildFeed(
-            regular: List<Video>,
-            shorts: List<Video>,
-            maxTotal: Int,
-        ): List<Video> {
-            val mergedRegular =
-                regular
-                    .sortedByDescending { it.timestamp }
-                    .mergeDuplicateVideos()
-                    .take(MAX_REGULAR_VIDEOS)
-            val mergedShorts =
-                shorts
-                    .sortedByDescending { it.timestamp }
-                    .mergeDuplicateVideos()
-                    .distinctBy { it.channelId.ifBlank { it.id } }
-                    .take(MAX_SHORTS)
-            return (mergedRegular + mergedShorts)
-                .sortedByDescending { it.timestamp }
-                .mergeDuplicateVideos()
-                .take(maxTotal)
-        }
-
-        private fun List<Video>.mergeDuplicateVideos(): List<Video> {
-            val now = System.currentTimeMillis()
-            return groupBy { it.id }
-                .values
-                .map { candidates ->
-                    val primary = candidates.first()
-                    val timestampSource =
-                        candidates
-                            .filter { it.timestamp > 0L }
-                            .maxByOrNull { it.timestamp }
-                            ?: primary
-                    val bestChannelThumbnail =
-                        candidates.firstOrNull { it.channelThumbnailUrl.isNotBlank() }?.channelThumbnailUrl
-                            ?: primary.channelThumbnailUrl
-                    val bestVideoThumbnail =
-                        candidates
-                            .asSequence()
-                            .map { ThumbnailUrlResolver.normalizeVideoThumbnail(it.id, it.thumbnailUrl) }
-                            .firstOrNull { it.isNotBlank() }
-                            ?: ThumbnailUrlResolver.normalizeVideoThumbnail(primary.id, primary.thumbnailUrl)
-                    val bestDescription =
-                        candidates.firstOrNull { it.description.isNotBlank() }?.description
-                            ?: primary.description
-
-                    primary.copy(
-                        duration = candidates.maxOf { it.duration },
-                        viewCount = candidates.maxOf { it.viewCount },
-                        thumbnailUrl = bestVideoThumbnail,
-                        uploadDate = timestampSource.uploadDate,
-                        timestamp = timestampSource.timestamp,
-                        timestampIsExact = timestampSource.timestampIsExact,
-                        description = bestDescription,
-                        channelThumbnailUrl = bestChannelThumbnail,
-                        isShort = candidates.any { it.isShort },
-                        isLive = candidates.any { it.isLive },
-                        isUpcoming = candidates.any { it.isUpcoming && it.timestamp > now + 60_000L },
-                    )
-                }.sortedByDescending { it.timestamp }
-        }
-
-        private fun compactAccumulator(
-            videos: MutableList<Video>,
-            maxSize: Int,
-        ) {
-            if (videos.size <= maxSize * 2) return
-            val compacted = videos.mergeDuplicateVideos().take(maxSize)
-            videos.clear()
-            videos.addAll(compacted)
-        }
-
         private data class RssResult(
             val hasRecent: Boolean,
             val videoTimestamps: Map<String, Long>,
             val videos: List<Video>,
             val needsChannelFallback: Boolean,
+            val linkVerdicts: Map<String, Boolean> = emptyMap(),
             /** The feed lists an upload inside the window, whether or not it survived the filters. */
             val hasRecentEntries: Boolean = false,
-            /** The Shorts tab could not be read, so no entry in [videos] is known to be a reel or not. */
-            val reelsUnverified: Boolean = false,
             val failed: Boolean = false,
             val failureReason: String? = null,
         )
@@ -333,7 +341,7 @@ class RssSubscriptionService
 
         /**
          * RSS gives accurate dates for all recent uploads (including Shorts) but never a duration or a
-         * Shorts/live flag, so its timestamps double as the date source for the Phase 2 tab items.
+         * live flag, so its timestamps double as the date source for the Phase 2 tab items.
          */
         private suspend fun fetchRssVideos(
             channelId: String,
@@ -355,6 +363,7 @@ class RssSubscriptionService
 
             val timestamps = mutableMapOf<String, Long>()
             val videos = mutableListOf<Video>()
+            val linkVerdicts = mutableMapOf<String, Boolean>()
             var newestTimestamp = 0L
 
             for (entry in feed.entries) {
@@ -364,6 +373,7 @@ class RssSubscriptionService
                 if (publishedAt > newestTimestamp) newestTimestamp = publishedAt
                 if (publishedAt > minimumDateMillis && !entry.isPaidOrMembersOnly()) {
                     videos += entry.toVideo(channelId = channelId, channelName = feed.channelName)
+                    entry.isShort?.let { linkVerdicts[entry.videoId] = it }
                 }
             }
 
@@ -385,27 +395,23 @@ class RssSubscriptionService
                 videoTimestamps = timestamps,
                 videos = videos,
                 needsChannelFallback = videos.isEmpty() && newestTimestamp > minimumDateMillis,
+                linkVerdicts = linkVerdicts,
                 hasRecentEntries = newestTimestamp > minimumDateMillis,
             )
         }
 
         /**
-         * RSS cannot tell a reel from a video, so a channel's Shorts tab is asked, one full browse per
-         * channel. When the store already classified every entry the answer is reused: a sweep then
-         * browses only the channels with something new instead of every subscription.
-         *
-         * Null when the Shorts tab could not be read.
+         * Each entry's link, else a stored verdict, classifies the slice without a browse. When some
+         * entry has neither, a Shorts tab read within the cache window is reused; otherwise the
+         * channel needs a Shorts check, one full browse, and null holds it for the checks stage.
          */
-        private suspend fun classifyReels(
+        private suspend fun knownReels(
             channelId: String,
-            videos: List<Video>,
+            result: RssResult,
             storedReelVerdicts: Map<String, Boolean>,
-        ): List<Video>? {
-            if (videos.isNotEmpty() && videos.all { it.id in storedReelVerdicts }) {
-                return videos.map { it.copy(isShort = storedReelVerdicts.getValue(it.id)) }
-            }
-            return channelReelIndex.markReels(channelId, videos)
-        }
+        ): List<Video>? =
+            classifiedFromVerdicts(result.videos, result.linkVerdicts, storedReelVerdicts)
+                ?: channelReelIndex.markReelsIfCached(channelId, result.videos)
 
         private fun ChannelRssEntry.toVideo(
             channelId: String,
@@ -426,7 +432,7 @@ class RssSubscriptionService
                 timestampIsExact = true,
                 channelThumbnailUrl = "",
                 description = description.orEmpty(),
-                isShort = false,
+                isShort = isShort == true,
                 isLive = false,
                 isUpcoming = isUpcoming,
             )
@@ -535,13 +541,11 @@ class RssSubscriptionService
             const val UNKNOWN_LABEL = "Unknown"
 
             const val RSS_CHUNK_SIZE = 8
+            const val SHORTS_CHECK_CHUNK_SIZE = 4
             const val CHANNEL_CHUNK_SIZE = 3
             const val CHANNEL_BATCH_SIZE = 50
             val CHANNEL_BATCH_DELAY = (100L..400L)
             const val SUBSCRIPTION_FEED_LOOKBACK_DAYS = 60L
-
-            const val MAX_REGULAR_VIDEOS = 1200
-            const val MAX_SHORTS = 300
 
             val RESTRICTION_MARKERS =
                 listOf(

@@ -98,6 +98,14 @@ interface WatchHistoryDao {
         durationMs: Long,
     )
 
+    /** Moves only the saved place; 0 means [videoId] has no row yet. */
+    @Query("UPDATE watch_history SET position = :position, duration = :duration WHERE videoId = :videoId")
+    suspend fun updateProgress(
+        videoId: String,
+        position: Long,
+        duration: Long,
+    ): Int
+
     /** Drops saved progress without deleting the history row, so the card no longer reads as watched. */
     @Query("UPDATE watch_history SET position = 0 WHERE videoId = :videoId")
     suspend fun clearProgress(videoId: String)
@@ -146,6 +154,13 @@ interface WatchHistoryDao {
 
     @Query("SELECT videoId, position, duration, timestamp FROM watch_history WHERE videoId = :videoId")
     suspend fun getProgress(videoId: String): WatchProgress?
+
+    /** Progress for just [videoIds], so a search page asks about its own results and nothing else. */
+    @Query(
+        "SELECT videoId, position, duration, timestamp FROM watch_history " +
+            "WHERE isMusic = 0 AND isLocal = 0 AND videoId IN (:videoIds)",
+    )
+    suspend fun getProgressFor(videoIds: List<String>): List<WatchProgress>
 
     /**
      * Returns the most recently watched non-music, non-Short video **only if that specific video

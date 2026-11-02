@@ -18,7 +18,9 @@ import kotlin.math.ln
 internal object NeuroPhrases {
     const val MIN_COUNT = 3
     const val MIN_NPMI = 0.5
-    const val MIN_DOCUMENTS = 20
+
+    // Ten videos: a document is one video, where it used to be every open, watch and like of one.
+    const val MIN_DOCUMENTS = 10
 
     /** NPMI of [bigram] in [idf], from -1 (never together) to 1 (only together); null when unknown. */
     fun npmi(
@@ -45,4 +47,18 @@ internal object NeuroPhrases {
         if ((idf.wordFrequency[bigram] ?: 0) < MIN_COUNT) return false
         return (npmi(bigram, idf) ?: return false) >= MIN_NPMI
     }
+
+    /** [MIN_COUNT] documents, and document frequency of [run] at least [MIN_MERGED_SHARE] of its rarest single character. */
+    fun isMergedRun(
+        run: String,
+        idf: IdfSnapshot,
+    ): Boolean {
+        if (idf.totalDocs < MIN_DOCUMENTS) return false
+        val joint = idf.wordFrequency[run] ?: return false
+        if (joint < MIN_COUNT) return false
+        val rarest = run.mapNotNull { idf.wordFrequency[it.toString()] }.minOrNull()?.let { maxOf(it, joint) } ?: return false
+        return joint >= MIN_MERGED_SHARE * rarest
+    }
+
+    const val MIN_MERGED_SHARE = 0.5
 }

@@ -35,11 +35,15 @@ import io.github.aedev.flow.data.model.Video
 import io.github.aedev.flow.data.model.toVideo
 import io.github.aedev.flow.data.model.uploadDateMillis
 import io.github.aedev.flow.player.EnhancedPlayerManager
+import io.github.aedev.flow.player.state.EnhancedPlayerState
 import io.github.aedev.flow.player.state.SubtitleOption
 import io.github.aedev.flow.ui.components.shared.FlowDescriptionBottomSheet
 import io.github.aedev.flow.ui.components.shared.FlowNoteEditorDialog
+import io.github.aedev.flow.ui.components.shared.MediaDownloadPrompt
+import io.github.aedev.flow.ui.components.shared.MediaSheetSlot
 import io.github.aedev.flow.ui.components.shared.MediaSleepTimerSheet
 import io.github.aedev.flow.ui.components.shared.commentTimestampToMs
+import io.github.aedev.flow.ui.components.shared.defaultSheetExpandedHeight
 import io.github.aedev.flow.ui.components.shared.quickactions.QuickActionUndo
 import io.github.aedev.flow.ui.components.shared.quickactions.sharedQuickActionsViewModel
 import io.github.aedev.flow.ui.components.shared.rememberDateDisplaySettings
@@ -161,7 +165,7 @@ internal fun PlayerDescriptionSheetHost(
     FlowDescriptionBottomSheet(
         video = video,
         descriptionPage = descriptionPage,
-        tags = video.tags,
+        tags = (listOfNotNull(video.category) + video.tags).distinct(),
         chapterCount = uiState.chapters.size,
         onChaptersClick = onChaptersClick,
         onTranscriptClick = onTranscriptClick?.takeIf { hasTranscriptTrack },
@@ -234,6 +238,35 @@ internal fun PlayerTranscriptSheetHost(
 }
 
 @Composable
+internal fun PlayerDownloadSheetHost(
+    video: Video,
+    uiState: VideoPlayerUiState,
+    playerState: EnhancedPlayerState,
+    asSidePanel: Boolean,
+    expandedHeight: Dp?,
+    onDismiss: () -> Unit,
+    collapsedHeight: Dp = 0.dp,
+    onSheetProgressChange: (Float) -> Unit = {},
+) {
+    MediaDownloadPrompt(
+        streamSizes = uiState.streamSizes,
+        videoFormats = uiState.innerTubeVideoFormats,
+        audioFormats = uiState.innerTubeAudioFormats,
+        video = video,
+        subtitles = playerState.availableSubtitles,
+        currentPlayingHeight = playerState.effectiveQuality,
+        onDismiss = onDismiss,
+        slot =
+            MediaSheetSlot(
+                expandedHeight = expandedHeight ?: defaultSheetExpandedHeight(),
+                collapsedHeight = collapsedHeight,
+                asSidePanel = asSidePanel,
+                onProgressChange = onSheetProgressChange,
+            ),
+    )
+}
+
+@Composable
 internal fun PlayerSleepTimerSheetHost(
     asSidePanel: Boolean,
     expandedHeight: Dp?,
@@ -243,7 +276,7 @@ internal fun PlayerSleepTimerSheetHost(
 ) {
     MediaSleepTimerSheet(
         onDismiss = onDismiss,
-        expandedHeight = expandedHeight,
+        expandedHeight = expandedHeight ?: defaultSheetExpandedHeight(),
         collapsedHeight = collapsedHeight,
         enableVerticalDismiss = !asSidePanel,
         asBottomSheet = !asSidePanel,

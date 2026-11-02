@@ -1,11 +1,15 @@
 package io.github.aedev.flow.ui.screens.settings.playback
 
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.outlined.BatteryAlert
 import androidx.compose.runtime.getValue
 import androidx.compose.ui.res.pluralStringResource
 import androidx.compose.ui.res.stringResource
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.aedev.flow.R
 import io.github.aedev.flow.data.local.PlayerRelatedCardStyle
+import io.github.aedev.flow.data.local.SpeedSwipeSide
+import io.github.aedev.flow.ui.components.equalizer.equalizerSummary
 import io.github.aedev.flow.ui.components.settings.SettingsDestination
 import io.github.aedev.flow.ui.components.settings.SettingsListScope
 import io.github.aedev.flow.ui.components.settings.SettingsTarget
@@ -14,9 +18,11 @@ import io.github.aedev.flow.ui.components.settings.choice
 import io.github.aedev.flow.ui.components.settings.nav
 import io.github.aedev.flow.ui.components.settings.switch
 import io.github.aedev.flow.ui.components.settings.toggleGroup
+import io.github.aedev.flow.ui.components.shared.FlowNavRow
 import io.github.aedev.flow.ui.components.shared.FlowSwitchRow
 import io.github.aedev.flow.ui.components.shared.FlowToggleOption
 import io.github.aedev.flow.ui.screens.settings.index.DestinationIndex
+import io.github.aedev.flow.ui.screens.settings.index.PlaybackGesturesIndex
 import io.github.aedev.flow.ui.screens.settings.index.PlaybackIndex
 
 private const val UNLIMITED_TITLE_LINES = 0
@@ -26,10 +32,26 @@ internal fun SettingsListScope.playbackSections(
     state: PlaybackStructure,
     openDialog: (PlaybackDialog) -> Unit,
     onNavigate: (SettingsTarget) -> Unit,
+    onAllowBackground: () -> Unit,
 ) {
     group(key = "playback.general", header = R.string.playback_header) {
         switch(PlaybackIndex.backgroundPlay, viewModel.backgroundPlay, viewModel::setBackgroundPlay)
+        switch(PlaybackIndex.keepPlayingAfterSwipe, viewModel.keepPlayingAfterSwipe, viewModel::setKeepPlayingAfterSwipe)
+        if (state.backgroundRestricted) {
+            row("playback.background_restricted") { shape ->
+                FlowNavRow(
+                    title = stringResource(R.string.playback_background_restricted_title),
+                    supportingText = stringResource(R.string.playback_background_restricted_subtitle),
+                    leadingIcon = Icons.Outlined.BatteryAlert,
+                    showChevron = false,
+                    shape = shape,
+                    onClick = onAllowBackground,
+                )
+            }
+        }
         switch(PlaybackIndex.startPaused, viewModel.startPaused, viewModel::setStartPaused)
+        switch(PlaybackIndex.openFullscreen, viewModel.openFullscreen, viewModel::setOpenFullscreen)
+        switch(PlaybackIndex.tiltFullscreen, viewModel.tiltFullscreen, viewModel::setTiltFullscreen)
         switch(PlaybackIndex.autoplay, viewModel.autoplay, viewModel::setAutoplay, enabled = !state.loopAll)
         switch(PlaybackIndex.queueAutoplay, viewModel.queueAutoplay, viewModel::setQueueAutoplay, enabled = !state.loopAll)
         choice(PlaybackIndex.autoplayCountdown, onClick = { openDialog(PlaybackDialog.AUTOPLAY_COUNTDOWN) }) {
@@ -41,7 +63,12 @@ internal fun SettingsListScope.playbackSections(
         switch(PlaybackIndex.playDuringCalls, viewModel.playDuringCalls, viewModel::setPlayDuringCalls)
     }
     group(key = "playback.sound", header = R.string.eq_settings_section) {
-        nav(DestinationIndex.entry(SettingsDestination.EQUALIZER), onClick = { onNavigate(SettingsTarget(SettingsDestination.EQUALIZER)) })
+        nav(
+            DestinationIndex.entry(SettingsDestination.EQUALIZER),
+            onClick = { onNavigate(SettingsTarget(SettingsDestination.EQUALIZER)) },
+            valueText = { equalizerSummary() },
+        )
+        switch(PlaybackIndex.normalizeVolume, viewModel.normalizeVolume, viewModel::setNormalizeVolume)
     }
     group(key = "playback.speed", header = R.string.settings_section_speed) {
         switch(PlaybackIndex.rememberSpeed, viewModel.rememberSpeed, viewModel::setRememberSpeed)
@@ -58,7 +85,7 @@ internal fun SettingsListScope.playbackSections(
         }
     }
     group(key = "playback.gestures", header = R.string.player_appearance_gestures_header) {
-        choice(PlaybackIndex.doubleTapSeek, onClick = { openDialog(PlaybackDialog.DOUBLE_TAP_SEEK) }) {
+        choice(PlaybackGesturesIndex.doubleTapSeek, onClick = { openDialog(PlaybackDialog.DOUBLE_TAP_SEEK) }) {
             val seconds by viewModel.doubleTapSeek.collectAsStateWithLifecycle()
             if (seconds <= 0) {
                 stringResource(R.string.player_settings_double_tap_seek_off)
@@ -67,18 +94,37 @@ internal fun SettingsListScope.playbackSections(
             }
         }
         if (state.doubleTapSeek) {
-            choice(PlaybackIndex.seekZoneWidth, onClick = { openDialog(PlaybackDialog.SEEK_ZONE_WIDTH) }) {
+            choice(PlaybackGesturesIndex.seekZoneWidth, onClick = { openDialog(PlaybackDialog.SEEK_ZONE_WIDTH) }) {
                 val zone by viewModel.seekZone.collectAsStateWithLifecycle()
                 stringResource(zone.labelRes())
             }
         }
-        switch(PlaybackIndex.brightnessGesture, viewModel.brightnessGesture, viewModel::setBrightnessGesture)
-        switch(PlaybackIndex.rememberBrightness, viewModel.rememberBrightness, viewModel::setRememberBrightness)
-        switch(PlaybackIndex.volumeGesture, viewModel.volumeGesture, viewModel::setVolumeGesture)
-        switch(PlaybackIndex.volumeBoost, viewModel.volumeBoost, viewModel::setVolumeBoost)
-        switch(PlaybackIndex.seekGesture, viewModel.seekGesture, viewModel::setSeekGesture)
-        switch(PlaybackIndex.haptics, viewModel.haptics, viewModel::setHaptics)
-        switch(PlaybackIndex.controlsWhileLoading, viewModel.controlsWhileLoading, viewModel::setControlsWhileLoading)
+        switch(
+            PlaybackGesturesIndex.brightnessGesture,
+            viewModel.brightnessGesture,
+            viewModel::setBrightnessGesture,
+            enabled = state.speedSwipeSide != SpeedSwipeSide.LEFT,
+        )
+        switch(PlaybackGesturesIndex.rememberBrightness, viewModel.rememberBrightness, viewModel::setRememberBrightness)
+        switch(
+            PlaybackGesturesIndex.volumeGesture,
+            viewModel.volumeGesture,
+            viewModel::setVolumeGesture,
+            enabled = state.speedSwipeSide != SpeedSwipeSide.RIGHT,
+        )
+        switch(PlaybackGesturesIndex.volumeBoost, viewModel.volumeBoost, viewModel::setVolumeBoost)
+        choice(PlaybackGesturesIndex.speedSwipe, onClick = { openDialog(PlaybackDialog.SPEED_SWIPE_SIDE) }) {
+            speedSwipeSideLabel(state.speedSwipeSide)
+        }
+        if (state.speedSwipeSide != SpeedSwipeSide.OFF || state.musicSideSwipes) {
+            choice(PlaybackGesturesIndex.speedSwipeStep, onClick = { openDialog(PlaybackDialog.SPEED_SWIPE_STEP) }) {
+                val step by viewModel.speedSwipeStep.collectAsStateWithLifecycle()
+                speedSwipeStepLabel(step)
+            }
+        }
+        switch(PlaybackGesturesIndex.seekGesture, viewModel.seekGesture, viewModel::setSeekGesture)
+        switch(PlaybackGesturesIndex.haptics, viewModel.haptics, viewModel::setHaptics)
+        switch(PlaybackGesturesIndex.controlsWhileLoading, viewModel.controlsWhileLoading, viewModel::setControlsWhileLoading)
     }
     group(key = "playback.buttons", header = R.string.settings_section_player_buttons) {
         switch(PlaybackIndex.castButton, viewModel.castButton, viewModel::setCastButton)
@@ -90,6 +136,7 @@ internal fun SettingsListScope.playbackSections(
         switch(PlaybackIndex.speedIndicator, viewModel.speedIndicator, viewModel::setSpeedIndicator)
         switch(PlaybackIndex.commentsButton, viewModel.commentsButton, viewModel::setCommentsButton)
         switch(PlaybackIndex.sponsorBlockButton, viewModel.sponsorBlockButton, viewModel::setSponsorBlockButton)
+        switch(PlaybackIndex.nextPrevButtons, viewModel.nextPrevButtons, viewModel::setNextPrevButtons)
     }
     group(key = "playback.pip", header = R.string.settings_section_pip) {
         switch(PlaybackIndex.autoPip, viewModel.autoPip, viewModel::setAutoPip)
@@ -113,6 +160,9 @@ internal fun SettingsListScope.playbackSections(
     group(key = "playback.music", header = R.string.settings_section_music) {
         switch(PlaybackIndex.endlessRadio, viewModel.endlessRadio, viewModel::setEndlessRadio)
         switch(PlaybackIndex.pauseMusicWhenMuted, viewModel.pauseMusicWhenMuted, viewModel::setPauseMusicWhenMuted)
+        switch(PlaybackIndex.musicResume, viewModel.musicResume, viewModel::setMusicResume)
+        switch(PlaybackIndex.resumeFromHeadphones, viewModel.resumeFromHeadphones, viewModel::setResumeFromHeadphones)
+        switch(PlaybackIndex.musicSideSwipes, viewModel.musicSideSwipes, viewModel::setMusicSideSwipes)
         switch(PlaybackIndex.musicVideoSwitch, viewModel.musicVideoSwitch, viewModel::setMusicVideoSwitch)
         choice(PlaybackIndex.lyricsProviders, onClick = { openDialog(PlaybackDialog.LYRICS) }) {
             val providers by viewModel.lyricsProviders.collectAsStateWithLifecycle()
@@ -168,6 +218,7 @@ private fun SettingsListScope.watchPageSection(
     }
     switch(PlaybackIndex.comments, viewModel.comments, viewModel::setComments)
     switch(PlaybackIndex.commentsPreview, viewModel.commentsPreview, viewModel::setCommentsPreview, enabled = state.comments)
+    switch(PlaybackIndex.liveChat, viewModel.liveChat, viewModel::setLiveChat)
 }
 
 private fun SettingsListScope.shortsPlayerSection(

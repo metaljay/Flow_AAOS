@@ -47,9 +47,40 @@ class HomeChipPoliciesTest {
     }
 
     @Test
+    fun `live streams are searched for the top two interests`() {
+        val gym = InterestChip("gym", "Gym", listOf("gym"))
+        val chess = InterestChip("chess", "Chess", listOf("chess"))
+
+        assertThat(liveQueries(listOf(claude, gym, chess))).containsExactly("claude 5.5", "gym").inOrder()
+    }
+
+    @Test
+    fun `a viewer with no interests still gets live streams`() {
+        assertThat(liveQueries(emptyList())).containsExactly(HomeChipParams.LIVE_FALLBACK_QUERY)
+    }
+
+    @Test
     fun `interest searches lead with the chip's phrases`() {
         assertThat(interestQueries(claude)).containsExactly("claude 5.5", "claude opus", "claude design").inOrder()
         assertThat(interestQueries(InterestChip("gym", "Gym", listOf("gym")))).containsExactly("gym")
+    }
+
+    @Test
+    fun `a theme searches each of its interests in turn`() {
+        val theme =
+            InterestChip(
+                "theme:gaming",
+                "Minecraft",
+                emptyList(),
+                category = "gaming",
+                parts =
+                    listOf(
+                        InterestChip("minecraft", "Minecraft", listOf("minecraft", "minecraft redstone")),
+                        InterestChip("fortnite", "Fortnite", listOf("fortnite")),
+                    ),
+            )
+
+        assertThat(interestQueries(theme)).containsExactly("minecraft redstone", "fortnite").inOrder()
     }
 
     @Test

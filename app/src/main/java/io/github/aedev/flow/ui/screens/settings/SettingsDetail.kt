@@ -15,6 +15,7 @@ import io.github.aedev.flow.ui.screens.settings.appearance.theme.CustomThemesScr
 import io.github.aedev.flow.ui.screens.settings.appearance.theme.ThemeScreen
 import io.github.aedev.flow.ui.screens.settings.backup.BackupScreen
 import io.github.aedev.flow.ui.screens.settings.content.ContentSettingsScreen
+import io.github.aedev.flow.ui.screens.settings.content.LibrarySettingsScreen
 import io.github.aedev.flow.ui.screens.settings.content.MusicHomeSettingsScreen
 import io.github.aedev.flow.ui.screens.settings.diagnostics.DiagnosticsScreen
 import io.github.aedev.flow.ui.screens.settings.downloads.DownloadSettingsScreen
@@ -25,6 +26,8 @@ import io.github.aedev.flow.ui.screens.settings.network.NetworkSettingsScreen
 import io.github.aedev.flow.ui.screens.settings.notifications.NotificationSettingsScreen
 import io.github.aedev.flow.ui.screens.settings.playback.BufferSettingsScreen
 import io.github.aedev.flow.ui.screens.settings.playback.PlaybackSettingsScreen
+import io.github.aedev.flow.ui.screens.settings.profiles.ProfileEditScreen
+import io.github.aedev.flow.ui.screens.settings.profiles.ProfilesScreen
 import io.github.aedev.flow.ui.screens.settings.quality.QualitySettingsScreen
 import io.github.aedev.flow.ui.screens.settings.region.LanguageRegionScreen
 import io.github.aedev.flow.ui.screens.settings.scrobbling.ScrobblingScreen
@@ -47,7 +50,12 @@ internal fun SettingsDetail(
     onBack: (() -> Unit)?,
     onNavigate: (SettingsTarget) -> Unit,
     onOpenRecap: () -> Unit,
+    options: SettingsHostOptions = SettingsHostOptions(),
 ) {
+    options.pages[target.destination]?.let { page ->
+        page(onBack)
+        return
+    }
     when (target.destination) {
         SettingsDestination.HOME,
         SettingsDestination.APPEARANCE,
@@ -103,6 +111,10 @@ internal fun SettingsDetail(
             MusicHomeSettingsScreen(onBack = onBack, highlight = target.highlight)
         }
 
+        SettingsDestination.LIBRARY -> {
+            LibrarySettingsScreen(onBack = onBack, highlight = target.highlight)
+        }
+
         SettingsDestination.DATE_TIME -> {
             DateTimeScreen(onBack = onBack, highlight = target.highlight)
         }
@@ -151,6 +163,14 @@ internal fun SettingsDetail(
             SyncScreen(onBack = onBack)
         }
 
+        SettingsDestination.PROFILES -> {
+            ProfilesScreen(onBack = onBack, highlight = target.highlight, onNavigate = onNavigate)
+        }
+
+        SettingsDestination.PROFILE_EDIT -> {
+            ProfileEditScreen(profileId = target.tab, onBack = onBack, highlight = target.highlight)
+        }
+
         SettingsDestination.HISTORY -> {
             HistorySettingsScreen(onBack = onBack, highlight = target.highlight)
         }
@@ -180,7 +200,11 @@ internal fun SettingsDetail(
         }
 
         SettingsDestination.ABOUT -> {
-            AboutScreen(onBack = onBack, highlight = target.highlight)
+            AboutScreen(onBack = onBack, highlight = target.highlight, onNavigate = onNavigate)
+        }
+
+        SettingsDestination.REMOTE_GUIDE -> {
+            Unit
         }
 
         SettingsDestination.DIAGNOSTICS -> {

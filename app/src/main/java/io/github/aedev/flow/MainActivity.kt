@@ -1,46 +1,33 @@
 package io.github.aedev.flow
 
-import android.content.ContentResolver
 import android.content.Context
 import android.content.Intent
-import android.media.AudioManager
-import android.net.Uri
 import android.os.Build
 import android.os.Bundle
 import android.os.PowerManager
 import android.util.Log
 import android.view.KeyEvent
-import android.widget.Toast
+import android.view.KeyboardShortcutGroup
+import android.view.Menu
 import androidx.activity.ComponentActivity
 import androidx.activity.SystemBarStyle
 import androidx.activity.compose.setContent
 import androidx.activity.enableEdgeToEdge
-import androidx.compose.foundation.layout.Box
-import androidx.compose.foundation.layout.fillMaxSize
-import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.*
-import androidx.compose.ui.Modifier
-import androidx.compose.ui.platform.LocalConfiguration
-import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.semantics.semantics
-import androidx.compose.ui.semantics.testTagsAsResourceId
-import androidx.core.content.IntentCompat
 import androidx.core.splashscreen.SplashScreen.Companion.installSplashScreen
 import androidx.lifecycle.Lifecycle
 import androidx.lifecycle.lifecycleScope
 import dagger.hilt.android.AndroidEntryPoint
 import io.github.aedev.flow.data.local.AppFontPreferences
-import io.github.aedev.flow.data.local.AppUiModePreferences
 import io.github.aedev.flow.data.local.LocalDataManager
-import io.github.aedev.flow.data.playlist.PlaylistImport
 import io.github.aedev.flow.data.playlist.PlaylistTransfer
 import io.github.aedev.flow.data.recommendation.FlowNeuroEngine
+import io.github.aedev.flow.data.repository.DeArrowRepository
+import io.github.aedev.flow.data.repository.OriginalTitleRepository
 import io.github.aedev.flow.discord.DiscordPresenceRuntime
-import io.github.aedev.flow.notification.NotificationHelper
 import io.github.aedev.flow.platform.AppIconController
-import io.github.aedev.flow.platform.AppUiMode
 import io.github.aedev.flow.platform.AppUiRoot
-import io.github.aedev.flow.platform.DeviceFormFactorDetector
+import io.github.aedev.flow.platform.PlayerKeyboardShortcutHelp
 import io.github.aedev.flow.player.BackgroundPlaybackPolicy
 import io.github.aedev.flow.player.EnhancedPlayerManager
 import io.github.aedev.flow.player.GlobalPlayerState
@@ -48,30 +35,15 @@ import io.github.aedev.flow.player.LifecyclePlaybackPreferences
 import io.github.aedev.flow.player.MemoryPressurePolicy
 import io.github.aedev.flow.player.PictureInPictureHelper
 import io.github.aedev.flow.player.PipQueueNavigation
-import io.github.aedev.flow.ui.FlowApp
-import io.github.aedev.flow.ui.LinkDestination
-import io.github.aedev.flow.ui.components.library.message
-import io.github.aedev.flow.ui.components.shared.ProvideChannelGroupLabels
-import io.github.aedev.flow.ui.components.shared.ProvideDateDisplaySettings
-import io.github.aedev.flow.ui.components.shared.card.ProvideVideoCardState
-import io.github.aedev.flow.ui.linkDestination
-import io.github.aedev.flow.ui.linkTextOf
-import io.github.aedev.flow.ui.musicCollectionRoute
-import io.github.aedev.flow.ui.screens.crash.CrashReportScreen
-import io.github.aedev.flow.ui.screens.update.UPDATE_ROUTE
-import io.github.aedev.flow.ui.startup.FlowTheme
+import io.github.aedev.flow.sync2.service.LinkedSyncWorker
+import io.github.aedev.flow.ui.IncomingIntents
+import io.github.aedev.flow.ui.IncomingLinks
+import io.github.aedev.flow.ui.startup.FlowRoot
 import io.github.aedev.flow.ui.startup.SplashController
 import io.github.aedev.flow.ui.startup.ThemeSettings
-import io.github.aedev.flow.ui.startup.splashTone
 import io.github.aedev.flow.ui.startup.themeSettings
-import io.github.aedev.flow.ui.theme.FlowFontFamily
-import io.github.aedev.flow.ui.theme.FlowTheme
-import io.github.aedev.flow.ui.tv.FlowTvApp
-import io.github.aedev.flow.ui.utils.ProvideWindowSizeClass
 import io.github.aedev.flow.utils.AppLanguageManager
 import io.github.aedev.flow.utils.FlowCrashHandler
-import io.github.aedev.flow.utils.PLAYLIST_FILE_MIME_TYPE
-import io.github.aedev.flow.utils.parseYouTubeLink
 import kotlinx.coroutines.Dispatchers
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.delay
@@ -84,17 +56,13 @@ private const val PORTRAIT_REEL_ASPECT_RATIO = 9f / 16f
 
 @AndroidEntryPoint
 class MainActivity : ComponentActivity() {
-    private val _deeplinkVideoId = mutableStateOf<String?>(null)
-    val deeplinkVideoId: State<String?> = _deeplinkVideoId
+    private val links = IncomingLinks()
 
-    private val _isDeeplinkShort = mutableStateOf(false)
-    val isDeeplinkShort: State<Boolean> = _isDeeplinkShort
+    @Inject
+    lateinit var originalTitles: OriginalTitleRepository
 
-    private val _openMusicPlayerRequest = mutableIntStateOf(0)
-    val openMusicPlayerRequest: State<Int> = _openMusicPlayerRequest
-
-    private val _pendingRoute = mutableStateOf<String?>(null)
-    val pendingRoute: State<String?> = _pendingRoute
+    @Inject
+    lateinit var deArrow: DeArrowRepository
 
     @Inject
     lateinit var lifecyclePlaybackPreferences: LifecyclePlaybackPreferences
@@ -112,13 +80,15 @@ class MainActivity : ComponentActivity() {
     lateinit var videoPlayerManager: dagger.Lazy<EnhancedPlayerManager>
 
     @Inject
+    lateinit var localPlayback: dagger.Lazy<io.github.aedev.flow.sync2.live.LocalPlayback>
+
+    @Inject
     lateinit var widgetContentSync: dagger.Lazy<io.github.aedev.flow.widget.core.refresh.WidgetContentSync>
 
     @Inject
     lateinit var nowPlayingWidgetPublisher: dagger.Lazy<io.github.aedev.flow.widget.nowplaying.NowPlayingWidgetPublisher>
 
-    // A recreated activity gets its launch intent again; a playlist file in it was already imported.
-    private var isRestoringState = false
+    private val incomingIntents by lazy { IncomingIntents(this, links, playlistTransfer) }
 
     private val splashController = SplashController(this)
 
@@ -158,8 +128,7 @@ class MainActivity : ComponentActivity() {
     }
 
     override fun attachBaseContext(newBase: Context) {
-        val selectedLanguage = AppLanguageManager.loadSelectedLanguageTag(newBase)
-        super.attachBaseContext(AppLanguageManager.wrapContext(newBase, selectedLanguage))
+        super.attachBaseContext(AppLanguageManager.wrapContext(newBase, AppLanguageManager.resolveLanguageTag(newBase)))
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
@@ -185,11 +154,15 @@ class MainActivity : ComponentActivity() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.Q) {
             window.isNavigationBarContrastEnforced = false
             window.isStatusBarContrastEnforced = false
+            // Some MIUI builds read force dark from the view rather than the theme (#1517).
+            window.decorView.isForceDarkAllowed = false
         }
 
         // Player setup reads DataStore and opens the media cache index, so it runs off the main
         // thread and settles after the first frame instead of blocking onCreate.
         lifecycleScope.launch { GlobalPlayerState.initializeAsync(applicationContext) }
+        // A video another linked device handed over opens as a tapped link would.
+        lifecycleScope.launch { localPlayback.get().openVideo.collect { links.openVideo(it) } }
 
         // Snapshot lives in the process, not the activity: onUserLeaveHint/onStop read it
         // synchronously and must still see it after a recreation they run inside of (#817).
@@ -211,121 +184,29 @@ class MainActivity : ComponentActivity() {
             nowPlayingWidgetPublisher.get().repairStalePlayback()
         }
 
-        isRestoringState = savedInstanceState != null
-        handleIntent(intent)
-        isRestoringState = false
+        incomingIntents.handle(intent, isRestoringState = savedInstanceState != null)
 
         // Read now, alongside the rest of startup, so the theme is usually known by the first composition.
         val storedTheme = MutableStateFlow<ThemeSettings?>(null)
         lifecycleScope.launch { dataManager.themeSettings(appFontPreferences).collect { storedTheme.value = it } }
 
         setContent {
-            // Nothing is composed until the theme is known: the splash covers the wait, and the app
-            // composes once in the right theme instead of twice.
-            val theme = storedTheme.collectAsState().value ?: return@setContent
-
-            val context = LocalContext.current
-            val configuration = LocalConfiguration.current
-            val uiPreferences = remember { AppUiModePreferences(applicationContext) }
-            val appUiMode by uiPreferences.mode.collectAsState(initial = AppUiMode.AUTOMATIC)
-            val deviceFormFactor =
-                remember(configuration.uiMode, context) {
-                    DeviceFormFactorDetector.detect(context)
-                }
-            val appUiRoot = appUiMode.resolve(deviceFormFactor)
-            SideEffect { cachedAppUiRoot = appUiRoot }
-
-            // Check for a crash that happened last session.
-            // If found, show the CrashReportScreen instead of the normal UI.
-            var pendingCrashLog by remember {
-                mutableStateOf(FlowCrashHandler.getLastCrash(applicationContext))
-            }
-
-            if (pendingCrashLog != null) {
-                SideEffect { splashController.contentReady = true }
-                FlowTheme(theme.copy(fontFamily = FlowFontFamily)) {
-                    CrashReportScreen(
-                        report = pendingCrashLog!!,
-                        onContinue = {
-                            FlowCrashHandler.clearLastCrash(applicationContext)
-                            pendingCrashLog = null
-                        },
-                    )
-                }
-                return@setContent
-            }
-
-            // Initialize Flow Neuro Engine
-            LaunchedEffect(Unit) {
-                io.github.aedev.flow.data.recommendation.FlowNeuroEngine
-                    .initialize(applicationContext)
-            }
-
-            FlowTheme(theme) {
-                val splashTone = splashTone(MaterialTheme.colorScheme.background)
-                LaunchedEffect(splashTone) { splashController.rememberTheme(splashTone, appIconController.activeSuffix()) }
-
-                // Date preferences: five DataStore flows used to be opened per video card,
-                // metadata line, info section, description sheet and info dialog.
-                ProvideWindowSizeClass {
-                    ProvideDateDisplaySettings {
-                        // Card preferences and watch progress are collected once here. Cards used to
-                        // collect them individually, so a feed of ten opened ten Room observers and
-                        // fifty DataStore collectors.
-                        ProvideVideoCardState {
-                            Box(
-                                modifier =
-                                    Modifier
-                                        .fillMaxSize()
-                                        .semantics { testTagsAsResourceId = true },
-                            ) {
-                                // 1. MAIN APP (Home/NavHost)
-                                // This loads *behind* the splash screen immediately.
-                                // By the time splash fades, this is ready.
-                                val deeplinkVideoId by this@MainActivity.deeplinkVideoId
-                                val isDeeplinkShort by this@MainActivity.isDeeplinkShort
-                                val openMusicPlayerRequest by this@MainActivity.openMusicPlayerRequest
-                                val pendingRoute by this@MainActivity.pendingRoute
-
-                                if (appUiRoot == AppUiRoot.TV) {
-                                    SideEffect { splashController.contentReady = true }
-                                    FlowTvApp(
-                                        deeplinkVideoId = deeplinkVideoId,
-                                        isShort = isDeeplinkShort,
-                                        onDeeplinkConsumed = { consumeDeeplink() },
-                                    )
-                                } else {
-                                    ProvideChannelGroupLabels {
-                                        FlowApp(
-                                            currentTheme = theme.themeMode,
-                                            themeVariant = theme.themeVariant,
-                                            systemLightThemeMode = theme.systemLightThemeMode,
-                                            systemDarkThemeMode = theme.systemDarkThemeMode,
-                                            deeplinkVideoId = deeplinkVideoId,
-                                            isShort = isDeeplinkShort,
-                                            openMusicPlayerRequest = openMusicPlayerRequest,
-                                            onDeeplinkConsumed = {
-                                                consumeDeeplink()
-                                            },
-                                            pendingRoute = pendingRoute,
-                                            onPendingRouteConsumed = {
-                                                _pendingRoute.value = null
-                                            },
-                                            onStartDestinationKnown = { splashController.contentReady = true },
-                                        )
-                                    }
-                                }
-                            }
-                        }
-                    }
-                }
-            }
+            FlowRoot(
+                storedTheme = storedTheme,
+                links = links,
+                splashController = splashController,
+                originalTitles = originalTitles,
+                deArrow = deArrow,
+                appIconController = appIconController,
+                onUiRoot = { cachedAppUiRoot = it },
+            )
         }
     }
 
     override fun onStart() {
         super.onStart()
         DiscordPresenceRuntime.setAppForeground(true)
+        LinkedSyncWorker.syncOnOpen(this)
     }
 
     override fun onDestroy() {
@@ -356,111 +237,7 @@ class MainActivity : ComponentActivity() {
     override fun onNewIntent(intent: Intent) {
         super.onNewIntent(intent)
         setIntent(intent)
-        handleIntent(intent)
-    }
-
-    private fun playlistFileIn(intent: Intent): Uri? {
-        val type = intent.type ?: intent.data?.takeIf { it.scheme == ContentResolver.SCHEME_CONTENT }?.let(contentResolver::getType)
-        if (type != PLAYLIST_FILE_MIME_TYPE) return null
-        return when (intent.action) {
-            Intent.ACTION_VIEW -> intent.data
-            Intent.ACTION_SEND -> IntentCompat.getParcelableExtra(intent, Intent.EXTRA_STREAM, Uri::class.java)
-            else -> null
-        }
-    }
-
-    private fun importPlaylistFile(file: Uri) {
-        lifecycleScope.launch {
-            val result = playlistTransfer.get().import(file, getString(R.string.imported_playlist_default_name))
-            Toast.makeText(this@MainActivity, result.message(this@MainActivity), Toast.LENGTH_LONG).show()
-            if (result is PlaylistImport.Imported) {
-                _pendingRoute.value = if (result.isMusic) musicCollectionRoute(result.playlistId) else "playlist/${result.playlistId}"
-            }
-        }
-    }
-
-    private fun handleIntent(intent: Intent) {
-        if (intent.getBooleanExtra(NotificationHelper.EXTRA_OPEN_UPDATE, false)) {
-            intent.removeExtra(NotificationHelper.EXTRA_OPEN_UPDATE)
-            _pendingRoute.value = UPDATE_ROUTE
-            return
-        }
-        val playlistFile = playlistFileIn(intent)
-        if (playlistFile != null) {
-            if (!isRestoringState) importPlaylistFile(playlistFile)
-            return
-        }
-        val notificationVideoId = intent.getStringExtra("notification_video_id") ?: intent.getStringExtra("video_id")
-
-        val widgetRoute =
-            intent.getStringExtra(
-                io.github.aedev.flow.widget.core.action.WidgetDeepLink.EXTRA_WIDGET_ROUTE,
-            )
-        if (widgetRoute != null) {
-            intent.removeExtra(io.github.aedev.flow.widget.core.action.WidgetDeepLink.EXTRA_WIDGET_ROUTE)
-            _pendingRoute.value = widgetRoute
-            return
-        }
-
-        val linkText = linkTextOf(intent)
-        if (linkText != null) {
-            openLink(linkText)
-            return
-        }
-
-        if (intent.getBooleanExtra("open_music_player", false)) {
-            _deeplinkVideoId.value = null
-            _isDeeplinkShort.value = false
-            _openMusicPlayerRequest.intValue += 1
-            intent.removeExtra("notification_video_id")
-            intent.removeExtra("video_id")
-            return
-        }
-
-        if (intent.getBooleanExtra("open_video_player", false)) {
-            intent.removeExtra("open_video_player")
-            val currentVideoId = GlobalPlayerState.currentVideo.value?.id
-            if (currentVideoId != null) {
-                _isDeeplinkShort.value = false
-                _deeplinkVideoId.value = currentVideoId
-            }
-            return
-        }
-
-        val isShort = intent.getBooleanExtra("is_short", false) || intent.getBooleanExtra("is_shorts", false)
-        _isDeeplinkShort.value = isShort && notificationVideoId != null
-        notificationVideoId?.let { _deeplinkVideoId.value = it }
-    }
-
-    /**
-     * A link from another app. A recreated activity gets its intent again, and its restored back
-     * stack already holds the page the link opened, so only playback is re-requested then.
-     */
-    private fun openLink(text: String) {
-        when (val destination = parseYouTubeLink(text)?.let(::linkDestination)) {
-            is LinkDestination.Video -> {
-                _isDeeplinkShort.value = false
-                _deeplinkVideoId.value = destination.videoId
-            }
-
-            is LinkDestination.Short -> {
-                _isDeeplinkShort.value = true
-                _deeplinkVideoId.value = destination.videoId
-            }
-
-            is LinkDestination.Page -> {
-                if (!isRestoringState) _pendingRoute.value = destination.route
-            }
-
-            null -> {
-                if (!isRestoringState) Toast.makeText(this, R.string.link_not_supported, Toast.LENGTH_LONG).show()
-            }
-        }
-    }
-
-    fun consumeDeeplink() {
-        _deeplinkVideoId.value = null
-        _isDeeplinkShort.value = false
+        incomingIntents.handle(intent, isRestoringState = false)
     }
 
     override fun onPictureInPictureModeChanged(
@@ -482,14 +259,12 @@ class MainActivity : ComponentActivity() {
                     delay(350L)
                     val stillBackgrounded = !lifecycle.currentState.isAtLeast(Lifecycle.State.STARTED)
                     if (stillBackgrounded && !isInPictureInPictureMode) {
-                        GlobalPlayerState.requestDismiss()
-                        io.github.aedev.flow.player.EnhancedPlayerManager
-                            .getInstance()
-                            .stop()
-                        io.github.aedev.flow.player.EnhancedPlayerManager
-                            .getInstance()
-                            .stopBackgroundService()
-                        // onStop ran while the window was still in PiP, so it skipped this (#1152).
+                        // onStop ran while the window was still in PiP, so it skipped its pause (#1152).
+                        // Closing the window pauses like leaving the app does, and keeps the video (#1349).
+                        if (cachedAppUiRoot == AppUiRoot.MOBILE) {
+                            releaseOrientationLock()
+                        }
+                        pauseVideoForBackground()
                         pauseShortsPlayers()
                     }
                 }
@@ -550,33 +325,22 @@ class MainActivity : ComponentActivity() {
     ): Boolean {
         if (
             (keyCode == KeyEvent.KEYCODE_VOLUME_UP || keyCode == KeyEvent.KEYCODE_VOLUME_DOWN) &&
-            io.github.aedev.flow.player.PlayerHardwareController.fullscreenVideoActive.value
+            io.github.aedev.flow.player.PlayerHardwareController.fullscreenVideoActive.value &&
+            io.github.aedev.flow.player.PlayerHardwareController
+                .adjustVolume(this, raise = keyCode == KeyEvent.KEYCODE_VOLUME_UP)
         ) {
-            val audioManager = getSystemService(Context.AUDIO_SERVICE) as? AudioManager
-            if (audioManager != null) {
-                val direction =
-                    if (keyCode == KeyEvent.KEYCODE_VOLUME_UP) {
-                        AudioManager.ADJUST_RAISE
-                    } else {
-                        AudioManager.ADJUST_LOWER
-                    }
-                audioManager.adjustStreamVolume(
-                    AudioManager.STREAM_MUSIC,
-                    direction,
-                    if (io.github.aedev.flow.player.PlayerHardwareController.inAppVolumeOverlayEnabled.value) {
-                        0
-                    } else {
-                        AudioManager.FLAG_SHOW_UI
-                    },
-                )
-                if (io.github.aedev.flow.player.PlayerHardwareController.inAppVolumeOverlayEnabled.value) {
-                    io.github.aedev.flow.player.PlayerHardwareController
-                        .notifyVolumeKey()
-                }
-                return true
-            }
+            return true
         }
         return super.onKeyDown(keyCode, event)
+    }
+
+    override fun onProvideKeyboardShortcuts(
+        data: MutableList<KeyboardShortcutGroup>,
+        menu: Menu?,
+        deviceId: Int,
+    ) {
+        super.onProvideKeyboardShortcuts(data, menu, deviceId)
+        data += PlayerKeyboardShortcutHelp.group(this)
     }
 
     override fun onKeyUp(
@@ -765,9 +529,17 @@ class MainActivity : ComponentActivity() {
             handOffVideoPlaybackToBackground()
         } else {
             videoLifecycleLog("handleBackgroundPlaybackOnStop pause")
-            playerManager.pause()
-            playerManager.stopBackgroundService()
+            pauseVideoForBackground()
         }
+    }
+
+    private fun pauseVideoForBackground() {
+        val playerManager =
+            io.github.aedev.flow.player.EnhancedPlayerManager
+                .getInstance()
+        playerManager.pause()
+        playerManager.parkVideoForBackground()
+        playerManager.stopBackgroundService()
     }
 
     companion object {

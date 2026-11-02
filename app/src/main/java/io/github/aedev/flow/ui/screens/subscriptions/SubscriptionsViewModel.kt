@@ -6,6 +6,7 @@ import androidx.lifecycle.viewModelScope
 import dagger.hilt.android.lifecycle.HiltViewModel
 import io.github.aedev.flow.data.backup.BackupCoordinator
 import io.github.aedev.flow.data.engagement.FeedInvalidationBus
+import io.github.aedev.flow.data.innertube.SubscriptionRefreshStage
 import io.github.aedev.flow.data.local.ChannelSubscription
 import io.github.aedev.flow.data.local.PlayerPreferences
 import io.github.aedev.flow.data.local.SubscriptionRepository
@@ -22,28 +23,37 @@ import io.github.aedev.flow.utils.PerformanceDispatcher
 import io.github.aedev.flow.utils.ThumbnailUrlResolver
 import io.github.aedev.flow.utils.formatYouTubeRelativeTime
 import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.ExperimentalCoroutinesApi
 import kotlinx.coroutines.Job
 import kotlinx.coroutines.NonCancellable
 import kotlinx.coroutines.async
 import kotlinx.coroutines.awaitAll
 import kotlinx.coroutines.delay
 import kotlinx.coroutines.flow.MutableStateFlow
+import kotlinx.coroutines.flow.SharingStarted
 import kotlinx.coroutines.flow.StateFlow
 import kotlinx.coroutines.flow.asStateFlow
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.flow.combine
+import kotlinx.coroutines.flow.conflate
 import kotlinx.coroutines.flow.distinctUntilChanged
-import kotlinx.coroutines.flow.first
 import kotlinx.coroutines.flow.firstOrNull
+import kotlinx.coroutines.flow.flatMapLatest
+import kotlinx.coroutines.flow.flowOn
 import kotlinx.coroutines.flow.map
+import kotlinx.coroutines.flow.onEach
 import kotlinx.coroutines.flow.receiveAsFlow
+import kotlinx.coroutines.flow.shareIn
 import kotlinx.coroutines.flow.update
 import kotlinx.coroutines.launch
 import kotlinx.coroutines.supervisorScope
+import kotlinx.coroutines.sync.Mutex
+import kotlinx.coroutines.sync.withLock
 import kotlinx.coroutines.withContext
 import javax.inject.Inject
 import kotlinx.coroutines.channels.Channel as EventChannel
 
+@OptIn(ExperimentalCoroutinesApi::class)
 @HiltViewModel
 class SubscriptionsViewModel
     @Inject
@@ -90,6 +100,13 @@ class SubscriptionsViewModel
         fun ensureStarted() {
             if (hasStarted) return
             hasStarted = true
+
+            val subscriptions =
+                subscriptionRepository
+                    .getAllSubscriptions()
+                    .flowOn(PerformanceDispatcher.diskIO)
+                    .conflate()
+                    .shareIn(viewModelScope, SharingStarted.WhileSubscribed(5_000), replay = 1)
 
             viewModelScope.launch(PerformanceDispatcher.diskIO) {
                 subscriptionGroupDao.getAllGroups().collect { entities ->
@@ -195,12 +212,11 @@ class SubscriptionsViewModel
             }
 
             viewModelScope.launch(PerformanceDispatcher.diskIO) {
-                subscriptionRepository
-                    .getAllSubscriptions()
-                    .collect { allSubs ->
-                        val notifStates = allSubs.associate { it.channelId to it.isNotificationEnabled }
-                        _uiState.update { it.copy(notificationStates = notifStates) }
-                    }
+                subscriptions.collect { allSubs ->
+                    val channels = allSubs.toSubscribedChannels()
+                    val notifStates = allSubs.associate { it.channelId to it.isNotificationEnabled }
+                    _uiState.update { it.copy(subscribedChannels = channels, notificationStates = notifStates) }
+                }
             }
 
             viewModelScope.launch(PerformanceDispatcher.diskIO) {
@@ -212,9 +228,16 @@ class SubscriptionsViewModel
             }
 
             viewModelScope.launch(PerformanceDispatcher.diskIO) {
-                subscriptionFeedRepository.observeFeed().collect { videos ->
-                    latestFeedVideos = videos
-                    updateVideos(videos)
+                combine(
+                    _uiState
+                        .map { it.selectedGroupScope() }
+                        .distinctUntilChanged()
+                        .flatMapLatest { scope -> subscriptionFeedRepository.observeFeed(scope) }
+                        .onEach { latestFeedVideos = it },
+                    subscriptions.map { it.toSubscribedChannels() }.distinctUntilChanged(),
+                    ::Pair,
+                ).collect { (_, channels) ->
+                    updateVideos(latestFeedVideos, channels)
                 }
             }
 
@@ -232,13 +255,11 @@ class SubscriptionsViewModel
             }
 
             viewModelScope.launch(PerformanceDispatcher.networkIO) {
-                subscriptionRepository
-                    .getAllSubscriptions()
+                subscriptions
                     .map { subs -> subs.map { it.channelId }.sorted() }
                     .distinctUntilChanged()
                     .collect { channelIds ->
                         Log.i(TAG, "Channel IDs changed: ${channelIds.size} channels")
-                        publishSubscribedChannels()
                         if (channelIds.isNotEmpty()) {
                             runRefresh(force = false, showLoading = _uiState.value.recentVideos.isEmpty())
                         }
@@ -246,31 +267,14 @@ class SubscriptionsViewModel
             }
         }
 
-        private suspend fun publishSubscribedChannels() {
-            val allSubs = subscriptionRepository.getAllSubscriptions().first()
-            val channels =
-                allSubs.map { sub ->
-                    Channel(
-                        id = sub.channelId,
-                        name = sub.channelName,
-                        thumbnailUrl = ThumbnailUrlResolver.resolveChannelAvatar(sub.channelThumbnail),
-                        subscriberCount = 0L,
-                        isSubscribed = true,
-                        isMusic = sub.isMusic,
-                    )
-                }
-            _uiState.update { it.copy(subscribedChannels = channels) }
-            refreshVisibleFeed()
-        }
-
         /**
          * Fetches only the channels that are actually due, unless [force] (an explicit pull-to-refresh)
-         * asks for the whole subscription list.
+         * asks for every channel. With a group selected, only that group's channels (#1099).
          */
         private suspend fun runRefresh(
             force: Boolean,
             showLoading: Boolean,
-        ) = runRefresh(subscriptionFeedRepository.planRefresh(force), showLoading)
+        ) = runRefresh(subscriptionFeedRepository.planRefresh(force, _uiState.value.selectedGroupScope()), showLoading)
 
         private suspend fun runRefresh(
             plan: SubscriptionRefreshPlan,
@@ -281,7 +285,11 @@ class SubscriptionsViewModel
                 _uiState.update { it.copy(isLoading = false) }
                 return
             }
-            Log.i(TAG, "Refreshing ${plan.channelIds.size} channel(s), full=${plan.isFullRefresh}")
+            Log.i(
+                TAG,
+                "Refreshing ${plan.channelIds.size} channel(s), full=${plan.isFullRefresh}, " +
+                    "group=${plan.scope?.size}, allTabs=${plan.readAllTabs}",
+            )
 
             if (showLoading) {
                 _uiState.update { it.copy(isLoading = true) }
@@ -291,8 +299,11 @@ class SubscriptionsViewModel
                     latestFeedVideos = progress.videos
                     _uiState.update {
                         it.copy(
+                            // The spinner covers the RSS stage only; the checks keep their own counter.
+                            isLoading = it.isLoading && progress.stage == SubscriptionRefreshStage.RSS && !progress.finished,
                             failedChannelIds = progress.failedChannelIds,
                             failedChannelReasons = progress.failedChannelReasons,
+                            refreshStage = progress.stage,
                             refreshProcessedChannels = progress.processedChannels,
                             refreshTotalChannels = progress.totalChannels,
                         )
@@ -316,11 +327,14 @@ class SubscriptionsViewModel
             }
         }
 
-        private suspend fun updateVideos(videos: List<Video>) {
+        private suspend fun updateVideos(
+            videos: List<Video>,
+            channels: List<Channel> = _uiState.value.subscribedChannels,
+        ) {
             val state = _uiState.value
             val sections =
                 subscriptionFeedSections(
-                    videos = videos.withHighQualityThumbnails().withSubscriptionAvatars(),
+                    videos = videos.withHighQualityThumbnails().withSubscriptionAvatars(channels),
                     filters =
                         SubscriptionFeedFilters(
                             showVideos = state.showSubscriptionVideos,
@@ -342,31 +356,6 @@ class SubscriptionsViewModel
                     now = System.currentTimeMillis(),
                 )
             _uiState.update { it.copy(recentVideos = sections.recentVideos, shorts = sections.shorts) }
-        }
-
-        private fun List<Video>.withSubscriptionAvatars(): List<Video> {
-            val avatarByChannelId =
-                _uiState.value.subscribedChannels
-                    .asSequence()
-                    .filter { it.thumbnailUrl.isNotBlank() }
-                    .associate { it.id to ThumbnailUrlResolver.resolveChannelAvatar(it.thumbnailUrl) }
-            if (avatarByChannelId.isEmpty()) return this
-
-            return map { video ->
-                val normalizedExistingAvatar = ThumbnailUrlResolver.resolveChannelAvatar(video.channelThumbnailUrl)
-                if (video.channelThumbnailUrl.isBlank()) {
-                    avatarByChannelId[video.channelId]?.let { avatar ->
-                        video.copy(
-                            channelThumbnailUrl = avatar,
-                            channelThumbnailUrls = video.channelThumbnailUrls.ifEmpty { listOf(avatar) },
-                        )
-                    } ?: video
-                } else if (normalizedExistingAvatar != video.channelThumbnailUrl) {
-                    video.copy(channelThumbnailUrl = normalizedExistingAvatar)
-                } else {
-                    video
-                }
-            }
         }
 
         fun updateVisibleVideoIds(videoIds: Set<String>) {
@@ -408,7 +397,7 @@ class SubscriptionsViewModel
                     try {
                         val enrichedById = mutableMapOf<String, Video>()
                         candidates.chunked(DURATION_ENRICHMENT_BATCH_SIZE).forEach { batch ->
-                            val enrichedBatch =
+                            val lookups =
                                 supervisorScope {
                                     batch
                                         .map { video ->
@@ -416,14 +405,15 @@ class SubscriptionsViewModel
                                                 fetchSubscriptionPlayerMetadata(video, DURATION_METADATA_TIMEOUT_MS)
                                             }
                                         }.awaitAll()
-                                }
+                                }.filterNotNull()
                             withContext(Dispatchers.Main.immediate) {
                                 val attemptedAt = System.currentTimeMillis()
                                 batch.forEach { video ->
                                     durationEnrichmentAttemptedAt[video.id] = attemptedAt
                                 }
                             }
-                            enrichedBatch.filterNotNull().associateByTo(enrichedById) { it.id }
+                            lookups.filter { it.refusedToViewer }.forEach { playerPreferences.markVideoUnplayable(it.videoId) }
+                            lookups.mapNotNull { it.enriched }.associateByTo(enrichedById) { it.id }
                         }
 
                         if (enrichedById.isEmpty()) return@launch
@@ -432,7 +422,7 @@ class SubscriptionsViewModel
                             latestFeedVideos
                                 .map { video -> enrichedById[video.id]?.let(video::withPlayerMetadata) ?: video }
                                 .withHighQualityThumbnails()
-                                .withSubscriptionAvatars()
+                                .withSubscriptionAvatars(_uiState.value.subscribedChannels)
 
                         latestFeedVideos = mergedVideos
                         updateVideos(mergedVideos)
@@ -451,12 +441,14 @@ class SubscriptionsViewModel
                 }
         }
 
+        /** Shows [groupName]'s channels and tops up the ones gone stale; nothing is fetched while they are fresh. */
         fun selectGroup(groupName: String?) {
             _uiState.update { it.copy(selectedGroupName = groupName) }
             viewModelScope.launch(PerformanceDispatcher.diskIO) {
                 playerPreferences.setSelectedSubscriptionGroup(groupName)
                 refreshVisibleFeed()
             }
+            if (groupName != null) refreshIfStaleOrMissedUploads()
         }
 
         fun createGroup(
@@ -489,11 +481,11 @@ class SubscriptionsViewModel
             }
         }
 
-        fun reorderGroups(
-            fromIndex: Int,
-            toIndex: Int,
-        ) {
-            viewModelScope.launch(PerformanceDispatcher.diskIO) { subscriptionGroupDao.moveGroup(fromIndex, toIndex) }
+        private val groupOrderLock = Mutex()
+
+        /** Saves [names] as the group order; each save is a whole order, so saves are kept in sequence. */
+        fun setGroupOrder(names: List<String>) {
+            viewModelScope.launch(PerformanceDispatcher.diskIO) { groupOrderLock.withLock { subscriptionGroupDao.setOrder(names) } }
         }
 
         private val _importMessages = EventChannel<String>(EventChannel.BUFFERED)
@@ -509,7 +501,7 @@ class SubscriptionsViewModel
             _uiState.update { it.copy(selectedChannelId = channelId) }
         }
 
-        /** Explicit user refresh: every subscribed channel, regardless of how recently it was fetched. */
+        /** Explicit user refresh: every channel shown, regardless of how recently it was fetched. */
         fun refreshFeed() {
             viewModelScope.launch(PerformanceDispatcher.networkIO) {
                 runRefresh(force = true, showLoading = true)

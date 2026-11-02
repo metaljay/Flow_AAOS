@@ -170,6 +170,24 @@ class FeedItemParsersTest {
     }
 
     @Test
+    fun `a short lockup on a Home tab stays a video but is marked a Short (1393)`() {
+        val parsed =
+            item(
+                lockup(
+                    "hqr_k5p2KZ8",
+                    "LOCKUP_CONTENT_TYPE_SHORT",
+                    "How to Use Ultrafast Properly",
+                    rows = row("12K views", "10 days ago"),
+                    overlays = durationOverlay("0:28"),
+                ),
+            )
+
+        val video = (parsed as FeedItem.VideoItem).video
+        assertTrue(video.isShort)
+        assertEquals(28, video.duration)
+    }
+
+    @Test
     fun `a plural relative date resolves to days rather than seconds`() {
         val fourDays =
             (
@@ -202,6 +220,58 @@ class FeedItemParsersTest {
         assertEquals("Scrapyard Wars", playlist.name)
         assertEquals(12, playlist.videoCount)
         assertEquals(false, playlist.isLocal)
+    }
+
+    @Test
+    fun `a course lockup is a playlist with its lessons, not an upcoming video (#1299)`() {
+        val lessonsBadge =
+            """[ { "thumbnailOverlayBadgeViewModel": { "thumbnailBadges": [ { "thumbnailBadgeViewModel": {
+              "icon": { "sources": [ { "clientResource": { "imageName": "GRADUATION_CAP" } } ] },
+              "text": "124 lessons", "badgeStyle": "THUMBNAIL_OVERLAY_BADGE_STYLE_DEFAULT" } } ] } } ]"""
+        val parsed =
+            item(
+                lockup(
+                    "PLcourse",
+                    "LOCKUP_CONTENT_TYPE_COURSE",
+                    "Python for Beginners (Full Course)",
+                    rows = row("Telusko", "Course"),
+                    overlays = lessonsBadge,
+                ),
+            )
+
+        val playlist = (parsed as FeedItem.PlaylistItem).playlist
+        assertEquals("PLcourse", playlist.id)
+        assertEquals(124, playlist.videoCount)
+        assertTrue(playlist.isCourse)
+    }
+
+    @Test
+    fun `a playlist row with the course panel is a course`() {
+        val parsed =
+            item(
+                """
+                { "playlistRenderer": {
+                  "playlistId": "PLcourse",
+                  "title": { "simpleText": "Python for Beginners (Full Course)" },
+                  "videoCount": "124",
+                  "thumbnailOverlays": [
+                    { "thumbnailOverlayBottomPanelRenderer": { "text": { "simpleText": "124 lessons" }, "icon": { "iconType": "COURSE" } } },
+                    { "thumbnailOverlayHoverTextRenderer": { "text": { "runs": [ { "text": "Play all" } ] }, "icon": { "iconType": "PLAY_ALL" } } }
+                  ]
+                } }
+                """.trimIndent(),
+            )
+
+        val playlist = (parsed as FeedItem.PlaylistItem).playlist
+        assertEquals(124, playlist.videoCount)
+        assertTrue(playlist.isCourse)
+    }
+
+    @Test
+    fun `an ordinary playlist is not a course`() {
+        val parsed = item(lockup("PLxxxx", "LOCKUP_CONTENT_TYPE_PLAYLIST", "Scrapyard Wars", overlays = durationOverlay("12 videos")))
+
+        assertFalse((parsed as FeedItem.PlaylistItem).playlist.isCourse)
     }
 
     @Test

@@ -64,8 +64,11 @@ object FlowWidgets {
         }
     }
 
-    suspend fun updateAll(context: Context) {
-        catalog.forEach { it.widget().updateAll(context) }
+    suspend fun updateAll(
+        context: Context,
+        except: Set<KClass<out GlanceAppWidget>> = emptySet(),
+    ) {
+        catalog.map { it.widget() }.filterNot { it::class in except }.forEach { it.updateAll(context) }
     }
 
     /**
@@ -80,9 +83,16 @@ object FlowWidgets {
         val stamp = "${BuildConfig.VERSION_CODE}|$themeSignature"
         if (context.lastWidgetPreviewStamp() == stamp) return
         val manager = GlanceAppWidgetManager(context)
+        // Some profiles, such as a Private Space, reject our own providers as invalid (#1357), and
+        // Glance passes that binder exception straight through.
         val published =
-            catalog.all { entry ->
-                manager.setWidgetPreviews(entry.receiver) == GlanceAppWidgetManager.SET_WIDGET_PREVIEWS_RESULT_SUCCESS
+            try {
+                catalog.all { entry ->
+                    manager.setWidgetPreviews(entry.receiver) == GlanceAppWidgetManager.SET_WIDGET_PREVIEWS_RESULT_SUCCESS
+                }
+            } catch (e: IllegalArgumentException) {
+                Log.w(TAG, "Widget previews rejected: ${e.message}")
+                false
             }
         Log.i(TAG, "Widget previews published: $published")
         if (published) context.writeWidgetPreviewStamp(stamp)

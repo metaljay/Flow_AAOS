@@ -20,6 +20,7 @@ internal object HomeChipParams {
     const val MIX_LENGTH = 25
     const val MIX_MIN_VIDEOS = 5
     const val SESSION_TOPICS = 5
+    const val LIVE_FALLBACK_QUERY = "live"
 }
 
 /** The order chips appear in, which never changes between loads. Empty chips are left out. */
@@ -45,11 +46,21 @@ internal fun visibleChips(
     }
 }
 
-/** Searches for an interest chip: its own phrases first, a lone word qualified by one of them. */
+/**
+ * Searches for an interest chip: its own phrases first, a lone word qualified by one of them. A theme
+ * chip searches each of its interests in turn.
+ */
 internal fun interestQueries(
     interest: InterestChip,
     max: Int = HomeChipParams.QUERIES_PER_INTEREST,
 ): List<String> {
+    if (interest.parts.isNotEmpty()) {
+        val perPart = interest.parts.map { interestQueries(it, max) }
+        return (0 until max)
+            .flatMap { round -> perPart.mapNotNull { it.getOrNull(round) } }
+            .distinct()
+            .take(max)
+    }
     val rep = NeuroScoring.stripDomainTag(interest.representative)
     val members = interest.topics.map(NeuroScoring::stripDomainTag).filter { it != rep }
 
@@ -61,6 +72,13 @@ internal fun interestQueries(
     if (queries.isEmpty()) queries += rep
     return queries.take(max)
 }
+
+/** Top-interest live queries; generic fallback when none. */
+internal fun liveQueries(interests: List<InterestChip>): List<String> =
+    interests
+        .take(2)
+        .mapNotNull { interestQueries(it, 1).firstOrNull() }
+        .ifEmpty { listOf(HomeChipParams.LIVE_FALLBACK_QUERY) }
 
 /** Only channels the viewer has never watched, followed or rejected, one video each. */
 internal fun fromUnknownChannels(

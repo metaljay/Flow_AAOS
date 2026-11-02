@@ -26,7 +26,11 @@ internal fun rememberPlaylistHeaderState(
     val parts =
         listOfNotNull(
             uiState.ownerName?.takeIf(String::isNotBlank),
-            pluralStringResource(R.plurals.videos_count_template, videos.size, videos.size),
+            if (uiState.isCourse) {
+                pluralStringResource(R.plurals.course_lessons_count, videos.size, videos.size)
+            } else {
+                pluralStringResource(R.plurals.videos_count_template, videos.size, videos.size)
+            },
             mediaLengthLabel(totalSeconds).takeUnless { uiState.isLoadingMore },
             when {
                 uiState.isWatchLater || uiState.isLikes -> stringResource(R.string.playlist_type_builtin)
@@ -40,6 +44,7 @@ internal fun rememberPlaylistHeaderState(
         name = uiState.playlistName,
         metadata = parts.joinToString(" $separator "),
         description = uiState.description,
+        note = stringResource(R.string.playlist_unavailable_hidden).takeIf { uiState.hidesUnavailable },
         thumbnailUrl = videos.firstOrNull()?.thumbnailUrl ?: uiState.thumbnailUrl,
         isSaved = uiState.isSaved,
         canSave = !isUserCreated,
@@ -57,5 +62,6 @@ internal fun rememberPlaylistHeaderState(
                 }
             },
         isDownloaded = isDownloaded,
+        isInMusicLibrary = uiState.isInMusicLibrary,
     )
 }

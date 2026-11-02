@@ -1,6 +1,7 @@
 package io.github.aedev.flow.ui.screens.settings.index
 
 import io.github.aedev.flow.R
+import io.github.aedev.flow.ui.components.settings.SettingAvailability
 import io.github.aedev.flow.ui.components.settings.SettingEntry
 import io.github.aedev.flow.ui.components.settings.SettingsDestination
 
@@ -8,13 +9,34 @@ import io.github.aedev.flow.ui.components.settings.SettingsDestination
 internal object DestinationIndex {
     private const val KEY_PREFIX = "dest."
 
+    /** Pages about phone hardware or features TV leaves out: widgets, the navigation bar, local media, notifications. */
+    private val notOnTv =
+        setOf(
+            SettingsDestination.WIDGETS,
+            SettingsDestination.NAVIGATION_BAR,
+            SettingsDestination.LOCAL_MEDIA,
+            SettingsDestination.NOTIFICATIONS,
+        )
+
     fun entry(destination: SettingsDestination): SettingEntry =
         SettingEntry(
             key = KEY_PREFIX + destination.id,
             title = destination.titleRes,
             destination = destination.parent ?: SettingsDestination.HOME,
             summary = summaryOf(destination),
+            availability =
+                when (destination) {
+                    in notOnTv -> SettingAvailability.NotOnTv
+                    SettingsDestination.REMOTE_GUIDE -> SettingAvailability.TvOnly
+                    else -> SettingAvailability.Always
+                },
         )
+
+    /** Whether [option] can be reached on a TV ([tv]) or elsewhere: it and every page above it exist there. */
+    fun isReachable(
+        option: SettingEntry,
+        tv: Boolean,
+    ): Boolean = option.availability.shownOn(tv) && option.destination.path.all { entry(it).availability.shownOn(tv) }
 
     /** The page a destination entry stands for, or null for an option entry. */
     fun destinationOf(entry: SettingEntry): SettingsDestination? =
@@ -26,8 +48,10 @@ internal object DestinationIndex {
     /** The editor is left out: it opens one theme, so it has no page of its own to find. */
     val all: List<SettingEntry> =
         SettingsDestination.entries
-            .filter { it != SettingsDestination.HOME && it != SettingsDestination.CUSTOM_THEME_EDIT }
-            .map(::entry)
+            .filter {
+                it != SettingsDestination.HOME && it != SettingsDestination.CUSTOM_THEME_EDIT &&
+                    it != SettingsDestination.PROFILE_EDIT
+            }.map(::entry)
 
     private fun summaryOf(destination: SettingsDestination): Int? =
         when (destination) {
@@ -51,11 +75,14 @@ internal object DestinationIndex {
             SettingsDestination.QUALITY -> R.string.settings_quality_summary
             SettingsDestination.CONTENT -> R.string.settings_content_summary
             SettingsDestination.MUSIC_HOME -> R.string.settings_music_home_summary
+            SettingsDestination.LIBRARY -> R.string.settings_library_summary
             SettingsDestination.TOPICS -> R.string.settings_topics_summary
             SettingsDestination.INTEGRATIONS -> R.string.settings_integrations_summary
             SettingsDestination.SCROBBLING -> R.string.scrobbling_summary
             SettingsDestination.BACKUP -> R.string.settings_backup_summary
             SettingsDestination.SYNC -> R.string.sync_devices_subtitle
+            SettingsDestination.PROFILES -> R.string.profiles_summary
+            SettingsDestination.PROFILE_EDIT -> null
             SettingsDestination.HISTORY -> R.string.settings_history_summary
             SettingsDestination.DOWNLOADS -> R.string.settings_downloads_summary
             SettingsDestination.LOCAL_MEDIA -> R.string.settings_local_media_summary
@@ -65,5 +92,6 @@ internal object DestinationIndex {
             SettingsDestination.WIDGETS -> R.string.settings_widgets_summary
             SettingsDestination.ABOUT -> R.string.settings_about_summary
             SettingsDestination.DIAGNOSTICS -> R.string.settings_item_diagnostics_subtitle
+            SettingsDestination.REMOTE_GUIDE -> R.string.tv_remote_guide_subtitle
         }
 }

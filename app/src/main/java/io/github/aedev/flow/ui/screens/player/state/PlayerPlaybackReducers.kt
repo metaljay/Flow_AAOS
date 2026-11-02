@@ -42,6 +42,7 @@ internal fun VideoPlayerUiState.applyLocalCopyReady(
         offlineSponsorBlockSegments = step.offlineSegments,
         error = null,
         errorHint = null,
+        errorOffersSessionReset = false,
         isLoading = false,
         isUpcoming = false,
         upcomingReleaseTimeMs = null,
@@ -85,7 +86,7 @@ internal fun VideoPlayerUiState.applyVodStreams(
     storyboard: List<StoryboardLevel>,
 ): VideoPlayerUiState =
     copy(
-        cachedVideo = cachedVideo,
+        cachedVideo = cachedVideo.keepingLateFieldsOf(this.cachedVideo),
         isArchivedLivestream = isArchivedLivestream,
         relatedVideos = relatedVideos,
         videoStream = videoStream,
@@ -95,6 +96,7 @@ internal fun VideoPlayerUiState.applyVodStreams(
         isLoading = false,
         error = null,
         errorHint = null,
+        errorOffersSessionReset = false,
         savedPosition = savedPositionMs,
         isAdaptiveMode = isAdaptiveMode,
         autoplayEnabled = autoplayEnabled,
@@ -133,6 +135,7 @@ internal fun VideoPlayerUiState.applyLiveStreams(
         isLoading = false,
         error = null,
         errorHint = null,
+        errorOffersSessionReset = false,
         hlsUrl = hlsUrl,
         isLive = true,
         isUpcoming = false,
@@ -151,6 +154,7 @@ internal fun VideoPlayerUiState.applyVodFailure(
         relatedVideos = relatedVideos,
         error = videoError.message,
         errorHint = videoError.hint,
+        errorOffersSessionReset = videoError.offersSessionReset,
     )
 
 /** Nothing resolved. A null [relatedVideos] leaves the lane the screen is already showing alone. */
@@ -163,6 +167,7 @@ internal fun VideoPlayerUiState.applyPlaybackFailure(
         relatedVideos = relatedVideos ?: this.relatedVideos,
         error = videoError.message,
         errorHint = videoError.hint,
+        errorOffersSessionReset = videoError.offersSessionReset,
     )
 
 /**
@@ -261,7 +266,24 @@ internal fun VideoPlayerUiState.applyLiveWatchMetadata(result: SecondaryMetadata
     )
 
 /** Counts, date and description from the watch page, folded over what the load resolved. */
-internal fun VideoPlayerUiState.applyWatchInfo(video: Video): VideoPlayerUiState = copy(cachedVideo = video)
+internal fun VideoPlayerUiState.applyWatchInfo(video: Video): VideoPlayerUiState =
+    copy(cachedVideo = video.keepingLateFieldsOf(cachedVideo))
+
+/**
+ * Both writers above replace the video with a copy taken before Return YouTube Dislike or the
+ * category request answered, so a like count or category already known survives a copy of the
+ * same video that has none.
+ */
+private fun Video.keepingLateFieldsOf(current: Video?): Video {
+    if (current?.id != id) return this
+    val keptLikes = likeCount <= 0L && current.likeCount > 0L
+    val keptCategory = category == null && current.category != null
+    if (!keptLikes && !keptCategory) return this
+    return copy(
+        likeCount = if (keptLikes) current.likeCount else likeCount,
+        category = category ?: current.category,
+    )
+}
 
 /** The quality the user picked, and the streams that choice resolved to. */
 internal fun VideoPlayerUiState.applySelectedQuality(

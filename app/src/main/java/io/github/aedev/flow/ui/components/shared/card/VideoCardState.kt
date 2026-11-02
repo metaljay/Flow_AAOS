@@ -20,6 +20,9 @@ import io.github.aedev.flow.data.local.ViewHistory
 import io.github.aedev.flow.data.local.dao.WatchProgress
 import io.github.aedev.flow.data.model.Video
 import io.github.aedev.flow.data.model.VideoCollaborator
+import io.github.aedev.flow.data.repository.DeArrowRepository
+import io.github.aedev.flow.data.repository.OriginalTitleRepository
+import io.github.aedev.flow.ui.components.LocalDeArrow
 import io.github.aedev.flow.ui.components.layout.navigation.MediaNavigator
 import io.github.aedev.flow.ui.components.rememberDeArrowResult
 import io.github.aedev.flow.ui.components.shared.LocalThumbnailQuality
@@ -45,6 +48,8 @@ data class VideoCardPreferences(
     val markWatchedEnabled: Boolean = false,
     val upcomingReminderIds: Set<String> = emptySet(),
     val showWatchProgress: Boolean = true,
+    val originalTitlesEnabled: Boolean = false,
+    val deArrowRandomFrame: Boolean = true,
 )
 
 /**
@@ -115,6 +120,8 @@ val LocalVideoCardActions = staticCompositionLocalOf { VideoCardActions.None }
  */
 @Composable
 fun ProvideVideoCardState(
+    originalTitles: OriginalTitleRepository?,
+    deArrow: DeArrowRepository?,
     quickActions: QuickActionsViewModel = sharedQuickActionsViewModel(),
     content: @Composable () -> Unit,
 ) {
@@ -141,6 +148,10 @@ fun ProvideVideoCardState(
                 VideoCardPreferences(deArrow, deArrowBadge, actions, markWatched, reminders)
             }.combine(playerPreferences.showWatchProgress) { cardPreferences, showWatchProgress ->
                 cardPreferences.copy(showWatchProgress = showWatchProgress)
+            }.combine(playerPreferences.originalTitles) { cardPreferences, originalTitles ->
+                cardPreferences.copy(originalTitlesEnabled = originalTitles)
+            }.combine(playerPreferences.deArrowRandomFrame) { cardPreferences, randomFrame ->
+                cardPreferences.copy(deArrowRandomFrame = randomFrame)
             }.distinctUntilChanged()
         }
     val preferences by preferencesFlow.collectAsStateWithLifecycle(VideoCardPreferences())
@@ -171,6 +182,8 @@ fun ProvideVideoCardState(
         LocalVideoWatchProgress provides progressStore,
         LocalVideoCardActions provides actions,
         LocalThumbnailQuality provides thumbnailQuality,
+        LocalOriginalTitles provides originalTitles,
+        LocalDeArrow provides deArrow,
         content = content,
     )
 }
@@ -203,7 +216,9 @@ internal class VideoCardState(
     val video: Video,
     val title: String,
     val thumbnailUrl: String,
-    val showDeArrowBadge: Boolean,
+    val deArrowTitle: Boolean,
+    val deArrowFrameUrl: String?,
+    val deArrowBadgeEnabled: Boolean,
     val channelName: String,
     val collaborators: List<VideoCollaborator>,
     val watchProgress: Float?,
@@ -227,16 +242,19 @@ internal class VideoCardState(
 @Composable
 internal fun rememberVideoCardState(video: Video): VideoCardState {
     val preferences = LocalVideoCardPreferences.current
-    val deArrow = rememberDeArrowResult(video.id, preferences.deArrowEnabled)
+    val deArrow = rememberDeArrowResult(video, preferences.deArrowEnabled, preferences.deArrowRandomFrame)
+    val originalTitle = rememberOriginalTitle(video.id, preferences.originalTitlesEnabled && deArrow?.title == null)
     val collaborators = rememberCollaboratorItems(video)
     val channelName = rememberCollaboratorChannelDisplayName(video.channelName, collaborators)
     val watchProgress = rememberWatchProgress(video.id)
     val sheets = remember { VideoCardSheetState() }
     return VideoCardState(
         video = video,
-        title = deArrow?.title ?: video.title,
+        title = deArrow?.title ?: originalTitle ?: video.title,
         thumbnailUrl = deArrow?.thumbnailUrl ?: video.thumbnailUrl,
-        showDeArrowBadge = deArrow != null && preferences.deArrowBadgeEnabled,
+        deArrowTitle = deArrow?.title != null,
+        deArrowFrameUrl = deArrow?.thumbnailUrl,
+        deArrowBadgeEnabled = preferences.deArrowBadgeEnabled,
         channelName = channelName,
         collaborators = collaborators,
         watchProgress = watchProgress,

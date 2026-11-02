@@ -1,5 +1,5 @@
 <?xml version="1.0" encoding="utf-8"?>
-<resources>
+<resources xmlns:tools="http://schemas.android.com/tools">
     <style name="Theme.Flow" parent="android:Theme.Material.Light.NoActionBar">
         <!-- Enable edge-to-edge -->
         <item name="android:windowLayoutInDisplayCutoutMode">shortEdges</item>
@@ -8,6 +8,9 @@
         <item name="android:windowLightStatusBar">true</item>
         <item name="android:enforceNavigationBarContrast">false</item>
         <item name="android:enforceStatusBarContrast">false</item>
+        <!-- The window is a platform Light theme whatever Flow's own theme is, so a system or MIUI
+             dark mode would otherwise invert what Compose already drew dark or light (#1517). -->
+        <item name="android:forceDarkAllowed" tools:targetApi="q">false</item>
     </style>
 
     <!-- The platform splash. Before Android 13 it follows the system night mode; from 13 on,
@@ -80,6 +83,36 @@
         <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_dynamic_foreground</item>
         <item name="windowSplashScreenIconBackgroundColor">@color/icon_bg_dynamic</item>
         <item name="postSplashScreenTheme">@style/Theme.Flow</item>
+    </style>
+
+    <!-- Material icons: launcher foreground over the icon tint, one base per icon. -->
+    <style name="Theme.Flow.Starting.Material.Sky" parent="Theme.SplashScreen.IconBackground">
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/icon_bg_material_sky</item>
+        <item name="postSplashScreenTheme">@style/Theme.Flow</item>
+    </style>
+    <style name="Theme.Flow.Starting.Material.Mint" parent="Theme.SplashScreen.IconBackground">
+        <item name="windowSplashScreenAnimatedIcon">@drawable/ic_launcher_foreground</item>
+        <item name="windowSplashScreenIconBackgroundColor">@color/icon_bg_material_mint</item>
+        <item name="postSplashScreenTheme">@style/Theme.Flow</item>
+    </style>
+    <style name="Theme.Flow.Starting.Light.Material.Sky" parent="Theme.Flow.Starting.Material.Sky">
+        <item name="windowSplashScreenBackground">@color/splash_background_light</item>
+    </style>
+    <style name="Theme.Flow.Starting.Light.Material.Mint" parent="Theme.Flow.Starting.Material.Mint">
+        <item name="windowSplashScreenBackground">@color/splash_background_light</item>
+    </style>
+    <style name="Theme.Flow.Starting.Dark.Material.Sky" parent="Theme.Flow.Starting.Material.Sky">
+        <item name="windowSplashScreenBackground">@color/splash_background_dark</item>
+    </style>
+    <style name="Theme.Flow.Starting.Dark.Material.Mint" parent="Theme.Flow.Starting.Material.Mint">
+        <item name="windowSplashScreenBackground">@color/splash_background_dark</item>
+    </style>
+    <style name="Theme.Flow.Starting.Black.Material.Sky" parent="Theme.Flow.Starting.Material.Sky">
+        <item name="windowSplashScreenBackground">@color/splash_background_black</item>
+    </style>
+    <style name="Theme.Flow.Starting.Black.Material.Mint" parent="Theme.Flow.Starting.Material.Mint">
+        <item name="windowSplashScreenBackground">@color/splash_background_black</item>
     </style>
 
     <!-- Expressive icons: their own art at logo size over the tone's window, like the Flow badge. -->

@@ -66,6 +66,7 @@ fun EnhancedMusicScreen(
     onPlaylistClick: (String) -> Unit = {},
     onAllPlaylistsClick: () -> Unit = {},
     onAllSubscriptionsClick: () -> Unit = {},
+    showRecognize: Boolean = true,
     viewModel: MusicViewModel = sharedMusicViewModel(),
     libraryViewModel: MusicHomeLibraryViewModel = hiltViewModel(),
 ) {
@@ -168,11 +169,13 @@ fun EnhancedMusicScreen(
             )
         },
         floatingActionButton = {
-            FloatingActionButton(
-                onClick = onRecognizeClick,
-                modifier = Modifier.floatAboveBottomChrome(bottomInsets),
-            ) {
-                Icon(Icons.Rounded.Mic, stringResource(R.string.recognize_music))
+            if (showRecognize) {
+                FloatingActionButton(
+                    onClick = onRecognizeClick,
+                    modifier = Modifier.floatAboveBottomChrome(bottomInsets),
+                ) {
+                    Icon(Icons.Rounded.Mic, stringResource(R.string.recognize_music))
+                }
             }
         },
         containerColor = MaterialTheme.colorScheme.background,

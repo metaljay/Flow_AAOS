@@ -10,6 +10,11 @@ import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.LayoutDirection
 import androidx.compose.ui.unit.dp
 import io.github.aedev.flow.data.local.GestureOverlayStyle
+import io.github.aedev.flow.data.local.SpeedSwipeSide
+import io.github.aedev.flow.ui.components.shared.BrightnessOverlay
+import io.github.aedev.flow.ui.components.shared.SpeedSwipeOverlay
+import io.github.aedev.flow.ui.components.shared.VolumeOverlay
+import io.github.aedev.flow.ui.components.shared.centredGestureHudAlignment
 import io.github.aedev.flow.ui.screens.player.state.PlayerScreenState
 
 private val HudSideInset = 16.dp
@@ -22,6 +27,7 @@ fun PlayerGestureOverlays(
     speedBoostSpeed: Float,
     style: GestureOverlayStyle,
     seekZoneFraction: Float,
+    speedSwipeSide: SpeedSwipeSide,
     modifier: Modifier = Modifier,
 ) {
     // Force LTR so CenterStart/CenterEnd always map to physical left/right,
@@ -32,7 +38,7 @@ fun PlayerGestureOverlays(
             val isVertical = style == GestureOverlayStyle.VERTICAL
             val edgeInset = HudSideInset + cutoutEdgeInset(isFullscreen)
             val topInset = HudTopInset + cutoutTopInset(screenState.isFullscreenPortrait)
-            val centredAlignment = centredHudAlignment(style)
+            val centredAlignment = centredGestureHudAlignment(style)
             // Only a read-out that actually sits on the top edge clears the punch-hole. The ring
             // reads out in the middle of the picture, nowhere near it.
             val centredTopInset = if (centredAlignment == Alignment.TopCenter) topInset else HudTopInset
@@ -81,6 +87,23 @@ fun PlayerGestureOverlays(
                     },
             )
 
+            // Like the level bars, the speed bar reads out opposite the thumb doing the swiping.
+            SpeedSwipeOverlay(
+                isVisible = screenState.showSpeedSwipeOverlay,
+                speed = { screenState.speedSwipeLevel },
+                style = style,
+                modifier =
+                    if (isVertical) {
+                        Modifier
+                            .align(if (speedSwipeSide == SpeedSwipeSide.RIGHT) Alignment.CenterStart else Alignment.CenterEnd)
+                            .padding(horizontal = edgeInset)
+                    } else {
+                        Modifier
+                            .align(centredAlignment)
+                            .padding(top = centredTopInset)
+                    },
+            )
+
             SeekDragOverlay(
                 isVisible = screenState.isSeekDragging,
                 targetMs = { screenState.seekDragTargetMs },
@@ -99,10 +122,6 @@ fun PlayerGestureOverlays(
         }
     }
 }
-
-/** The ring is a badge, not a bar: it belongs in the middle of the picture, where the eye is. */
-private fun centredHudAlignment(style: GestureOverlayStyle): Alignment =
-    if (style == GestureOverlayStyle.CIRCULAR) Alignment.Center else Alignment.TopCenter
 
 @Composable
 internal fun cutoutTopInset(isFullscreenPortrait: Boolean): Dp {

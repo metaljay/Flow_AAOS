@@ -62,6 +62,14 @@ internal object PlayerAppearanceIndex {
         )
     val musicBackground =
         entry("music_background", R.string.player_background_style_title, section = R.string.settings_section_music_player)
+    val followLightTheme =
+        entry(
+            "music_follow_light_theme",
+            R.string.player_appearance_follow_light_theme_title,
+            R.string.player_appearance_follow_light_theme_subtitle,
+            R.string.settings_section_music_player,
+            revealVia = musicBackground.key,
+        )
     val hideMusicArtwork =
         entry(
             "hide_music_artwork",
@@ -98,6 +106,17 @@ internal object PlayerAppearanceIndex {
             section = R.string.settings_section_music_player,
             revealVia = artworkControlColors.key,
         )
+    val sleepTimerButton =
+        entry(
+            "music_sleep_timer_button",
+            R.string.player_appearance_sleep_timer_button_title,
+            R.string.player_appearance_sleep_timer_button_subtitle,
+            R.string.settings_section_music_player,
+        )
+    val queueSwipeLeft =
+        entry("queue_swipe_left", R.string.queue_swipe_left, R.string.queue_swipe_subtitle, R.string.settings_section_music_player)
+    val queueSwipeRight =
+        entry("queue_swipe_right", R.string.queue_swipe_right, R.string.queue_swipe_subtitle, R.string.settings_section_music_player)
     val adaptiveSize =
         entry(
             "adaptive_size",
@@ -164,11 +183,15 @@ internal object PlayerAppearanceIndex {
             scrubPreview,
             frameStep,
             musicBackground,
+            followLightTheme,
             hideMusicArtwork,
             animatedArtwork,
             animatedArtworkWifiOnly,
             artworkControlColors,
             plainControlColors,
+            sleepTimerButton,
+            queueSwipeLeft,
+            queueSwipeRight,
             adaptiveSize,
             ambientMode,
             groupedQuality,

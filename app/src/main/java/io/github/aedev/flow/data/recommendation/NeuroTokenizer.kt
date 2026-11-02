@@ -23,7 +23,10 @@ import kotlin.math.*
  *
  * Stateless utility — can be shared across all other components.
  */
-internal class NeuroTokenizer {
+internal class NeuroTokenizer(
+    /** Dictionary breaker for unspaced scripts. */
+    private val wordBreaker: WordBreaker = PlatformWordBreaker,
+) {
     companion object {
         val WHITESPACE_REGEX = Regex("\\s+")
 
@@ -34,8 +37,6 @@ internal class NeuroTokenizer {
         const val CHANNEL_KEYWORD_WEIGHT = 0.6
         const val TITLE_KEYWORD_WEIGHT = 0.5
 
-        /** A title pair not yet known to be a phrase: counted, so it can become one, but barely weighted. */
-        const val BIGRAM_CANDIDATE_WEIGHT = 0.2
         const val BIGRAM_PRIORITY_WEIGHT = 1.2
         const val DESCRIPTION_MIN_LENGTH = 20
         const val DESCRIPTION_TAKE_WORDS = 15
@@ -365,6 +366,9 @@ internal class NeuroTokenizer {
             "unbelievable",
             "shocking",
             "exposed",
+            "hilarious",
+            // The platform itself, in nearly every title about anything (#907)
+            "youtube",
             "revealed",
             "secret",
             "secrets",
@@ -440,6 +444,95 @@ internal class NeuroTokenizer {
             "honestly",
             "maybe",
             "probably",
+            // English function words: they end a chunk, so "battery life after a month" never pairs
+            // "life after" (#907). Other languages get their lists with the multilingual stop lists.
+            "after",
+            "before",
+            "over",
+            "under",
+            "again",
+            "once",
+            "during",
+            "while",
+            "through",
+            "between",
+            "against",
+            "without",
+            "within",
+            "until",
+            "since",
+            "upon",
+            "onto",
+            "off",
+            "above",
+            "near",
+            "behind",
+            "across",
+            "along",
+            "around",
+            "among",
+            "beside",
+            "besides",
+            "beyond",
+            "inside",
+            "outside",
+            "toward",
+            "towards",
+            "despite",
+            "unless",
+            "whether",
+            "although",
+            "though",
+            "because",
+            "yet",
+            "nor",
+            "per",
+            "via",
+            "any",
+            "both",
+            "each",
+            "few",
+            "many",
+            "much",
+            "other",
+            "others",
+            "such",
+            "same",
+            "own",
+            "our",
+            "ours",
+            "ourselves",
+            "his",
+            "her",
+            "hers",
+            "herself",
+            "him",
+            "himself",
+            "its",
+            "itself",
+            "she",
+            "who",
+            "whom",
+            "whose",
+            "yours",
+            "yourself",
+            "yourselves",
+            "theirs",
+            "themselves",
+            "myself",
+            "had",
+            "having",
+            "should",
+            "could",
+            "may",
+            "might",
+            "shall",
+            "let",
+            "where",
+            "later",
+            "ago",
+            "soon",
+            "yes",
         )
 
     // ── Tag Spam Filter ──
@@ -620,6 +713,10 @@ internal class NeuroTokenizer {
             "drum track",
             "sound track",
             "race track",
+            // Music
+            "lofi hip hop",
+            // Tech
+            "game laptop",
             // Gaming
             "speed run",
             "play through",
@@ -730,13 +827,169 @@ internal class NeuroTokenizer {
 
     fun normalizeLemma(word: String): String = lemmaMap[word.lowercase()] ?: word.lowercase()
 
-    fun tokenize(text: String): List<String> =
-        NeuroText
-            .words(NeuroText.fold(text))
-            .map { word -> word.trim { !NeuroText.isWordChar(it) } }
-            .filter(NeuroText::isTopicSized)
-            .map { normalizeLemma(it) }
-            .filter { !stopWords.contains(it) && !YEAR_TAG_REGEX.matches(it) }
+    /** The viewer's language ([UserBrain.languageProfile]); its stop words apply to every title. */
+    @Volatile
+    var languageProfile: String = "en"
+
+    /**
+     * The language keys are stemmed for ([UserBrain.keyLanguage]). Unlike [languageProfile] it never
+     * follows what the viewer watches, so a word keeps one key for the life of a brain.
+     */
+    @Volatile
+    var keyLanguage: String = "en"
+
+    @Volatile
+    private var specificityCache: Pair<String, NeuroSpecificity>? = null
+
+    /** How specific [key] is in general language ([NeuroSpecificity]), for English and this viewer's languages. */
+    fun specificity(key: String): Double {
+        val languages = "$keySpec|$keyLanguage|$languageProfile"
+        val cached = specificityCache?.takeIf { it.first == languages }?.second
+        val current =
+            cached ?: NeuroSpecificity(::keyOf, listOf("en", keyLanguage, languageProfile)).also { specificityCache = languages to it }
+        return current.of(key)
+    }
+
+    /** The [NeuroKeySpec] keys are made by. Spec 1 keeps lemmas; migrations up to schema 18 read keys by it. */
+    var keySpec: Int = NeuroKeySpec.VERSION
+        private set
+
+    /** A tokenizer that reads keys by [spec] for the same viewer. */
+    fun atKeySpec(spec: Int): NeuroTokenizer =
+        NeuroTokenizer(wordBreaker).also {
+            it.keySpec = spec
+            it.languageProfile = languageProfile
+            it.keyLanguage = keyLanguage
+        }
+
+    /** Words no language's stop list may remove: they are topics here, whatever they mean elsewhere. */
+    internal val protectedWords: Set<String> by lazy {
+        buildSet {
+            addAll(NeuroText.SHORT_TOPICS)
+            addAll(lemmaMap.values)
+            addAll(polysemousWords)
+            addAll(alwaysTopical)
+            NeuroKeySpec.EXPRESSION_KEYS.forEach { addAll(it.split(' ')) }
+            compoundTerms.forEach { addAll(it.split(' ')) }
+            NeuroTopicCatalog.TOPIC_CATEGORIES.forEach { category ->
+                category.topics.forEach { topic ->
+                    addAll(NeuroText.words(fold(topic), wordBreaker).map { it.trim { c -> !NeuroText.isWordChar(c) } })
+                }
+            }
+        }
+    }
+
+    /** The lemma map and the stop words every title gets, for the tables Flow Desktop reads ([NeuroKeySpec]). */
+    internal val lemmas: Map<String, String> get() = lemmaMap
+    internal val baseStopWords: Set<String> get() = stopWords
+
+    /** Words the tokenizer's own lists compare keys with; key spec 2 never stems them ([NeuroStemmer]). */
+    internal val curatedWords: Set<String> by lazy {
+        buildSet {
+            addAll(protectedWords)
+            addAll(NeuroKeySpec.NEVER_ALONE)
+            addAll(channelBranding)
+            addAll(highPacingWords)
+            addAll(lowPacingWords)
+            domainDisambiguation.forEach { (word, contexts) ->
+                add(word)
+                contexts.forEach { context ->
+                    add(context.domain)
+                    addAll(context.contextWords)
+                }
+            }
+        }
+    }
+
+    private val stopLists = java.util.concurrent.ConcurrentHashMap<String, Set<String>>()
+
+    /** [language]'s stop words, less the [protectedWords]. */
+    fun stopList(language: String): Set<String> = stopLists.getOrPut(language) { NeuroLanguages.stopList(language) - protectedWords }
+
+    private fun stopWordsFor(pieces: List<String>): (String) -> Boolean {
+        val profile = stopList(languageProfile)
+        val title = NeuroLanguages.detect(pieces)?.takeIf { it != languageProfile }?.let(::stopList)
+        return if (title.isNullOrEmpty()) {
+            { word -> word in stopWords || word in profile }
+        } else {
+            { word -> word in stopWords || word in profile || word in title }
+        }
+    }
+
+    /**
+     * [word]'s key ([NeuroKeySpec] stage 8): its lemma stemmed for [keyLanguage] by
+     * [NeuroStemmer], or the lemma when the stem is itself a lemma-map word. A key is its own key.
+     */
+    fun keyOf(word: String): String {
+        val lemma = normalizeLemma(word)
+        if (keySpec < 2) return lemma
+        val stem = NeuroStemmer.key(lemma, keyLanguage)
+        return if (normalizeLemma(stem) == stem) stem else lemma
+    }
+
+    private val chunker by lazy {
+        NeuroChunker(::stopWordsFor, ::normalizeLemma, ::keyOf, wordBreaker)
+    }
+
+    /** [NeuroKeySpec.HAN_SPEC] and a non-`ja` viewer: keys fold Hant and merge Han runs. */
+    val hanFolds: Boolean get() = keySpec >= NeuroKeySpec.HAN_SPEC && languageProfile != "ja"
+
+    private val defaultHan: HanFold get() = if (hanFolds) HanFold.UNLESS_KANA else HanFold.NONE
+
+    /** One fold for every field of [video]; kana in the title, channel name or tags turns it off. */
+    fun hanFoldOf(video: Video): HanFold = if (hanFolds && !hasKana(video)) HanFold.ALWAYS else HanFold.NONE
+
+    private fun hasKana(video: Video): Boolean =
+        NeuroText.hasKana(video.title) || NeuroText.hasKana(video.channelName) ||
+            video.tags.take(TAG_MAX_INGEST).any(NeuroText::hasKana)
+
+    fun fold(
+        text: String,
+        han: HanFold = defaultHan,
+    ): String = NeuroText.fold(text, han)
+
+    /** Multi-word catalog topics, keyed the way a title spells them. */
+    private val catalogPhrases: Set<String> by lazy {
+        NeuroTopicCatalog.TOPIC_CATEGORIES
+            .flatMap { it.topics }
+            .mapNotNull { topic ->
+                chunker
+                    .chunk(topic, defaultHan)
+                    .chunks
+                    .singleOrNull()
+                    ?.takeIf { it.size >= 2 }
+                    ?.joinToString(" ")
+            }.toSet()
+    }
+
+    /** Every catalog topic as titles key it, single words and phrases alike ("Hip Hop" reads "hip hop"). */
+    val catalogKeys: Set<String> by lazy {
+        NeuroTopicCatalog.TOPIC_CATEGORIES
+            .flatMap { it.topics }
+            .flatMapTo(HashSet()) { keysOf(it) }
+    }
+
+    /** [text] read by [NeuroKeySpec]: its chunks of words that belong together. */
+    fun chunk(
+        text: String,
+        han: HanFold = defaultHan,
+    ): NeuroChunker.Chunks = chunker.chunk(text, han)
+
+    fun tokenize(
+        text: String,
+        han: HanFold = defaultHan,
+    ): List<String> = chunker.chunk(text, han).words
+
+    /**
+     * The keys a short label stands for, such as an onboarding pick: one per chunk, so "Lo-Fi" reads
+     * "lofi" and "Health & Fitness" reads "health" and "fitness", the keys titles produce.
+     */
+    fun keysOf(label: String): List<String> =
+        chunker
+            .chunk(label, defaultHan)
+            .chunks
+            .map { it.joinToString(" ") }
+            .ifEmpty { listOfNotNull(keyOf(fold(label).trim()).takeIf { it.isNotBlank() }) }
 
     fun tokenizeForSimilarity(text: String): Set<String> = tokenize(text).toSet()
 
@@ -747,6 +1000,9 @@ internal class NeuroTokenizer {
      */
     fun isNoiseTopic(topic: String): Boolean {
         val base = topic.substringBefore(':').lowercase().trim()
+        if (base in NeuroKeySpec.EXPRESSION_KEYS) return false
+        if (base in NeuroKeySpec.NEVER_ALONE || base.length > NeuroKeySpec.MAX_KEY_LENGTH) return true
+        if (NeuroFormats.formatOf(base) != null) return true
         if (!NeuroText.isTopicSized(base)) return true
         if (base.all { it.isDigit() } || YEAR_TAG_REGEX.matches(base)) return true
         val parts = base.split(' ').filter { it.isNotBlank() }
@@ -754,7 +1010,7 @@ internal class NeuroTokenizer {
         // Degenerate bigrams like "code code" are tokenizer echoes, not topics.
         if (parts.size > 1 && parts.distinct().size < parts.size) return true
         return parts.any { part ->
-            part in stopWords || normalizeLemma(part) in stopWords || !NeuroText.isTopicSized(part)
+            part in stopWords || normalizeLemma(part) in stopWords || part in stopList(languageProfile) || !NeuroText.isTopicSized(part)
         }
     }
 
@@ -779,11 +1035,13 @@ internal class NeuroTokenizer {
         channelTopicProfile: Map<String, Double>? = null,
     ): ContentVector {
         val topics = mutableMapOf<String, Double>()
+        val han = hanFoldOf(video)
 
-        val titleWords = tokenize(video.title)
+        val title = chunker.chunk(video.title, han)
+        val titleWords = title.words
 
         // Use smart channel tokenization to filter names and branding
-        val chWords = tokenizeChannelName(video.channelName)
+        val chWords = tokenizeChannelName(video.channelName, han)
 
         // Channel keywords — filtered for actual topic words only
         chWords.forEach {
@@ -791,47 +1049,29 @@ internal class NeuroTokenizer {
         }
 
         // Collect all words for domain disambiguation context BEFORE processing tokens
-        val fullContext = buildContextWordList(video)
+        val fullContext = buildContextWordList(video, han)
+        val tags = topicTags(video)
+        val tagChunks = tags.take(TAG_MAX_INGEST).map { chunker.chunk(it, han) }
+        val tagPhrases = tagChunks.flatMapTo(HashSet()) { tagPhrases(it) }
+        val formats = title.formats + tagChunks.flatMap { it.formats }
 
-        // ── V9.3 Fix 1: Extract bigrams FIRST, track which unigram indices are "claimed" ──
-        val claimedByBigram = mutableSetOf<Int>()
-
-        if (titleWords.size >= 2) {
-            for (i in 0 until titleWords.size - 1) {
-                val bigram = "${titleWords[i]} ${titleWords[i + 1]}"
-
-                val isMeaningful =
-                    compoundTerms.contains(bigram) ||
-                        polysemousWords.contains(titleWords[i]) ||
-                        polysemousWords.contains(titleWords[i + 1]) ||
-                        // Also treat domain-disambiguable words as meaningful for bigram protection
-                        titleWords[i] in domainDisambiguation ||
-                        titleWords[i + 1] in domainDisambiguation ||
-                        NeuroPhrases.isPhrase(bigram, idfSnapshot)
-
-                if (isMeaningful) {
-                    topics[bigram] =
-                        calculateIdfWeight(
-                            bigram,
-                            BIGRAM_PRIORITY_WEIGHT,
-                            idfSnapshot,
-                        )
-                    claimedByBigram.add(i)
-                    claimedByBigram.add(i + 1)
-                } else {
-                    topics[bigram] =
-                        calculateIdfWeight(
-                            bigram,
-                            BIGRAM_CANDIDATE_WEIGHT,
-                            idfSnapshot,
-                        )
-                }
+        // A run of the title is a key only once it is known to be a phrase; until then it only counts
+        // toward document frequency, which is how it can become one (#907). A phrase takes its words.
+        val claimed = HashSet<Long>()
+        title.runs().forEach { run ->
+            if (isPromoted(run.key, idfSnapshot, tagPhrases)) {
+                topics[run.key] = calculateIdfWeight(run.key, BIGRAM_PRIORITY_WEIGHT, idfSnapshot)
+                for (i in run.from until run.to) claimed += position(run.chunk, i)
             }
         }
-
-        // ── Title unigrams: SKIP words claimed by meaningful bigrams ──
-        titleWords.forEachIndexed { index, word ->
-            if (index !in claimedByBigram) {
+        title.merged.forEach { run ->
+            if (NeuroPhrases.isMergedRun(run, idfSnapshot) || run in tagPhrases) {
+                topics[run] = calculateIdfWeight(run, BIGRAM_PRIORITY_WEIGHT, idfSnapshot)
+            }
+        }
+        title.chunks.forEachIndexed { chunkIndex, chunk ->
+            chunk.forEachIndexed { index, word ->
+                if (position(chunkIndex, index) in claimed || word in NeuroKeySpec.NEVER_ALONE) return@forEachIndexed
                 // Domain-disambiguate polysemous words using full title+description context
                 val resolvedWord =
                     if (word in domainDisambiguation) {
@@ -851,6 +1091,7 @@ internal class NeuroTokenizer {
             extractDescriptionKeywords(
                 video.description,
                 idfSnapshot,
+                han,
             )
         descriptionTopics.forEach { (word, weight) ->
             // Also disambiguate description words using the same full context
@@ -864,7 +1105,6 @@ internal class NeuroTokenizer {
         }
 
         // ── Tag Processing ──
-        val tags = topicTags(video)
         if (tags.isNotEmpty()) {
             val descWords =
                 if (!video.description.isNullOrBlank()) {
@@ -884,11 +1124,14 @@ internal class NeuroTokenizer {
                     titleWords,
                     descWords,
                     idfSnapshot,
+                    han,
                 )
             tagTopics.forEach { (word, weight) ->
                 topics[word] = (topics[word] ?: 0.0) + weight
             }
         }
+
+        topics.keys.removeAll(::isNoiseTopic)
 
         // ── Channel Topic Prior ──
         if (channelTopicProfile != null &&
@@ -1005,6 +1248,7 @@ internal class NeuroTokenizer {
             pacing = pacingScore,
             complexity = complexityScore,
             isLive = if (video.isLive) 1.0 else 0.0,
+            formats = formats,
         )
     }
 
@@ -1024,6 +1268,7 @@ internal class NeuroTokenizer {
     fun extractDescriptionKeywords(
         description: String?,
         idfSnapshot: IdfSnapshot,
+        han: HanFold = defaultHan,
     ): Map<String, Double> {
         if (description.isNullOrBlank() || description.length < DESCRIPTION_MIN_LENGTH) {
             return emptyMap()
@@ -1038,13 +1283,13 @@ internal class NeuroTokenizer {
                         !sponsorLinePatterns.any { pattern -> lower.contains(pattern) } &&
                         !lower.contains("http") &&
                         !lower.trimStart().startsWith("#") &&
-                        !(line.trim().length > 5 && line.trim() == line.trim().uppercase())
+                        !(line.trim().length > 5 && isShouted(line))
                 }.take(DESCRIPTION_TAKE_LINES)
                 .joinToString(" ")
 
         if (contentLines.isBlank()) return emptyMap()
 
-        val words = tokenize(contentLines).take(DESCRIPTION_TAKE_WORDS)
+        val words = tokenize(contentLines, han).take(DESCRIPTION_TAKE_WORDS)
         val result = mutableMapOf<String, Double>()
         words.forEach { word ->
             result[word] = (
@@ -1053,6 +1298,23 @@ internal class NeuroTokenizer {
             )
         }
         return result
+    }
+
+    /**
+     * An all-caps line ("SUBSCRIBE NOW") or one with no letters at all. Chinese, Japanese and Thai
+     * have no case, so their letters count against the capitals: "【MV】周杰倫 新歌" is not shouting (#1395).
+     */
+    private fun isShouted(line: String): Boolean {
+        var capitals = 0
+        var uncased = 0
+        line.forEach { c ->
+            when {
+                c.isLowerCase() -> return false
+                c.isUpperCase() -> capitals++
+                c.isLetter() -> uncased++
+            }
+        }
+        return capitals >= uncased
     }
 
     // ══════════════════════════════════════════════
@@ -1068,6 +1330,7 @@ internal class NeuroTokenizer {
         titleWords: List<String>,
         descriptionWords: List<String>,
         idfSnapshot: IdfSnapshot,
+        han: HanFold = defaultHan,
     ): Map<String, Double> {
         if (tags.isEmpty()) return emptyMap()
 
@@ -1078,7 +1341,7 @@ internal class NeuroTokenizer {
         val tagContextWords =
             tags.take(TAG_MAX_INGEST).flatMap { t ->
                 NeuroText
-                    .fold(t)
+                    .fold(t, han)
                     .split(WHITESPACE_REGEX)
                     .map { it.trim { c -> !c.isLetterOrDigit() } }
                     .filter { it.length > 1 }
@@ -1086,7 +1349,7 @@ internal class NeuroTokenizer {
         val fullDisambiguationContext = tagContextWords + titleWords + descriptionWords
 
         tags.take(TAG_MAX_INGEST).forEach { rawTag ->
-            val cleaned = NeuroText.fold(rawTag).trim()
+            val cleaned = fold(rawTag, han).trim()
 
             if ((cleaned.length < TAG_MIN_LENGTH && cleaned !in NeuroText.SHORT_TOPICS) ||
                 cleaned.length > TAG_MAX_LENGTH
@@ -1098,7 +1361,8 @@ internal class NeuroTokenizer {
             if (cleaned in stopWords) return@forEach
             if (YEAR_TAG_REGEX.matches(cleaned)) return@forEach
 
-            val tagTokens = tokenize(cleaned)
+            val chunked = chunker.chunk(cleaned, han)
+            val tagTokens = chunked.words
             if (tagTokens.isEmpty()) return@forEach
 
             val isVerified = tagTokens.any { token -> token in verificationSet }
@@ -1110,14 +1374,15 @@ internal class NeuroTokenizer {
                     TAG_UNVERIFIED_WEIGHT
                 }
 
-            // A creator's multi-word tag is a phrase they chose; keep it whole ("guitar playalong").
-            val isPhrase = tagTokens.size in 2..TAG_PHRASE_MAX_WORDS
-            if (isPhrase) {
-                val phrase = tagTokens.joinToString(" ")
+            // A creator's multi-word tag is a phrase they chose; each unbroken part stays whole
+            // ("guitar playalong", and "stand up comedy" as "standup comedy", never "stand comedy").
+            val phrases = tagPhrases(chunked)
+            phrases.forEach { phrase ->
                 result[phrase] = (result[phrase] ?: 0.0) + calculateIdfWeight(phrase, baseWeight, idfSnapshot)
             }
-            val wordWeight = if (isPhrase) baseWeight * TAG_PHRASE_WORD_SHARE else baseWeight
+            val wordWeight = if (phrases.isNotEmpty()) baseWeight * TAG_PHRASE_WORD_SHARE else baseWeight
             tagTokens.forEach { token ->
+                if (token in NeuroKeySpec.NEVER_ALONE) return@forEach
                 val resolved =
                     if (token in domainDisambiguation) {
                         disambiguateWord(token, fullDisambiguationContext)
@@ -1132,6 +1397,91 @@ internal class NeuroTokenizer {
         }
 
         return result
+    }
+
+    /** The unbroken parts of a tag that hold two or three words. */
+    private fun tagPhrases(tag: NeuroChunker.Chunks): List<String> =
+        tag.chunks
+            .filter { chunk -> chunk.size >= 2 && chunk.sumOf { it.count { c -> c == ' ' } + 1 } <= TAG_PHRASE_MAX_WORDS }
+            .map { it.joinToString(" ") }
+
+    /** A run that is an interest on its own: a compound, a catalog topic, or a pair [NeuroPhrases] has learned. */
+    fun isKnownPhrase(
+        run: String,
+        idfSnapshot: IdfSnapshot,
+    ): Boolean =
+        run in compoundTerms ||
+            run in catalogPhrases ||
+            run in NeuroKeySpec.EXPRESSION_KEYS ||
+            (run.count { it == ' ' } == 1 && NeuroPhrases.isPhrase(run, idfSnapshot))
+
+    private fun isPromoted(
+        run: String,
+        idfSnapshot: IdfSnapshot,
+        tagPhrases: Set<String>,
+    ): Boolean = run in tagPhrases || isKnownPhrase(run, idfSnapshot)
+
+    private fun position(
+        chunk: Int,
+        index: Int,
+    ): Long = (chunk.toLong() shl 32) or index.toLong()
+
+    /** What one video counts toward document frequency: its keys, and every word and run of its title (#907). */
+    fun documentTerms(
+        video: Video,
+        vector: ContentVector,
+    ): Set<String> {
+        val title = chunker.chunk(video.title, hanFoldOf(video))
+        return HashSet<String>(vector.topics.keys).apply {
+            addAll(title.words)
+            title.runs().forEach { add(it.key) }
+            addAll(title.modelPairs)
+            addAll(title.merged)
+            addAll(title.singles)
+        }
+    }
+
+    /**
+     * Which keys of [video] the acquisition floor may plant: known phrases, tag phrases its title or
+     * description confirms, words two of its fields repeat, and words another video already used.
+     * [ownDocuments] is how many of [idfSnapshot]'s counts are [video] itself. A bare title the viewer
+     * meets for the first time plants nothing (#907).
+     */
+    fun plantFilter(
+        video: Video,
+        idfSnapshot: IdfSnapshot,
+        ownDocuments: Int,
+    ): (String) -> Boolean {
+        val confirmed = plantableKeys(video, idfSnapshot)
+        return { key ->
+            val base = NeuroScoring.stripDomainTag(key)
+            base in confirmed || (' ' !in base && (idfSnapshot.wordFrequency[key] ?: 0) > ownDocuments)
+        }
+    }
+
+    private fun plantableKeys(
+        video: Video,
+        idfSnapshot: IdfSnapshot,
+    ): Set<String> {
+        val han = hanFoldOf(video)
+        val title = chunker.chunk(video.title, han)
+        val titleWords = title.words.toSet()
+        val tags = topicTags(video).take(TAG_MAX_INGEST).map { chunker.chunk(it, han) }
+        val tagWords = tags.flatMapTo(HashSet()) { it.words }
+        val descriptionWords =
+            video.description
+                .takeIf { it.isNotBlank() }
+                ?.let { tokenize(it.lines().take(DESCRIPTION_TAKE_LINES).joinToString(" "), han).toSet() }
+                .orEmpty()
+        val confirmedTags = tags.filter { tag -> tag.words.any { it in titleWords || it in descriptionWords } }
+        val tagPhrases = tags.flatMapTo(HashSet(), ::tagPhrases)
+        return buildSet {
+            addAll(titleWords intersect tagWords)
+            addAll(titleWords intersect descriptionWords)
+            addAll(tagWords intersect descriptionWords)
+            confirmedTags.forEach { addAll(tagPhrases(it)) }
+            title.runs().forEach { run -> if (isPromoted(run.key, idfSnapshot, tagPhrases)) add(run.key) }
+        }
     }
 
     // ══════════════════════════════════════════════
@@ -2643,21 +2993,20 @@ internal class NeuroTokenizer {
      * "Python Engineer"       → ["python"]      (engineer not in list, python is)
      * "Binging with Babish"   → []              (no topic words)
      * "History Matters"       → ["history"]
+     * "央視新聞"               → ["新聞"]        (央視 = a brand, 新聞 = news)
      */
-    fun tokenizeChannelName(channelName: String): List<String> {
-        val rawOriginal =
-            NeuroText
-                .fold(channelName)
-                .split(WHITESPACE_REGEX)
-                .map { word -> word.trim { !it.isLetterOrDigit() } }
-                .filter { it.length > 1 }
+    fun tokenizeChannelName(
+        channelName: String,
+        han: HanFold = defaultHan,
+    ): List<String> {
+        val rawOriginal = nameWords(channelName, han)
 
         if (rawOriginal.isEmpty()) return emptyList()
 
         if (rawOriginal.size == 1) {
             val word = rawOriginal[0].lowercase()
-            val lemma = normalizeLemma(word)
-            return if (lemma in alwaysTopical || word in alwaysTopical) {
+            val lemma = keyOf(word)
+            return if (isChannelTopic(lemma) || isChannelTopic(word)) {
                 listOf(lemma)
             } else {
                 emptyList()
@@ -2667,15 +3016,27 @@ internal class NeuroTokenizer {
         val topical = mutableListOf<String>()
         rawOriginal.forEach { originalWord ->
             val lower = originalWord.lowercase()
-            val lemma = normalizeLemma(lower)
+            val lemma = keyOf(lower)
 
             when {
-                lemma in alwaysTopical -> topical.add(lemma)
-                lower in alwaysTopical -> topical.add(lower)
+                isChannelTopic(lemma) -> topical.add(lemma)
+                isChannelTopic(lower) -> topical.add(lower)
             }
         }
         return topical.distinct()
     }
+
+    private fun isChannelTopic(word: String): Boolean = word in alwaysTopical || word in NeuroLanguages.channelTopics
+
+    /** Words of a channel name; scripts written without spaces are split by the word breaker. */
+    private fun nameWords(
+        name: String,
+        han: HanFold,
+    ): List<String> =
+        NeuroText
+            .words(fold(name, han), wordBreaker)
+            .map { word -> word.trim { !NeuroText.isWordChar(it) } }
+            .filter { it.length > 1 }
 
     /**
      * Builds a flat list of all meaningful words from the video's title,
@@ -2684,29 +3045,27 @@ internal class NeuroTokenizer {
      * Does NOT lemmatize — we want raw word stems for prefix matching
      * against domain context words.
      */
-    private fun buildContextWordList(video: Video): List<String> {
+    private fun buildContextWordList(
+        video: Video,
+        han: HanFold,
+    ): List<String> {
         val words = mutableListOf<String>()
 
         NeuroText
-            .fold(video.title)
+            .fold(video.title, han)
             .split(WHITESPACE_REGEX)
             .map { it.trim { c -> !c.isLetterOrDigit() } }
             .filter { it.length > 1 }
             .forEach { words.add(it) }
 
-        NeuroText
-            .fold(video.channelName)
-            .split(WHITESPACE_REGEX)
-            .map { it.trim { c -> !c.isLetterOrDigit() } }
-            .filter { it.length > 1 }
-            .forEach { words.add(it) }
+        words.addAll(nameWords(video.channelName, han))
 
         if (!video.description.isNullOrBlank()) {
             video.description
                 .lines()
                 .take(3)
                 .joinToString(" ")
-                .let(NeuroText::fold)
+                .let { NeuroText.fold(it, han) }
                 .split(WHITESPACE_REGEX)
                 .map { it.trim { c -> !c.isLetterOrDigit() } }
                 .filter { it.length > 2 }
@@ -2718,7 +3077,7 @@ internal class NeuroTokenizer {
         if (tags.isNotEmpty()) {
             tags.take(TAG_MAX_INGEST).forEach { tag ->
                 NeuroText
-                    .fold(tag)
+                    .fold(tag, han)
                     .split(WHITESPACE_REGEX)
                     .map { it.trim { c -> !c.isLetterOrDigit() } }
                     .filter { it.length > 1 }
