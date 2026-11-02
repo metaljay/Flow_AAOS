@@ -10,7 +10,7 @@ The owner has no coding experience and relies on the agent to bring every custom
 | --- | --- |
 | Parent repository | https://github.com/A-EDev/Flow (git remote `upstream`) |
 | Parent branch synced | `main` |
-| **Last merged parent commit** | `669e1ae8e631e93381ffee0485ae24f3f662036b` (2026-10-12). Step 1 lists everything newer; step 11 updates this row. |
+| **Last merged parent commit** | `6cb0956005f4e7e289c9547e218fd167ad40407e` (2026-11-02). Step 1 lists everything newer; step 11 updates this row. |
 
 ## Steps
 
@@ -89,7 +89,9 @@ Run the lines one at a time (one flavour at a time saves memory). Always use fla
 | `ui/theme/Type.kt` | C5 | larger typography | Re-apply our scale on the parent's new scale |
 | `ui/screens/home/HomeScreen.kt` | C5 | larger logo and search; logo 12 dp start inset | Re-apply |
 | `ui/components/videoplayer/`, `shorts/`, `musicplayer/`, `shared/MediaPlayPauseButton.kt`, `shared/DescriptionCards.kt`, `shared/FlowDescriptionBottomSheet.kt`, `shared/MediaSeekBar*.kt`, `shared/MediaSeekTrackDrawing.kt` | C5 | larger controls and description text; minimise button size and offset; larger seek bar touch strip, track and handle | Re-apply sizes, keep the parent's logic |
+| `ui/components/profiles/ProfileSwitchSheet.kt` | C5 | 56 dp profile button in the Home top bar | Re-apply the size |
 | `app/src/test/.../ui/theme/FlowTypographyTest.kt` | C5 | expects our larger type scale | Keep our sizes in the assertions |
+| `app/src/test/resources/profiles/store_inventory.tsv`, `app/src/test/.../data/backup/BackupRulesTest.kt` | C8 | declare the card's saved data as device-wide | Keep our rows; a new car store needs a row in both |
 | `res/drawable/ic_launcher_foreground.xml`, `ic_launcher_dynamic_foreground.xml` | C7 | red play mark | Keep ours |
 | `README.md`, `AGENTS.md` | C10 | owner README; fork block at the top of AGENTS | Keep our README and block; take the parent's text below the block |
 | `CLAUDE.md`, `GEMINI.md`, `.claude/skills`, `.github/skills/aaos-*`, `AAOS_*.md`, `docs/agents/`, `CONTEXT.md`, `docs/adr/` | C10 | fork-owned agent entry points, recipes and docs | Keep ours (the parent's `.gitignore` ignores `.claude/` and `claude.md`; these are tracked anyway, never delete them) |
