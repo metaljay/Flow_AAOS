@@ -155,3 +155,5 @@ no_backup_dir	profiles/<id>/pending_restore.zip	main:data/profile/ProfileSlices.
 cache_dir	held_link/	main:data/profile/SwitchIntentQueue.kt	CACHE	-	A playlist file shared during a switch, kept for the next profile to open; replaced by the next one.
 files_dir	profile_avatars/	main:data/profile/ProfileAvatarPhotos.kt	DEVICE	-	Avatar photos of every profile, named by profile id, beside the registry that lists them; backed up with it and deleted with the profile.
 cache_dir	master_live_slice.zip	main:data/profile/ProfileSlices.kt	CACHE	-	The running profile exported while a master backup is put together; deleted once the backup is written.
+shared_prefs	flow_car_media_card	main:service/FlowCarMediaSession.kt	DEVICE	-	The car media card's last item.
+files_dir	car_media_card_artwork.png	main:service/FlowCarMediaSession.kt	DEVICE	-	The car media card's artwork.
