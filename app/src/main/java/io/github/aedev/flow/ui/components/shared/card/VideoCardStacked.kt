@@ -20,6 +20,10 @@ import io.github.aedev.flow.data.model.Video
 import io.github.aedev.flow.ui.components.shared.ChannelAvatarStack
 import io.github.aedev.flow.ui.components.shared.LocalDpadNavigation
 import io.github.aedev.flow.ui.components.shared.videoMetadataLine
+import io.github.aedev.flow.ui.utils.rememberIsAutomotiveDevice
+
+/** AAOS fork: the tight title lines Continue Watching uses, so more of each tile is thumbnail. */
+private const val CAR_TITLE_LINE_HEIGHT = 1.12f
 
 /** The thumbnail across the full width with the details beneath: feeds and grids. */
 @Composable
@@ -35,6 +39,7 @@ internal fun VideoCardStacked(
     val state = rememberVideoCardState(video)
     val cardPreferences = LocalVideoCardPreferences.current
     val actions = LocalVideoCardActions.current
+    val isAutomotiveDevice = rememberIsAutomotiveDevice()
 
     Column(
         modifier =
@@ -57,7 +62,11 @@ internal fun VideoCardStacked(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(start = if (showChannel) 8.dp else 12.dp, top = 12.dp, bottom = 12.dp),
+                    .padding(
+                        start = if (showChannel) 8.dp else 12.dp,
+                        top = if (isAutomotiveDevice) 8.dp else 12.dp,
+                        bottom = if (isAutomotiveDevice) 8.dp else 12.dp,
+                    ),
             avatar = {
                 if (showChannel) {
                     ChannelAvatarStack(
@@ -84,28 +93,40 @@ internal fun VideoCardStacked(
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = state.title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style =
+                        if (isAutomotiveDevice) {
+                            MaterialTheme.typography.bodySmallEmphasized.run {
+                                copy(lineHeight = fontSize * CAR_TITLE_LINE_HEIGHT)
+                            }
+                        } else {
+                            MaterialTheme.typography.titleMedium
+                        },
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
 
+                val uploaderOnly = isAutomotiveDevice && showChannel && !video.isUpcoming
                 Text(
                     text =
-                        videoMetadataLine(
-                            video = video,
-                            isUpcoming = video.isUpcoming,
-                            channelName = state.channelName,
-                            includeChannel = showChannel,
-                        ),
-                    style = MaterialTheme.typography.bodySmall,
+                        if (uploaderOnly) {
+                            state.channelName
+                        } else {
+                            videoMetadataLine(
+                                video = video,
+                                isUpcoming = video.isUpcoming,
+                                channelName = state.channelName,
+                                includeChannel = showChannel,
+                            )
+                        },
+                    style = if (isAutomotiveDevice) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodySmall,
                     color =
                         if (video.isUpcoming) {
                             MaterialTheme.colorScheme.primary
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant
                         },
-                    maxLines = 2,
+                    maxLines = if (uploaderOnly) 1 else 2,
                     overflow = TextOverflow.Ellipsis,
                 )
 

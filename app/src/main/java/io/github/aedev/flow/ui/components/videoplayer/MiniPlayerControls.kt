@@ -130,13 +130,13 @@ internal fun MiniPlayerControls(
     val scaleMult = sizeScale.coerceIn(1f, 1.6f)
 
     val baseTouchSize = if (isWideWindow) 44.dp else 36.dp
-    val baseBgSize = if (isWideWindow) 34.dp else 24.dp
-    val baseIconSize = if (isWideWindow) 30.dp else 24.dp
+    val baseBgSize = if (isWideWindow) 28.dp else 24.dp
+    val baseIconSize = if (isWideWindow) 22.dp else 24.dp
     val finalTouchSize = baseTouchSize * scaleMult
     val finalBgSize = baseBgSize * scaleMult
     val finalIconSize = baseIconSize * scaleMult
     val topTouchSize = if (isWideWindow) 50.dp else 42.dp
-    val topBgSize = if (isWideWindow) 42.dp else 34.dp
+    val topBgSize = if (isWideWindow) 32.dp else 34.dp
 
     Box(
         modifier = Modifier.fillMaxSize(),
@@ -155,7 +155,7 @@ internal fun MiniPlayerControls(
             ) {
                 if (playerState.isBuffering) {
                     CircularProgressIndicator(
-                        modifier = Modifier.size(if (isWideWindow) 30.dp else 24.dp),
+                        modifier = Modifier.size(if (isWideWindow) 22.dp else 24.dp),
                         strokeWidth = 2.dp,
                         color = PlayerScrimContent,
                     )
@@ -174,7 +174,7 @@ internal fun MiniPlayerControls(
                                 else -> stringResource(R.string.play)
                             },
                         tint = PlayerScrimContent,
-                        modifier = Modifier.size(if (isWideWindow) 42.dp else 34.dp),
+                        modifier = Modifier.size(if (isWideWindow) 26.dp else 34.dp),
                     )
                 }
             }
@@ -200,7 +200,7 @@ internal fun MiniPlayerControls(
                     imageVector = Icons.Rounded.Close,
                     contentDescription = stringResource(R.string.close),
                     tint = PlayerScrimContent,
-                    modifier = Modifier.size(if (isWideWindow) 34.dp else 30.dp),
+                    modifier = Modifier.size(if (isWideWindow) 22.dp else 30.dp),
                 )
             }
         }

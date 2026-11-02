@@ -6,6 +6,9 @@ package io.github.aedev.flow.ui.components
  */
 internal const val FEED_MAX_AUTO_COLUMNS = 3
 
+/** AAOS fork: the most tiles a car row takes, so a tile and its text stay small on the wide touchscreen. */
+internal const val CAR_FEED_COLUMNS = 4
+
 private const val SHELF_PREVIEW_ROWS_COMPACT = 4
 private const val SHELF_PREVIEW_ROWS_GRID = 2
 

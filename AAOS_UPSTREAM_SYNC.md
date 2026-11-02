@@ -84,7 +84,7 @@ Run the lines one at a time (one flavour at a time saves memory). Always use fla
 | `app/build.gradle.kts` | C1, C9 | release `applicationId`, version code and name, ABI-split workaround | Keep ours for those; take the parent's for the rest |
 | `app/src/main/AndroidManifest.xml`, `res/xml/automotive_app_desc.xml` | C2, C3, C8 | AAOS features and metadata, car launcher, `distractionOptimized`, camera optional, car media service and provider | Keep every AAOS entry; give any new parent activity the same metadata |
 | `service/FlowCarMediaSession.kt`, `FlowCarMediaBrowserService.kt`, `FlowCarMediaArtworkProvider.kt`, `FlowApplication.kt` (one `startObserving` call), `res/values/aaos_car_media_strings.xml` | C8 | car media card mirroring the video and music players | Keep; if the parent renames `GlobalPlayerState.currentVideo`, `EnhancedPlayerManager.playerState` or `EnhancedMusicPlayerManager.currentTrack`/`playerState`, re-point the observers |
-| `ui/components/layout/navigation/FlowNavigationChrome.kt`, `FlowNavigationBar.kt` | C4 | bottom navigation forced, larger icons | The parent's side rail must not return |
+| `ui/components/layout/navigation/FlowNavigationChrome.kt`, `FlowNavigationBar.kt` | C4 | bottom navigation forced, larger icons, tabs spread evenly with 16 dp edge insets | The parent's side rail must not return |
 | `ui/NavigationDestinations.kt`, `app/src/test/.../ui/NavigationDestinationsTest.kt` | C4 | the Search tab keeps the bottom bar | Keep ours |
 | `MainActivity.kt`, `utils/CarDisplayScale.kt` | C11 | one call in `attachBaseContext` scales the whole app; the scale lives in the fork-only file | Keep the call; take the parent's for the rest |
 | `shared/FlowSearchField.kt`, `ui/components/search/SearchTopBar.kt` | C5, C6, C11 | taller search field, larger buttons, 16 dp side padding | Re-apply sizes |
@@ -92,6 +92,7 @@ Run the lines one at a time (one flavour at a time saves memory). Always use fla
 | `ui/theme/Type.kt` | C5 | larger typography | Re-apply our scale on the parent's new scale |
 | `ui/screens/home/HomeScreen.kt` | C5 | larger logo and search; logo 12 dp start inset | Re-apply |
 | `ui/components/videoplayer/`, `shorts/`, `musicplayer/`, `shared/MediaPlayPauseButton.kt`, `shared/DescriptionCards.kt`, `shared/FlowDescriptionBottomSheet.kt`, `shared/MediaSeekBar*.kt`, `shared/MediaSeekTrackDrawing.kt` | C5 | larger controls and description text; minimise button size and offset; larger seek bar touch strip, track and handle | Re-apply sizes, keep the parent's logic |
+| `ui/components/FeedGridLayout.kt`, `FeedGridPolicy.kt`, `shared/card/VideoCardStacked.kt`, `ui/screens/home/HomeFeedGrid.kt` | C5 | up to 4 video tiles a row on the car, smaller tile text with only the uploader under the title, Continue Watching matches | Re-apply the car checks; keep the parent's phone and tablet values |
 | `ui/components/profiles/ProfileSwitchSheet.kt` | C5 | 56 dp profile button in the Home top bar | Re-apply the size |
 | `app/src/test/.../ui/theme/FlowTypographyTest.kt` | C5 | expects our larger type scale | Keep our sizes in the assertions |
 | `app/src/test/resources/profiles/store_inventory.tsv`, `app/src/test/.../data/backup/BackupRulesTest.kt` | C8 | declare the card's saved data as device-wide | Keep our rows; a new car store needs a row in both |

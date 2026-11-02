@@ -1,6 +1,8 @@
 package io.github.aedev.flow.ui.components.layout.navigation
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.WindowInsets
+import androidx.compose.foundation.layout.add
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreHoriz
@@ -13,6 +15,7 @@ import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.NavigationItemIconPosition
 import androidx.compose.material3.ShortNavigationBar
 import androidx.compose.material3.ShortNavigationBarArrangement
+import androidx.compose.material3.ShortNavigationBarDefaults
 import androidx.compose.material3.ShortNavigationBarItem
 import androidx.compose.material3.Text
 import androidx.compose.runtime.Composable
@@ -30,6 +33,9 @@ import io.github.aedev.flow.ui.utils.isMediumWidth
 import io.github.aedev.flow.ui.utils.rememberIsAutomotiveDevice
 
 private const val MAX_BAR_TABS = 5
+
+/** AAOS fork: the car's rounded corners and bezel cover the window edge, so tabs stop short of it. */
+private val CarBarEdgeInset = 16.dp
 
 /**
  * The bottom navigation bar. Material allows at most five destinations in a bar, so a sixth and
@@ -51,8 +57,18 @@ internal fun FlowNavigationBar(
     ShortNavigationBar(
         modifier = modifier,
         containerColor = MaterialTheme.colorScheme.surface,
+        windowInsets =
+            if (isAutomotiveDevice) {
+                ShortNavigationBarDefaults.windowInsets.add(WindowInsets(left = CarBarEdgeInset, right = CarBarEdgeInset))
+            } else {
+                ShortNavigationBarDefaults.windowInsets
+            },
         arrangement =
-            if (horizontalItems) ShortNavigationBarArrangement.Centered else ShortNavigationBarArrangement.EqualWeight,
+            if (horizontalItems && !isAutomotiveDevice) {
+                ShortNavigationBarArrangement.Centered
+            } else {
+                ShortNavigationBarArrangement.EqualWeight
+            },
     ) {
         barTabs.forEach { tab ->
             val selected = tab == selectedTab

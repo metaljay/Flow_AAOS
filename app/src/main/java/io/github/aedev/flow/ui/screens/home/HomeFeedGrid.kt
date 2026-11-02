@@ -27,6 +27,7 @@ import io.github.aedev.flow.ui.components.shared.card.VideoCardLayout
 import io.github.aedev.flow.ui.components.shared.dpadFocusGroup
 import io.github.aedev.flow.ui.components.shared.feedStripCardWidth
 import io.github.aedev.flow.ui.components.shared.rememberFeedGridPlan
+import io.github.aedev.flow.ui.utils.rememberIsAutomotiveDevice
 
 private const val FEED_FOOTER_MIN_VIDEOS = 100
 private val FeedTopPadding = 4.dp
@@ -72,7 +73,13 @@ internal fun HomeFeedGrid(
             itemsKey = rows,
             compactRowSpacing = if (isListView) 0.dp else feedLayout.cardSpacing,
         )
-    val stripCardWidth = feedStripCardWidth(feedLayout.rowWidth, ContinueWatchingShelfDefaults.CardWidth)
+    val isAutomotiveDevice = rememberIsAutomotiveDevice()
+    val stripCardWidth =
+        if (isAutomotiveDevice && !feedLayout.isCompact) {
+            feedLayout.cardWidth
+        } else {
+            feedStripCardWidth(feedLayout.rowWidth, ContinueWatchingShelfDefaults.CardWidth)
+        }
 
     LazyVerticalGrid(
         columns = plan.cells,

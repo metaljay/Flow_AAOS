@@ -9,12 +9,19 @@ import androidx.window.core.layout.WindowSizeClass
 import io.github.aedev.flow.data.local.HomeFeedColumns
 import io.github.aedev.flow.ui.components.shared.card.VideoCardDefaults
 import io.github.aedev.flow.ui.theme.Dimensions
+import io.github.aedev.flow.ui.utils.rememberIsAutomotiveDevice
 
 /**
  * Narrowest a grid cell may be before the grid drops a column: a 260 dp card plus the 12 dp gutter
  * the grid used to add between cells, so the counts the per-screen width tables produced survive.
  */
 val FeedCardMinWidth = 272.dp
+
+/**
+ * AAOS fork: the narrowest tile that keeps a readable title beside its menu at the whole-app size
+ * scale. An 850 dp window fits [CAR_FEED_COLUMNS]; a denser car screen drops to three.
+ */
+private val CarFeedCardMinWidth = 176.dp
 
 /** Widest a capped cell may grow before a very wide window adds a column anyway. */
 private val FeedCardMaxWidth = 460.dp
@@ -129,7 +136,14 @@ fun rememberFeedGridLayout(
     columnPreference: HomeFeedColumns = HomeFeedColumns.AUTO,
     maxAutoColumns: Int = FEED_MAX_AUTO_COLUMNS,
     minCellWidth: Dp = FeedCardMinWidth,
-): FeedGridLayout =
-    remember(maxWidth, columnPreference, maxAutoColumns, minCellWidth) {
-        feedGridLayoutFor(maxWidth, columnPreference, maxAutoColumns, minCellWidth)
+): FeedGridLayout {
+    val isAutomotiveDevice = rememberIsAutomotiveDevice()
+    return remember(maxWidth, columnPreference, maxAutoColumns, minCellWidth, isAutomotiveDevice) {
+        feedGridLayoutFor(
+            maxWidth = maxWidth,
+            columnPreference = columnPreference,
+            maxAutoColumns = if (isAutomotiveDevice) CAR_FEED_COLUMNS else maxAutoColumns,
+            minCellWidth = if (isAutomotiveDevice) CarFeedCardMinWidth else minCellWidth,
+        )
     }
+}
