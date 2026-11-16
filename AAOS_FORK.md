@@ -84,7 +84,7 @@ The owner has no coding experience, copy-pastes messages between chats, and depe
 | ID | Customisation | In one line |
 | --- | --- | --- |
 | C1 | Play identity | Release application ID stays exactly `com.JF_Flow`; namespace stays the parent's. |
-| C2 | AAOS manifest | Automotive features, car launcher entry, automotive app descriptor and `distractionOptimized` stay. |
+| C2 | AAOS manifest | Automotive features, car launcher entry and automotive app descriptor stay; every activity carries `distractionOptimized`. |
 | C3 | Camera optional | Both camera features stay `required="false"` so the car can install the app. |
 | C4 | Bottom navigation | Navigation stays at the bottom at every window size and on search, tabs spread evenly across the bar; no side rail. |
 | C5 | Calm car layout | The parent's own sizes, with a few car changes: up to 4 simple video tiles a row, small floating-tile buttons, a seek bar that is easy to grab. |
@@ -156,9 +156,9 @@ Each block uses the same four headings. **After a parent update** is what the sy
 ### C2. AAOS manifest
 
 - **What and why:** lets the car recognise Flow as a car app, list it in the car's app grid and run its screens under the car's driving rules.
-- **Where:** `app/src/main/AndroidManifest.xml` (automotive feature declarations, car launcher entry, MediaBrowser metadata, `distractionOptimized="true"` on the required activities and aliases, and the explanatory `KEEP` note); `app/src/main/res/xml/automotive_app_desc.xml`.
-- **After a parent update:** keep every AAOS entry and the `KEEP` note. Give any new parent activity or launcher alias the same `distractionOptimized` metadata.
-- **Check:** in the merged release manifest the automotive feature is optional, the automotive app descriptor and car launcher entry are present, and every launcher activity and alias carries `distractionOptimized`.
+- **Where:** `app/src/github/AndroidManifest.xml` (the Discord login activity's `distractionOptimized` line); `app/src/main/AndroidManifest.xml` (automotive feature declarations, car launcher entry, MediaBrowser metadata, `distractionOptimized="true"` on every activity and activity alias, and the explanatory `KEEP` note); `app/src/main/res/xml/automotive_app_desc.xml`.
+- **After a parent update:** keep every AAOS entry and the `KEEP` note. **Rule (owner, 2026-11-16): every activity and activity alias in our manifest files (`app/src/main/` and `app/src/github/`) carries the `distractionOptimized` metadata, launcher or not.** Give any activity or alias the parent adds the same line. Activities that libraries add by themselves (Media3's Bluetooth check, Glance's two invisible widget helpers) are not in our files and are left alone.
+- **Check:** in the merged release manifest the automotive feature is optional, the automotive app descriptor and car launcher entry are present, and the only activities without `distractionOptimized` are the three library ones named above.
 
 ### C3. Camera optional
 

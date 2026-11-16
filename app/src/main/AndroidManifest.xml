@@ -116,7 +116,7 @@
             android:name="com.android.automotive"
             android:resource="@xml/automotive_app_desc" />
 
-        <!-- KEEP for this AAOS build: retain distractionOptimized metadata on the main and TV activities and every launcher alias when syncing upstream. -->
+        <!-- KEEP for this AAOS build: every activity and activity-alias in this file carries distractionOptimized metadata, launcher or not. Give any activity the parent adds the same line when syncing upstream. -->
         <activity
             android:name=".TvActivity"
             android:banner="@drawable/tv_banner"
@@ -339,6 +339,7 @@
             <intent-filter>
                 <action android:name="android.appwidget.action.APPWIDGET_CONFIGURE" />
             </intent-filter>
+            <meta-data android:name="distractionOptimized" android:value="true" />
         </activity>
         <receiver
             android:name=".widget.nowplaying.NowPlayingWidgetReceiver"

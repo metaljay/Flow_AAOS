@@ -8,7 +8,10 @@
         <activity
             android:name="io.github.aedev.flow.discord.DiscordLoginActivity"
             android:exported="false"
-            android:theme="@style/Theme.Flow" />
+            android:theme="@style/Theme.Flow">
+            <!-- AAOS C2: every activity carries distractionOptimized. -->
+            <meta-data android:name="distractionOptimized" android:value="true" />
+        </activity>
 
         <receiver
             android:name="io.github.aedev.flow.updater.UpdateInstallReceiver"
