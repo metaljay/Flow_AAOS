@@ -22,14 +22,16 @@ import io.github.aedev.flow.data.local.PlayerOverlayPreferences
 import io.github.aedev.flow.data.local.PlayerPreferences
 import io.github.aedev.flow.player.EnhancedPlayerManager
 import io.github.aedev.flow.ui.theme.PlayerScrim
+import io.github.aedev.flow.ui.utils.CarLayout
 import io.github.aedev.flow.utils.formatMultiplierLabel
 
-private val OverlayActionButtonSize = 52.dp
-private val OverlayActionIconSize = 30.dp
-private val OverlayActionSpacing = 12.dp
-internal val OverlayPillHeight = 40.dp
-private val OverlayExpandIconSize = 24.dp
-private val OverlayControlRowMinHeight = 56.dp
+private val OverlayActionButtonSize = 40.dp
+private val OverlayActionIconSize = 24.dp
+private val OverlayActionSpacing = 8.dp
+internal val OverlayPillHeight = 28.dp
+private val OverlayExpandIconSize = 18.dp
+private val OverlayControlRowMinHeight = 44.dp
+private val OverlayActionIconInset = (OverlayActionButtonSize - OverlayActionIconSize) / 2f
 
 /** Tint over the video while the controls are up; the loading state blacks it out entirely. */
 private const val CONTROLS_BACKDROP_ALPHA = 0.24f
@@ -132,22 +134,14 @@ internal fun PlayerControlsOverlay(
         animatedInset(
             target =
                 when {
-                    isPortraitFullscreen -> 20.dp
+                    isPortraitFullscreen -> 16.dp
                     isFullscreen -> maxOf(56.dp, cutoutHorizontalPadding)
-                    else -> 16.dp
+                    else -> 12.dp
                 },
             label = "bottomControlPadding",
         )
     val topControlHorizontalPadding =
-        animatedInset(
-            target =
-                when {
-                    isPortraitFullscreen -> 20.dp
-                    isFullscreen -> maxOf(56.dp, cutoutHorizontalPadding)
-                    else -> 16.dp
-                },
-            label = "topControlPadding",
-        )
+        CarLayout.edgePadding((bottomControlHorizontalPadding - OverlayActionIconInset).coerceAtLeast(0.dp)) // AAOS C6
     val topControlVerticalPadding = if (isFullscreen) 8.dp else 4.dp
     val fullscreenTopPadding =
         when {

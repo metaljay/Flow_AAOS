@@ -20,10 +20,7 @@ import io.github.aedev.flow.data.model.Video
 import io.github.aedev.flow.ui.components.shared.ChannelAvatarStack
 import io.github.aedev.flow.ui.components.shared.LocalDpadNavigation
 import io.github.aedev.flow.ui.components.shared.videoMetadataLine
-import io.github.aedev.flow.ui.utils.rememberIsAutomotiveDevice
-
-/** AAOS fork: the tight title lines Continue Watching uses, so more of each tile is thumbnail. */
-private const val CAR_TITLE_LINE_HEIGHT = 1.12f
+import io.github.aedev.flow.ui.utils.CarLayout
 
 /** The thumbnail across the full width with the details beneath: feeds and grids. */
 @Composable
@@ -39,7 +36,6 @@ internal fun VideoCardStacked(
     val state = rememberVideoCardState(video)
     val cardPreferences = LocalVideoCardPreferences.current
     val actions = LocalVideoCardActions.current
-    val isAutomotiveDevice = rememberIsAutomotiveDevice()
 
     Column(
         modifier =
@@ -62,13 +58,9 @@ internal fun VideoCardStacked(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(
-                        start = if (showChannel) 8.dp else 12.dp,
-                        top = if (isAutomotiveDevice) 8.dp else 12.dp,
-                        bottom = if (isAutomotiveDevice) 8.dp else 12.dp,
-                    ),
+                    .padding(start = if (showChannel) 8.dp else 12.dp, top = 12.dp, bottom = 12.dp),
             avatar = {
-                if (showChannel) {
+                if (showChannel && CarLayout.tileShowsExtras) { // AAOS C5
                     ChannelAvatarStack(
                         urls = state.avatarUrls,
                         contentDescription = state.channelName,
@@ -82,51 +74,41 @@ internal fun VideoCardStacked(
                 }
             },
             actions = {
-                VideoCardSideActions(
-                    state = state,
-                    showWatched = false,
-                    onWatched = actions.onWatched,
-                    alignTo = 12.dp,
-                )
+                if (CarLayout.tileShowsExtras) { // AAOS C5
+                    VideoCardSideActions(
+                        state = state,
+                        showWatched = false,
+                        onWatched = actions.onWatched,
+                        alignTo = 12.dp,
+                    )
+                }
             },
         ) {
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = state.title,
-                    style =
-                        if (isAutomotiveDevice) {
-                            MaterialTheme.typography.bodySmallEmphasized.run {
-                                copy(lineHeight = fontSize * CAR_TITLE_LINE_HEIGHT)
-                            }
-                        } else {
-                            MaterialTheme.typography.titleMedium
-                        },
+                    style = MaterialTheme.typography.titleMedium,
                     color = MaterialTheme.colorScheme.onSurface,
-                    maxLines = 2,
+                    maxLines = CarLayout.tileTitleLines(2), // AAOS C5
                     overflow = TextOverflow.Ellipsis,
                 )
 
-                val uploaderOnly = isAutomotiveDevice && showChannel && !video.isUpcoming
                 Text(
                     text =
-                        if (uploaderOnly) {
-                            state.channelName
-                        } else {
-                            videoMetadataLine(
-                                video = video,
-                                isUpcoming = video.isUpcoming,
-                                channelName = state.channelName,
-                                includeChannel = showChannel,
-                            )
-                        },
-                    style = if (isAutomotiveDevice) MaterialTheme.typography.labelSmall else MaterialTheme.typography.bodySmall,
+                        CarLayout.tileUploaderLine(state.channelName, showChannel, video.isUpcoming) ?: videoMetadataLine( // AAOS C5
+                            video = video,
+                            isUpcoming = video.isUpcoming,
+                            channelName = state.channelName,
+                            includeChannel = showChannel,
+                        ),
+                    style = MaterialTheme.typography.bodySmall,
                     color =
                         if (video.isUpcoming) {
                             MaterialTheme.colorScheme.primary
                         } else {
                             MaterialTheme.colorScheme.onSurfaceVariant
                         },
-                    maxLines = if (uploaderOnly) 1 else 2,
+                    maxLines = 2,
                     overflow = TextOverflow.Ellipsis,
                 )
 

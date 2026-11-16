@@ -8,7 +8,6 @@ import androidx.compose.material3.TopAppBarDefaults
 import androidx.compose.runtime.Composable
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.text.font.FontWeight
-import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 
 /**
@@ -22,14 +21,6 @@ import androidx.compose.ui.unit.dp
 object FlowTopBarDefaults {
     /** Status bar padding is applied once by the root scaffold, never by an individual bar. */
     val WindowInsets: WindowInsets = WindowInsets(0.dp)
-
-    val BarHeight: Dp = 72.dp
-
-    /** AAOS fork: keeps the trailing actions clear of the Polestar 3 display's rounded right edge. */
-    val ActionsEndInset: Dp = 12.dp
-
-    /** AAOS fork: the same clearance for the back button at the left edge. */
-    val BackStartInset: Dp = 12.dp
 
     /**
      * Internal because [TopAppBarColors] is an experimental Material type: exposing it would force
@@ -47,8 +38,8 @@ object FlowTopBarDefaults {
         )
 
     val titleStyle: TextStyle
-        @Composable get() = MaterialTheme.typography.headlineMedium.copy(fontWeight = FontWeight.Bold)
+        @Composable get() = MaterialTheme.typography.titleLarge.copy(fontWeight = FontWeight.Bold)
 
     val subtitleStyle: TextStyle
-        @Composable get() = MaterialTheme.typography.bodyMedium
+        @Composable get() = MaterialTheme.typography.bodySmall
 }

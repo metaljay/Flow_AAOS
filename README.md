@@ -33,8 +33,8 @@ Changes from the original Flow project (the "parent") are brought into this copy
 | | Change | Details |
 | --- | --- | --- |
 | 🧭 | **Navigation stays at the bottom**, with the tabs spread evenly across the car's wide screen. | [More](AAOS_FORK.md#c4-bottom-navigation-at-every-window-size) |
-| 👀 | **Bigger text, icons, buttons and player controls**, easy to read and tap at a glance. | [More](AAOS_FORK.md#c5-large-display-legibility) |
-| 🔍 | **The whole app is drawn 1.5 times larger**, so every screen, including search, is easy to tap. | [More](AAOS_FORK.md#c11-whole-app-size-scale) |
+| 👀 | **A calm, uncluttered layout**: up to four simple video tiles a row (picture, one-line title, uploader) and a seek bar that is easy to grab. | [More](AAOS_FORK.md#c5-calm-car-layout) |
+| 🔍 | **The whole app is drawn 1.5 times larger**, so every screen is easy to read and tap. | [More](AAOS_FORK.md#c11-whole-app-size-scale) |
 | 👆 | **Nothing you tap hides under the screen's rounded edges.** | [More](AAOS_FORK.md#c6-display-safe-area) |
 | 🚗 | **Works as a car app**: it appears in the car's app list and the car lets its screens run. | [More](AAOS_FORK.md#c2-aaos-manifest) |
 | 🎵 | **The car's home screen media card** shows what Flow is playing. | [More](AAOS_FORK.md#c8-car-media-card) |

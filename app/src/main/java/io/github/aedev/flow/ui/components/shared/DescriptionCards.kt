@@ -106,8 +106,8 @@ internal fun DescriptionBody(
                     style =
                         MaterialTheme.typography.bodyMedium.copy(
                             color = tint.onContainer,
-                            lineHeight = 28.sp,
-                            fontSize = 19.sp,
+                            lineHeight = 24.sp,
+                            fontSize = 15.sp,
                         ),
                     maxLines = if (expanded) Int.MAX_VALUE else COLLAPSED_BODY_LINES,
                     overflow = TextOverflow.Ellipsis,

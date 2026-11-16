@@ -2,12 +2,7 @@ package io.github.aedev.flow.ui.components.layout.topbar
 
 import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.RowScope
-import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.WindowInsets
-import androidx.compose.foundation.layout.heightIn
-import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
-import androidx.compose.foundation.layout.width
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.automirrored.filled.ArrowBack
 import androidx.compose.material3.ExperimentalMaterial3Api
@@ -20,8 +15,8 @@ import androidx.compose.runtime.Composable
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.style.TextOverflow
-import androidx.compose.ui.unit.dp
 import io.github.aedev.flow.R
+import io.github.aedev.flow.ui.utils.CarLayout
 
 /**
  * Which screens show the app-shell actions ([FlowGlobalActions]).
@@ -100,7 +95,7 @@ fun FlowTopBar(
         }
 
     TopAppBar(
-        modifier = modifier.heightIn(min = FlowTopBarDefaults.BarHeight),
+        modifier = modifier,
         title = title,
         navigationIcon = {
             when {
@@ -109,14 +104,10 @@ fun FlowTopBar(
                 }
 
                 onBack != null -> {
-                    IconButton(
-                        onClick = onBack,
-                        modifier = Modifier.padding(start = FlowTopBarDefaults.BackStartInset).size(56.dp),
-                    ) {
+                    IconButton(onClick = onBack) {
                         Icon(
                             imageVector = Icons.AutoMirrored.Filled.ArrowBack,
                             contentDescription = stringResource(R.string.btn_back),
-                            modifier = Modifier.size(32.dp),
                         )
                     }
                 }
@@ -128,10 +119,9 @@ fun FlowTopBar(
                 FlowGlobalActionsRow()
             }
             trailingAction?.invoke()
-            Spacer(Modifier.width(FlowTopBarDefaults.ActionsEndInset))
         },
         colors = FlowTopBarDefaults.colors(),
-        windowInsets = windowInsets,
+        windowInsets = CarLayout.edgeInsets(windowInsets), // AAOS C6
     )
 }
 

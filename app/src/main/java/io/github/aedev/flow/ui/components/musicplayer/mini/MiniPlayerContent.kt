@@ -228,19 +228,15 @@ internal fun MiniPlayerContent(
         }
 
         Row(
-            horizontalArrangement = Arrangement.spacedBy(8.dp),
+            horizontalArrangement = Arrangement.spacedBy(2.dp),
             verticalAlignment = Alignment.CenterVertically,
         ) {
             if (elsewhere != null) PlayOnButton()
             if (showPrevious) {
-                IconButton(
-                    onClick = { EnhancedMusicPlayerManager.playPrevious() },
-                    modifier = Modifier.size(48.dp),
-                ) {
+                IconButton(onClick = { EnhancedMusicPlayerManager.playPrevious() }) {
                     Icon(
                         imageVector = Icons.Rounded.SkipPrevious,
                         contentDescription = stringResource(R.string.previous),
-                        modifier = Modifier.size(28.dp),
                         tint = MaterialTheme.colorScheme.onSurfaceVariant,
                     )
                 }
@@ -253,14 +249,10 @@ internal fun MiniPlayerContent(
                     EnhancedMusicPlayerManager.togglePlayPause()
                 },
             )
-            IconButton(
-                onClick = { EnhancedMusicPlayerManager.playNext() },
-                modifier = Modifier.size(48.dp),
-            ) {
+            IconButton(onClick = { EnhancedMusicPlayerManager.playNext() }) {
                 Icon(
                     imageVector = Icons.Rounded.SkipNext,
                     contentDescription = stringResource(R.string.next),
-                    modifier = Modifier.size(28.dp),
                     tint = MaterialTheme.colorScheme.onSurfaceVariant,
                 )
             }

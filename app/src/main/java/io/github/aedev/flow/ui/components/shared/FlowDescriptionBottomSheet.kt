@@ -126,7 +126,7 @@ fun FlowDescriptionBottomSheet(
                 modifier = dragModifier,
                 titleStyle =
                     MaterialTheme.typography.titleLarge.copy(
-                        fontSize = 24.sp,
+                        fontSize = 20.sp,
                         fontWeight = FontWeight.Bold,
                     ),
                 actions = {
@@ -162,7 +162,7 @@ fun FlowDescriptionBottomSheet(
             SelectionContainer {
                 Text(
                     text = video.title,
-                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 22.sp),
+                    style = MaterialTheme.typography.titleMedium.copy(fontSize = 18.sp),
                     fontWeight = FontWeight.Bold,
                     color = MaterialTheme.colorScheme.onSurface,
                 )

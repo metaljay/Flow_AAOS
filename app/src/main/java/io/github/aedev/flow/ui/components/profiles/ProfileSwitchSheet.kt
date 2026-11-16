@@ -11,7 +11,6 @@ import androidx.compose.foundation.layout.Column
 import androidx.compose.foundation.layout.Spacer
 import androidx.compose.foundation.layout.height
 import androidx.compose.foundation.layout.padding
-import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.ExpandLess
 import androidx.compose.material.icons.filled.ExpandMore
@@ -88,7 +87,7 @@ fun ProfileTopBarAction(
     var open by rememberSaveable { mutableStateOf(false) }
     val description = stringResource(R.string.profiles_action_description, running.displayName(context))
 
-    IconButton(onClick = { open = true }, modifier = Modifier.size(56.dp).semantics { contentDescription = description }) {
+    IconButton(onClick = { open = true }, modifier = Modifier.semantics { contentDescription = description }) {
         ProfileAvatar(running, size = TopBarAvatarSize)
     }
 

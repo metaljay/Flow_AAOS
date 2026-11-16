@@ -105,7 +105,7 @@ class VideoPlayerTopBarSpacingTest {
         )
 
     @Test
-    fun `every action in the top row is the expected size`() {
+    fun `every action in the top row is the same size`() {
         setTopBar()
 
         val widths =
@@ -116,25 +116,16 @@ class VideoPlayerTopBarSpacingTest {
                     .size.width
             }
 
-        val standardExpected = with(rule.density) { actionButtonSize.roundToPx() }
-        val minimizeExpected = with(rule.density) { (actionButtonSize + 8.dp).roundToPx() }
-        val minimizeDesc = context.getString(R.string.btn_minimize)
-
-        val expected =
-            rowDescriptions().associateWith { desc ->
-                if (desc == minimizeDesc) minimizeExpected else standardExpected
-            }
-
-        assertThat(widths).containsExactlyEntriesIn(expected)
+        val expected = with(rule.density) { actionButtonSize.roundToPx() }
+        assertThat(widths).containsExactlyEntriesIn(rowDescriptions().associateWith { expected })
     }
 
     @Test
-    fun `the gap between neighbouring standard actions in each cluster is even`() {
+    fun `the gap between neighbouring actions in each cluster is even`() {
         setTopBar()
 
-        val standardDescriptions = rowDescriptions().filterNot { it == context.getString(R.string.btn_minimize) }
         val bounds =
-            standardDescriptions
+            rowDescriptions()
                 .map { description ->
                     rule.onNodeWithContentDescription(description).fetchSemanticsNode().boundsInRoot
                 }.sortedBy { it.left }

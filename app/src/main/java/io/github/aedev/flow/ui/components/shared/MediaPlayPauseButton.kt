@@ -22,7 +22,7 @@ import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.dp
 import io.github.aedev.flow.R
 
-private val PlayButtonSize = 52.dp
+private val PlayButtonSize = 48.dp
 private val PlayButtonPressedWidth = 60.dp
 private val PlayButtonPlayingCorner = 14.dp
 
@@ -66,7 +66,6 @@ fun MediaPlayPauseButton(
             Icon(
                 imageVector = if (isPlaying) Icons.Rounded.Pause else Icons.Rounded.PlayArrow,
                 contentDescription = stringResource(if (isPlaying) R.string.pause else R.string.play),
-                modifier = Modifier.size(30.dp),
             )
         }
     }

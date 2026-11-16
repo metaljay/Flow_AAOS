@@ -14,10 +14,11 @@ import androidx.compose.ui.util.lerp
 import io.github.aedev.flow.data.model.SponsorBlockSegment
 import io.github.aedev.flow.ui.theme.SPONSOR_BLOCK_SEGMENT_ALPHA
 import io.github.aedev.flow.ui.theme.defaultSponsorBlockColor
+import io.github.aedev.flow.ui.utils.CarLayout
 import org.schabi.newpipe.extractor.stream.StreamSegment
 
-internal val RestTrackHeight = 7.dp
-internal val ActiveTrackHeight = 14.dp
+internal val RestTrackHeight = CarLayout.seekTrackRest(5.dp) // AAOS C5
+internal val ActiveTrackHeight = CarLayout.seekTrackActive(10.dp) // AAOS C5
 
 /**
  * Paints the track: base, buffered, progress, chapter gaps and SponsorBlock segments.

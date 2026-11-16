@@ -133,7 +133,7 @@ fun HomeScreen(
                         stringResource(R.string.app_name_uppercase),
                         modifier = logoClicks,
                         style =
-                            MaterialTheme.typography.headlineMedium.copy(
+                            MaterialTheme.typography.titleLarge.copy(
                                 fontWeight = FontWeight.ExtraBold,
                                 letterSpacing = 1.sp,
                             ),
@@ -144,21 +144,17 @@ fun HomeScreen(
                         {
                             FlowHeaderLogoIcon(
                                 isDeepFlowActive = deepFlowActive,
-                                modifier = Modifier.padding(start = 12.dp).size(44.dp).then(logoClicks),
+                                modifier = Modifier.size(32.dp).then(logoClicks),
                             )
                         }
                     } else {
                         null
                     },
                 actions = {
-                    IconButton(
-                        onClick = onSearchClick,
-                        modifier = Modifier.size(56.dp),
-                    ) {
+                    IconButton(onClick = onSearchClick) {
                         Icon(
                             Icons.Outlined.Search,
                             contentDescription = stringResource(R.string.search),
-                            modifier = Modifier.size(32.dp),
                         )
                     }
                 },

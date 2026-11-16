@@ -20,16 +20,16 @@ private fun baseTypography(family: FontFamily) =
             TextStyle(
                 fontFamily = family,
                 fontWeight = FontWeight.Bold,
-                fontSize = 38.sp,
-                lineHeight = 44.sp,
+                fontSize = 34.sp,
+                lineHeight = 40.sp,
                 letterSpacing = 0.sp,
             ),
         displayMedium =
             TextStyle(
                 fontFamily = family,
                 fontWeight = FontWeight.Bold,
-                fontSize = 34.sp,
-                lineHeight = 42.sp,
+                fontSize = 28.sp,
+                lineHeight = 36.sp,
                 letterSpacing = 0.sp,
             ),
         displaySmall = MaterialScale.displaySmall.copy(fontFamily = family),
@@ -38,16 +38,16 @@ private fun baseTypography(family: FontFamily) =
             TextStyle(
                 fontFamily = family,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 30.sp,
-                lineHeight = 38.sp,
+                fontSize = 24.sp,
+                lineHeight = 32.sp,
                 letterSpacing = 0.sp,
             ),
         headlineMedium =
             TextStyle(
                 fontFamily = family,
                 fontWeight = FontWeight.SemiBold,
-                fontSize = 26.sp,
-                lineHeight = 34.sp,
+                fontSize = 20.sp,
+                lineHeight = 28.sp,
                 letterSpacing = 0.sp,
             ),
         headlineSmall = MaterialScale.headlineSmall.copy(fontFamily = family),
@@ -56,24 +56,24 @@ private fun baseTypography(family: FontFamily) =
             TextStyle(
                 fontFamily = family,
                 fontWeight = FontWeight.Medium,
-                fontSize = 24.sp,
-                lineHeight = 32.sp,
+                fontSize = 18.sp,
+                lineHeight = 24.sp,
                 letterSpacing = 0.sp,
             ),
         titleMedium =
             TextStyle(
                 fontFamily = family,
                 fontWeight = FontWeight.Medium,
-                fontSize = 22.sp,
-                lineHeight = 30.sp,
+                fontSize = 16.sp,
+                lineHeight = 22.sp,
                 letterSpacing = 0.1.sp,
             ),
         titleSmall =
             TextStyle(
                 fontFamily = family,
                 fontWeight = FontWeight.Medium,
-                fontSize = 20.sp,
-                lineHeight = 28.sp,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
                 letterSpacing = 0.1.sp,
             ),
         // Body - Main content
@@ -81,24 +81,24 @@ private fun baseTypography(family: FontFamily) =
             TextStyle(
                 fontFamily = family,
                 fontWeight = FontWeight.Normal,
-                fontSize = 22.sp,
-                lineHeight = 30.sp,
+                fontSize = 16.sp,
+                lineHeight = 24.sp,
                 letterSpacing = 0.5.sp,
             ),
         bodyMedium =
             TextStyle(
                 fontFamily = family,
                 fontWeight = FontWeight.Normal,
-                fontSize = 20.sp,
-                lineHeight = 28.sp,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
                 letterSpacing = 0.25.sp,
             ),
         bodySmall =
             TextStyle(
                 fontFamily = family,
                 fontWeight = FontWeight.Normal,
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
                 letterSpacing = 0.4.sp,
             ),
         // Label - Buttons, tabs
@@ -106,24 +106,24 @@ private fun baseTypography(family: FontFamily) =
             TextStyle(
                 fontFamily = family,
                 fontWeight = FontWeight.Medium,
-                fontSize = 20.sp,
-                lineHeight = 28.sp,
+                fontSize = 14.sp,
+                lineHeight = 20.sp,
                 letterSpacing = 0.1.sp,
             ),
         labelMedium =
             TextStyle(
                 fontFamily = family,
                 fontWeight = FontWeight.Medium,
-                fontSize = 18.sp,
-                lineHeight = 26.sp,
+                fontSize = 12.sp,
+                lineHeight = 16.sp,
                 letterSpacing = 0.5.sp,
             ),
         labelSmall =
             TextStyle(
                 fontFamily = family,
                 fontWeight = FontWeight.Medium,
-                fontSize = 16.sp,
-                lineHeight = 24.sp,
+                fontSize = 11.sp,
+                lineHeight = 16.sp,
                 letterSpacing = 0.5.sp,
             ),
     )

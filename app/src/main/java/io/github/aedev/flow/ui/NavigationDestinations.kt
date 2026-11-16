@@ -5,6 +5,7 @@ import androidx.navigation.NavController
 import io.github.aedev.flow.data.shorts.queue.ShortsQueueSource
 import io.github.aedev.flow.ui.components.layout.navigation.DOWNLOADS_ROUTE
 import io.github.aedev.flow.ui.components.layout.navigation.FlowTab
+import io.github.aedev.flow.utils.CarDisplay
 import java.net.URI
 import java.net.URLEncoder
 
@@ -59,8 +60,8 @@ internal fun NavController.navigateToTab(
 /** The first tab a video opened from the Shorts tab can play over: any visible tab but Shorts itself. */
 internal fun shortsExitRoute(tabs: List<FlowTab>): String = (tabs.firstOrNull { it != FlowTab.Shorts } ?: FlowTab.Home).route
 
-/** AAOS fork: every tab keeps the bar, so search results are never a dead end in the car. */
-internal fun FlowTab?.showsNavigationBar(): Boolean = this != null
+/** Search is a tab, but it keeps the back-button layout of the other search screens, so no bar. */
+internal fun FlowTab?.showsNavigationBar(): Boolean = this != null && (this != FlowTab.Search || CarDisplay.isCar) // AAOS C4
 
 internal fun youtubeChannelUrl(channelIdOrHandle: String): String? {
     val value = channelIdOrHandle.trim()
