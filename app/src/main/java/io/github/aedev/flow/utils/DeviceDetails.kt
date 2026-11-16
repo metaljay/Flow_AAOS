@@ -39,7 +39,8 @@ data class DeviceFactGroup(
 object DeviceDetails {
     fun collect(context: Context): List<DeviceFactGroup> {
         val unknown = context.getString(R.string.unknown)
-        return listOf(
+        return listOfNotNull(
+            CarReadout.group(context), // AAOS C8
             DeviceFactGroup(R.string.device_info_section_device, device(context, unknown)),
             DeviceFactGroup(R.string.device_info_section_system, system(context, unknown)),
             DeviceFactGroup(R.string.device_info_section_display, display(context, unknown)),
