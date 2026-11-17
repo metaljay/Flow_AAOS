@@ -11,7 +11,7 @@ import android.service.media.MediaBrowserService
  * whichever of Flow's video or music players played last, and refills it from disk when the car
  * binds after the app was closed.
  */
-class FlowCarMediaBrowserService : MediaBrowserService() {
+open class FlowCarMediaBrowserService : MediaBrowserService() {
     override fun onCreate() {
         super.onCreate()
         FlowCarMediaSession.startObserving(this)

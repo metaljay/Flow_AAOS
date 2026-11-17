@@ -101,6 +101,7 @@ object FlowCarMediaSession {
         observing = true
         val ctx = context.applicationContext
         appContext = ctx
+        FlowCarMediaServices.apply(ctx)
         val scope = CoroutineScope(SupervisorJob() + Dispatchers.Main.immediate)
         scope.launch {
             combine(GlobalPlayerState.currentVideo, EnhancedPlayerManager.getInstance().playerState) { video, state ->
@@ -146,7 +147,7 @@ object FlowCarMediaSession {
         appContext = ctx
         return MediaSession(ctx, TAG).apply {
             setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS or MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS)
-            setExtras(Bundle().apply { putString(CAR_EXTRA_BROWSE_SERVICE_FOR_SESSION, FlowCarMediaBrowserService::class.java.name) })
+            setExtras(Bundle().apply { putString(CAR_EXTRA_BROWSE_SERVICE_FOR_SESSION, FlowCarMediaServices.browseServiceClass(ctx)) })
             launchPendingIntent(ctx, 0)?.let(::setSessionActivity)
             setCallback(callback, mainHandler)
             session = this

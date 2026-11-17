@@ -229,6 +229,19 @@
             <meta-data android:name="distractionOptimized" android:value="true" />
         </activity>
         
+        <!-- AAOS fork: switched on at start-up only when the car reports templates_host.media; the CalMediaActivityComponent line makes the car's media app open Flow instead of its own media screen. -->
+        <service
+            android:name=".service.FlowCarLaunchableMediaService"
+            android:enabled="false"
+            android:exported="true"
+            android:label="@string/app_launcher_name">
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+            <meta-data android:name="androidx.car.app.launchable" android:value="true" />
+            <meta-data android:name="androidx.car.app.media.CalMediaActivityComponent" android:value="${applicationId}/io.github.aedev.flow.MainActivity" />
+        </service>
+
         <!-- AAOS fork: the car media card source; declared before Media3MusicService so the car picks it for this package. -->
         <service
             android:name=".service.FlowCarMediaBrowserService"
@@ -237,7 +250,7 @@
             <intent-filter>
                 <action android:name="android.media.browse.MediaBrowserService" />
             </intent-filter>
-            <!-- No androidx.car.app.launchable here: on the Polestar launcher it makes the app icon open the car's media screen instead of the app. -->
+            <!-- Used when the car lacks templates_host.media; no launchable here: on the Polestar launcher it makes the app icon open the car's media screen instead of the app. -->
         </service>
 
         <!-- AAOS fork: read-only artwork for the car media card (AAOS needs a content:// URI). -->
