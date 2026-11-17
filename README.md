@@ -42,7 +42,7 @@ Changes from the original Flow project (the "parent") are brought into this copy
 | ▶️ | **Red YouTube-style play icon** in the car's app list. | [More](AAOS_FORK.md#c7-launcher-icon) |
 | 📦 | **Updates come through your own Play Store listing**, so they reach the car. | [More](AAOS_FORK.md#c1-play-identity) |
 
-**Known limit:** after a full restart of the car, the home screen media card stays blank. That is the price of the app icon opening the app properly; see the [car notes](AAOS_CAR_NOTES.md).
+**Being tried:** the home screen media card should now refill after a full restart of the car, while the app icon still opens the app. If the car does not cooperate, the icon may open the car's media screen instead until the next release; see the [car notes](AAOS_CAR_NOTES.md).
 
 ## 📲 Getting it on the car
 

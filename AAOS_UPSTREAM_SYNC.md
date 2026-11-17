@@ -61,7 +61,7 @@ The owner cannot read code, so this report is how they decide. Write it in plain
 
 - Keep OUR version code and name in `app/build.gradle.kts` (take ours on any conflict); never copy the parent's. The release stage raises them.
 - Release `applicationId` is exactly `com.JF_Flow` (C1).
-- The merged release manifest still has the AAOS metadata, every activity and alias in our manifest files with `distractionOptimized` (`AAOS_FORK.md` C2), the camera features optional, the car media service before `Media3MusicService` without `androidx.car.app.launchable`, the artwork provider, and the parent's target SDK (C2, C3, C8).
+- The merged release manifest still has the AAOS metadata, every activity and alias in our manifest files with `distractionOptimized` (`AAOS_FORK.md` C2), the camera features optional, both car media services before `Media3MusicService` (only the switched-off `FlowCarLaunchableMediaService` carries `androidx.car.app.launchable` and `CalMediaActivityComponent`), the artwork provider, and the parent's target SDK (C2, C3, C8).
 - `README.md` and the fork block at the top of `AGENTS.md` are ours (C10).
 
 ## Checks to run
@@ -83,7 +83,7 @@ Run the lines one at a time (one flavour at a time saves memory). Always use fla
 | --- | --- | --- | --- |
 | `app/build.gradle.kts` | C1, C9 | release `applicationId`, version code and name, ABI-split workaround | Keep ours for those; take the parent's for the rest |
 | `app/src/main/AndroidManifest.xml`, `app/src/github/AndroidManifest.xml`, `res/xml/automotive_app_desc.xml` | C2, C3, C8 | AAOS features and metadata, car launcher, `distractionOptimized`, camera optional, car media service and provider | Keep every AAOS entry; give any new parent activity the same metadata |
-| `service/FlowCarMediaSession.kt`, `FlowCarMediaBrowserService.kt`, `FlowCarMediaArtworkProvider.kt`, `FlowApplication.kt` (one `startObserving` call), `res/values/aaos_car_media_strings.xml` | C8 | car media card mirroring the video and music players | Keep; if the parent renames `GlobalPlayerState.currentVideo`, `EnhancedPlayerManager.playerState` or `EnhancedMusicPlayerManager.currentTrack`/`playerState`, re-point the observers |
+| `service/FlowCarMediaSession.kt`, `FlowCarMediaBrowserService.kt`, `FlowCarLaunchableMediaService.kt`, `FlowCarMediaArtworkProvider.kt`, `FlowApplication.kt` (one `startObserving` call), `res/values/aaos_car_media_strings.xml` | C8 | car media card mirroring the video and music players | Keep; if the parent renames `GlobalPlayerState.currentVideo`, `EnhancedPlayerManager.playerState` or `EnhancedMusicPlayerManager.currentTrack`/`playerState`, re-point the observers |
 | `utils/CarReadout.kt`, `utils/DeviceDetails.kt` | C8 | fork-only readout of the car's media support; one line tagged `// AAOS C8` adds it to About, Device Info | Take the parent's `DeviceDetails.kt`, then re-apply the tagged line |
 | `MainActivity.kt`, `utils/CarDisplay.kt` | C11 | one call in `attachBaseContext` (`// AAOS C11`) scales the whole app on the car; the scale and the "is this a car" flag live in the fork-only file | Keep the call; take the parent's for the rest |
 | `ui/utils/CarLayout.kt`, `app/src/test/.../ui/utils/CarLayoutTest.kt` | C4, C5, C6 | fork-only: every car-only size and rule | Ours; the parent does not have them |

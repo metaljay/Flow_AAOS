@@ -4,17 +4,20 @@
 
 ## The car and its launcher
 
-- The Polestar 3 runs Google's car launcher, but it does **not** look exactly like the emulator. Example: the Polestar app list shows **one icon per app**; the emulator showed two when an app had a media entry (2026-10-05).
+- The Polestar 3 runs Volvo's own car launcher (see the readout below), which does **not** look exactly like the emulator's Google launcher. Example: the Polestar app list shows **one icon per app**; the emulator showed two when an app had a media entry (2026-10-05).
 - Apps run in a window below the Polestar's own top bar (it shows "Google Maps" and shortcuts), not full screen.
 - A forced full restart (hold the play/pause button for about 20 s) is not the same as the car's normal overnight sleep. Test both when it matters.
+- The car's own readout (Settings, About, Device Info in Flow 46, 2026-11-17): Android 15, both `android.software.car.templates_host.media` and `android.software.car.templates_host` Supported, home screen `com.volvocars.launcher` 2.5.126 (Volvo's own launcher, not Google's CarLauncher), media screen `com.android.car.media` 36 (Google's car media app). The emulator reports both features too, but runs Google's CarLauncher.
 
 ## Media card (home screen, bottom left)
 
 - The card follows the media app that played last. Playing something in Flow or Nuvio makes that app the card's source.
 - While the car is running, the card shows what Flow or Nuvio is playing (title, channel/episode, picture) and switches between them (owner photos 2026-10-05).
-- **Never add `androidx.car.app.launchable=true` to the media service.** It makes the Polestar app icon open the car's own media screen ("Continue watching") with no way into the app; the owner could only open the apps from the Play Store's Open button (2026-10-05).
-- Without that setting, the car's card logic (`MediaSource.isMediaTemplate` in the car launcher) rejects the app's media service after a **full restart**: the card shows only the Flow or Nuvio icon and stays blank, even after playing again. The card accepts a service only if it has that setting or the app has no launcher icon at all, so a card that refills after a restart and an icon that opens the app cannot both be had (2026-10-05). Accepted trade-off.
-- After an app is **updated or force-stopped** while the car is on, the card loses its connection and stays blank until a restart (seen with the setting on, 2026-10-05).
+- **Never add `androidx.car.app.launchable=true` to an always-on media service.** On its own it makes the Polestar app icon open the car's own media screen ("Continue watching") with no way into the app; the owner could only open the apps from the Play Store's Open button (2026-10-05).
+- Without that setting, the car's card logic (`MediaSource.isMediaTemplate` in Google's car launcher) rejects the app's media service after a **full restart**: the card shows only the app icon and stays blank, even after playing again (2026-10-05).
+- **Being tried (2026-11-17):** a second, switched-off media service with `launchable=true` and `androidx.car.app.media.CalMediaActivityComponent` (value `package/class`, written `${applicationId}/full.class.Name`; a bare class name is ignored). At start-up the app switches it on, and the original off, only when the car reports `android.software.car.templates_host.media`; Google's car media app then opens the named activity instead of its own media screen. Emulator (Google's launcher, car media app 37), both apps: both app-grid entries open the app (Google's launcher lists the app **twice**: its icon plus a media entry); after a cold restart, without opening the app, the card shows the last item paused with title and picture; tapping the card opens the app. Not yet tried on the car (Volvo's launcher, car media app 36).
+- With that opt-in on, after an app is **updated or force-stopped** while the car is on, the card goes blank and stays blank, even after playing again, until a restart (emulator, 2026-11-17; seen on the car with `launchable` on, 2026-10-05). An app without the opt-in cannot take the card from an opted-in app by playing (emulator), so both apps carry it or neither.
+- **Undoing it:** the switched state survives app updates. A release that removes the opt-in must still switch the original service back to its default and the launchable one off; deleting the code alone leaves the app with no media service at all (emulator, 2026-11-17).
 - The card only shows artwork from a local `content://` URI, never a web URL; each app serves its saved artwork through its own `...carmediaart` provider.
 
 ## Display safe area
