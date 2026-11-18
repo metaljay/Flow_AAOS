@@ -79,9 +79,10 @@ fun feedGridLayoutFor(
     minCellWidth: Dp = FeedCardMinWidth,
 ): FeedGridLayout {
     val isCompact = maxWidth < WindowSizeClass.WIDTH_DP_MEDIUM_LOWER_BOUND.dp
+    val isLargeWindow = maxWidth >= WindowSizeClass.WIDTH_DP_LARGE_LOWER_BOUND.dp || CarLayout.feedUsesLargeSpacing // AAOS C5
     val spacing =
         when {
-            maxWidth >= WindowSizeClass.WIDTH_DP_LARGE_LOWER_BOUND.dp -> LargeWindowSpacing
+            isLargeWindow -> LargeWindowSpacing
             isCompact -> CompactWindowSpacing
             else -> WideWindowSpacing
         }

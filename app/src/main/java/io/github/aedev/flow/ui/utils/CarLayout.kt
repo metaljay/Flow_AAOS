@@ -2,6 +2,9 @@ package io.github.aedev.flow.ui.utils
 
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.add
+import androidx.compose.material3.MaterialTheme
+import androidx.compose.runtime.Composable
+import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.aedev.flow.ui.components.FeedGridLayout
@@ -19,13 +22,22 @@ object CarLayout {
      */
     val EdgeInset = 12.dp
 
-    /** The most video tiles a car row takes. */
-    const val FEED_COLUMNS = 4
+    /** The most video tiles a car row takes. 3 matches Nuvio's video-shaped cards; 4 is one number away. */
+    const val FEED_COLUMNS = 3
 
     /** The narrowest a car video tile may be: a narrower window drops a column instead. */
     val FeedCardMinWidth = 200.dp
 
-    private const val TILE_TITLE_LINES = 1
+    private const val TILE_TITLE_LINES = 2
+    private val TileDetailsTopPadding = 8.dp
+    private val CardInset = 8.dp
+    private val PlayPauseButtonSize = 84.dp
+    private val PlayPauseIconSize = 72.dp
+    private val SkipButtonSize = 64.dp
+    private val SkipIconSize = 48.dp
+    private val OverlayButtonSize = 56.dp
+    private val OverlayIconSize = 32.dp
+    private val NavIconSize = 32.dp
     private val SeekTouchStrip = 24.dp
     private val SeekTrackRest = 7.dp
     private val SeekTrackActive = 12.dp
@@ -47,17 +59,45 @@ object CarLayout {
         parent: Dp,
     ): Dp = if (CarDisplay.isCar && !feed.isCompact) feed.cardWidth else parent
 
-    /** A car tile is a thumbnail, a one-line title and the uploader: no channel picture, no menu button. */
+    /** The car's grids use the parent's wide-window margin (24 dp) and row gap instead of its medium ones. */
+    val feedUsesLargeSpacing: Boolean get() = CarDisplay.isCar
+
+    /** The car keeps every short last run as tiles; the parent turns it into wide list rows. */
+    fun partialRows(parent: Set<Int>): Set<Int> = if (CarDisplay.isCar) emptySet() else parent
+
+    /** A car tile is a thumbnail and a title: no channel picture, no menu button, no detail line. */
     val tileShowsExtras: Boolean get() = !CarDisplay.isCar
 
     fun tileTitleLines(parent: Int): Int = if (CarDisplay.isCar) TILE_TITLE_LINES else parent
 
-    /** The uploader alone when the car tile has one to show; null keeps the parent's detail line. */
-    fun tileUploaderLine(
-        channelName: String,
-        showChannel: Boolean,
-        isUpcoming: Boolean,
-    ): String? = channelName.takeIf { CarDisplay.isCar && showChannel && !isUpcoming }
+    /** A step smaller than the parent's tile title, so two lines fit under the thumbnail. */
+    @Composable
+    fun tileTitleStyle(parent: TextStyle): TextStyle = if (CarDisplay.isCar) MaterialTheme.typography.titleSmall else parent
+
+    /** The card's side inset: two of them are the gap between tiles, so the car's 16 dp gap is 8 dp each. */
+    fun cardInset(parent: Dp): Dp = if (CarDisplay.isCar) CardInset else parent
+
+    fun tileDetailsTopPadding(parent: Dp): Dp = if (CarDisplay.isCar) TileDetailsTopPadding else parent
+
+    /** Bottom tab icons, drawn to fill the car's taller bar. */
+    fun navIconSize(parent: Dp): Dp = if (CarDisplay.isCar) NavIconSize else parent
+
+    /** The tab label, a typography step larger on the car. */
+    @Composable
+    fun navLabelStyle(parent: TextStyle): TextStyle = if (CarDisplay.isCar) MaterialTheme.typography.labelLarge else parent
+
+    /** Player buttons: easy to hit while parked. */
+    fun playButtonSize(parent: Dp): Dp = if (CarDisplay.isCar) PlayPauseButtonSize else parent
+
+    fun playIconSize(parent: Dp): Dp = if (CarDisplay.isCar) PlayPauseIconSize else parent
+
+    fun skipButtonSize(parent: Dp): Dp = if (CarDisplay.isCar) SkipButtonSize else parent
+
+    fun skipIconSize(parent: Dp): Dp = if (CarDisplay.isCar) SkipIconSize else parent
+
+    fun overlayButtonSize(parent: Dp): Dp = if (CarDisplay.isCar) OverlayButtonSize else parent
+
+    fun overlayIconSize(parent: Dp): Dp = if (CarDisplay.isCar) OverlayIconSize else parent
 
     /** The strip under the video that grabs the seek bar. */
     fun seekTouchStrip(parent: Dp): Dp = if (CarDisplay.isCar) SeekTouchStrip else parent

@@ -36,6 +36,7 @@ internal fun VideoCardStacked(
     val state = rememberVideoCardState(video)
     val cardPreferences = LocalVideoCardPreferences.current
     val actions = LocalVideoCardActions.current
+    val detailsTopPadding = CarLayout.tileDetailsTopPadding(12.dp) // AAOS C5
 
     Column(
         modifier =
@@ -58,7 +59,7 @@ internal fun VideoCardStacked(
             modifier =
                 Modifier
                     .fillMaxWidth()
-                    .padding(start = if (showChannel) 8.dp else 12.dp, top = 12.dp, bottom = 12.dp),
+                    .padding(start = if (showChannel) 8.dp else 12.dp, top = detailsTopPadding, bottom = 12.dp),
             avatar = {
                 if (showChannel && CarLayout.tileShowsExtras) { // AAOS C5
                     ChannelAvatarStack(
@@ -87,30 +88,32 @@ internal fun VideoCardStacked(
             Column(verticalArrangement = Arrangement.spacedBy(4.dp)) {
                 Text(
                     text = state.title,
-                    style = MaterialTheme.typography.titleMedium,
+                    style = CarLayout.tileTitleStyle(MaterialTheme.typography.titleMedium), // AAOS C5
                     color = MaterialTheme.colorScheme.onSurface,
                     maxLines = CarLayout.tileTitleLines(2), // AAOS C5
                     overflow = TextOverflow.Ellipsis,
                 )
 
-                Text(
-                    text =
-                        CarLayout.tileUploaderLine(state.channelName, showChannel, video.isUpcoming) ?: videoMetadataLine( // AAOS C5
-                            video = video,
-                            isUpcoming = video.isUpcoming,
-                            channelName = state.channelName,
-                            includeChannel = showChannel,
-                        ),
-                    style = MaterialTheme.typography.bodySmall,
-                    color =
-                        if (video.isUpcoming) {
-                            MaterialTheme.colorScheme.primary
-                        } else {
-                            MaterialTheme.colorScheme.onSurfaceVariant
-                        },
-                    maxLines = 2,
-                    overflow = TextOverflow.Ellipsis,
-                )
+                if (CarLayout.tileShowsExtras) { // AAOS C5
+                    Text(
+                        text =
+                            videoMetadataLine(
+                                video = video,
+                                isUpcoming = video.isUpcoming,
+                                channelName = state.channelName,
+                                includeChannel = showChannel,
+                            ),
+                        style = MaterialTheme.typography.bodySmall,
+                        color =
+                            if (video.isUpcoming) {
+                                MaterialTheme.colorScheme.primary
+                            } else {
+                                MaterialTheme.colorScheme.onSurfaceVariant
+                            },
+                        maxLines = 2,
+                        overflow = TextOverflow.Ellipsis,
+                    )
+                }
 
                 MembersOnlyLabel(video)
                 reason?.let { CardReasonLabel(it) }

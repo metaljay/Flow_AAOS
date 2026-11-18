@@ -11,6 +11,7 @@ import androidx.compose.ui.unit.dp
 import io.github.aedev.flow.ui.components.FeedGridLayout
 import io.github.aedev.flow.ui.components.partialRowIndices
 import io.github.aedev.flow.ui.components.shared.card.VideoCardDefaults
+import io.github.aedev.flow.ui.utils.CarLayout
 
 /**
  * The per-index decisions a vertical feed grid makes once its [FeedGridLayout] and its item list are
@@ -87,7 +88,7 @@ fun feedGridPlanFor(
                 spansOwnRow = (0 until itemCount).map(spansOwnRow),
                 columns = columns,
                 includeLastRun = includeLastRun,
-            ),
+            ).let { CarLayout.partialRows(it) }, // AAOS C5
         listMode = listMode,
         isCompact = layout.isCompact,
         compactRows = compactRows,

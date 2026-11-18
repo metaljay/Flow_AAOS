@@ -1,6 +1,7 @@
 package io.github.aedev.flow.ui.components.layout.navigation
 
 import androidx.compose.foundation.layout.Box
+import androidx.compose.foundation.layout.requiredSize
 import androidx.compose.foundation.layout.size
 import androidx.compose.material.icons.Icons
 import androidx.compose.material.icons.filled.MoreHoriz
@@ -8,6 +9,7 @@ import androidx.compose.material3.DropdownMenuGroup
 import androidx.compose.material3.DropdownMenuItem
 import androidx.compose.material3.DropdownMenuPopup
 import androidx.compose.material3.Icon
+import androidx.compose.material3.LocalTextStyle
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.material3.MenuDefaults
 import androidx.compose.material3.NavigationItemIconPosition
@@ -23,6 +25,7 @@ import androidx.compose.runtime.remember
 import androidx.compose.runtime.setValue
 import androidx.compose.ui.Modifier
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.unit.dp
 import io.github.aedev.flow.R
 import io.github.aedev.flow.ui.utils.CarLayout
 import io.github.aedev.flow.ui.utils.LocalWindowSizeClass
@@ -63,8 +66,14 @@ internal fun FlowNavigationBar(
             ShortNavigationBarItem(
                 selected = selected,
                 onClick = { onTabSelected(tab) },
-                icon = { Icon(imageVector = tab.icon(selected), contentDescription = null) },
-                label = { Text(text = stringResource(tab.labelRes)) },
+                icon = {
+                    Icon(
+                        imageVector = tab.icon(selected),
+                        contentDescription = null,
+                        modifier = Modifier.requiredSize(CarLayout.navIconSize(24.dp)),
+                    )
+                }, // AAOS C4
+                label = { Text(text = stringResource(tab.labelRes), style = CarLayout.navLabelStyle(LocalTextStyle.current)) }, // AAOS C4
                 iconPosition = iconPosition,
             )
         }
@@ -93,8 +102,14 @@ private fun OverflowItem(
         ShortNavigationBarItem(
             selected = selectedTab in tabs,
             onClick = { expanded = true },
-            icon = { Icon(imageVector = Icons.Filled.MoreHoriz, contentDescription = null) },
-            label = { Text(text = stringResource(R.string.nav_more)) },
+            icon = {
+                Icon(
+                    imageVector = Icons.Filled.MoreHoriz,
+                    contentDescription = null,
+                    modifier = Modifier.requiredSize(CarLayout.navIconSize(24.dp)),
+                )
+            }, // AAOS C4
+            label = { Text(text = stringResource(R.string.nav_more), style = CarLayout.navLabelStyle(LocalTextStyle.current)) }, // AAOS C4
             iconPosition = iconPosition,
         )
         DropdownMenuPopup(expanded = expanded, onDismissRequest = { expanded = false }) {

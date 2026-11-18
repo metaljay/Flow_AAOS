@@ -25,8 +25,8 @@ import io.github.aedev.flow.ui.theme.PlayerScrim
 import io.github.aedev.flow.ui.utils.CarLayout
 import io.github.aedev.flow.utils.formatMultiplierLabel
 
-private val OverlayActionButtonSize = 40.dp
-private val OverlayActionIconSize = 24.dp
+private val OverlayActionButtonSize = CarLayout.overlayButtonSize(40.dp) // AAOS C5
+private val OverlayActionIconSize = CarLayout.overlayIconSize(24.dp) // AAOS C5
 private val OverlayActionSpacing = 8.dp
 internal val OverlayPillHeight = 28.dp
 private val OverlayExpandIconSize = 18.dp

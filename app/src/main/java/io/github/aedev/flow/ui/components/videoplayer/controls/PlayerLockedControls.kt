@@ -30,12 +30,13 @@ import io.github.aedev.flow.R
 import io.github.aedev.flow.ui.components.shared.MediaSeekBar
 import io.github.aedev.flow.ui.theme.PlayerLiveIndicator
 import io.github.aedev.flow.ui.theme.PlayerScrim
+import io.github.aedev.flow.ui.utils.CarLayout
 
 /** Backdrop for the unlock button, a shade darker than a normal affordance so it reads as modal. */
 private const val UNLOCK_AFFORDANCE_ALPHA = 0.42f
 
-private val UnlockButtonSize = 44.dp
-private val UnlockIconSize = 24.dp
+private val UnlockButtonSize = CarLayout.overlayButtonSize(44.dp) // AAOS C5
+private val UnlockIconSize = CarLayout.overlayIconSize(24.dp) // AAOS C5
 
 @Composable
 internal fun BoxScope.PlayerLockedControls(

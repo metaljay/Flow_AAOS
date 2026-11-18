@@ -5,6 +5,7 @@ import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import io.github.aedev.flow.data.model.Video
+import io.github.aedev.flow.ui.utils.CarLayout
 
 enum class VideoCardLayout {
     /** The thumbnail across the full width with the details beneath. */
@@ -19,7 +20,7 @@ object VideoCardDefaults {
     val RowThumbnailWidth: Dp = 168.dp
 
     /** The card's side inset, and the gap between its thumbnail, avatar and text. */
-    val Inset: Dp = 12.dp
+    val Inset: Dp = CarLayout.cardInset(12.dp) // AAOS C5
 
     val AvatarSize: Dp = 40.dp
 

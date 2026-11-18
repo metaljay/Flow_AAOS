@@ -43,14 +43,15 @@ import io.github.aedev.flow.ui.components.shared.pressScale
 import io.github.aedev.flow.ui.theme.PlayerScrimAffordance
 import io.github.aedev.flow.ui.theme.PlayerScrimContent
 import io.github.aedev.flow.ui.theme.PlayerScrimContentDisabled
+import io.github.aedev.flow.ui.utils.CarLayout
 
 private enum class TransportIcon { Buffering, Replay, Pause, Play }
 
-private val PlayPauseButtonSize = 62.dp
-private val PlayPauseIconSize = 54.dp
+private val PlayPauseButtonSize = CarLayout.playButtonSize(62.dp) // AAOS C5
+private val PlayPauseIconSize = CarLayout.playIconSize(54.dp) // AAOS C5
 private val BufferingIndicatorSlot = 48.dp
-private val SkipButtonSize = 48.dp
-private val SkipIconSize = 36.dp
+private val SkipButtonSize = CarLayout.skipButtonSize(48.dp) // AAOS C5
+private val SkipIconSize = CarLayout.skipIconSize(36.dp) // AAOS C5
 
 /** Breathing room kept at each end, so the outer button never touches the player edge. */
 private val TransportEdgeInset = 8.dp
