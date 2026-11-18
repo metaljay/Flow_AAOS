@@ -57,6 +57,7 @@ import io.github.aedev.flow.ui.components.rememberFeedGridLayout
 import io.github.aedev.flow.ui.components.settings.SettingsTarget
 import io.github.aedev.flow.ui.components.shared.FlowPullToRefreshBox
 import io.github.aedev.flow.ui.screens.home.chips.HomeChipRow
+import io.github.aedev.flow.ui.utils.CarLayout
 import kotlinx.coroutines.flow.collectLatest
 import kotlinx.coroutines.launch
 
@@ -151,10 +152,14 @@ fun HomeScreen(
                         null
                     },
                 actions = {
-                    IconButton(onClick = onSearchClick) {
+                    IconButton(
+                        onClick = onSearchClick,
+                        modifier = Modifier.size(CarLayout.iconButtonSize(40.dp)), // AAOS C4
+                    ) {
                         Icon(
                             Icons.Outlined.Search,
                             contentDescription = stringResource(R.string.search),
+                            modifier = Modifier.size(CarLayout.iconSize(24.dp)), // AAOS C4
                         )
                     }
                 },

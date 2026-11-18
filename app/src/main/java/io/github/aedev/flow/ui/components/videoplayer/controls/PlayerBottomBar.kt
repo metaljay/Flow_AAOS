@@ -42,6 +42,7 @@ import io.github.aedev.flow.ui.theme.PlayerScrim
 import io.github.aedev.flow.ui.theme.PlayerScrimAffordance
 import io.github.aedev.flow.ui.theme.PlayerScrimContent
 import io.github.aedev.flow.ui.theme.PlayerScrimContentSecondary
+import io.github.aedev.flow.ui.utils.CarLayout
 import org.schabi.newpipe.extractor.stream.StreamSegment
 
 /** A tappable text pill on video: the playback speed and the current quality. */
@@ -158,8 +159,8 @@ internal fun PlayerBottomBar(
                         onClick = actions.onCommentsClick,
                         icon = Icons.Outlined.ChatBubbleOutline,
                         contentDescription = stringResource(R.string.comments),
-                        buttonSize = metrics.pillHeight,
-                        iconSize = metrics.expandIconSize,
+                        buttonSize = CarLayout.overlayButtonSize(metrics.pillHeight), // AAOS C5
+                        iconSize = CarLayout.overlayIconSize(metrics.expandIconSize), // AAOS C5
                         contentColor = if (isCommentsPanelOpen) accentColor else PlayerScrimContent,
                     )
                 }
@@ -232,8 +233,8 @@ internal fun PlayerBottomBar(
                     onClick = actions.onFullscreenClick,
                     icon = if (isFullscreen) Icons.Rounded.CloseFullscreen else Icons.Rounded.OpenInFull,
                     contentDescription = stringResource(R.string.fullscreen),
-                    buttonSize = metrics.pillHeight,
-                    iconSize = metrics.expandIconSize,
+                    buttonSize = CarLayout.overlayButtonSize(metrics.pillHeight), // AAOS C5
+                    iconSize = CarLayout.overlayIconSize(metrics.expandIconSize), // AAOS C5
                 )
             }
         }

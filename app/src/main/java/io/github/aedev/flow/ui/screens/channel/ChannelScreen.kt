@@ -109,6 +109,7 @@ import io.github.aedev.flow.ui.components.shared.FullSizeImageDialog
 import io.github.aedev.flow.ui.components.shared.SaveToCollectionSheet
 import io.github.aedev.flow.ui.components.shared.sortCommentsByFilter
 import io.github.aedev.flow.ui.theme.extendedColors
+import io.github.aedev.flow.ui.utils.CarLayout
 import io.github.aedev.flow.ui.youtubeChannelUrl
 import io.github.aedev.flow.utils.ThumbnailUrlResolver
 import kotlinx.coroutines.launch
@@ -191,9 +192,13 @@ fun ChannelScreen(
                 onBack = onBackClick,
                 actions = {
                     if (showLayoutToggle) {
-                        IconButton(onClick = { coroutineScope.launch { preferences.setChannelIsGridView(!isGridView) } }) {
+                        IconButton(
+                            onClick = { coroutineScope.launch { preferences.setChannelIsGridView(!isGridView) } },
+                            modifier = Modifier.size(CarLayout.iconButtonSize(40.dp)), // AAOS C5
+                        ) {
                             Icon(
                                 imageVector = if (isGridView) Icons.Default.ViewList else Icons.Default.GridView,
+                                modifier = Modifier.size(CarLayout.iconSize(24.dp)), // AAOS C5
                                 contentDescription =
                                     if (isGridView) {
                                         stringResource(R.string.ui_list_view)
@@ -203,20 +208,24 @@ fun ChannelScreen(
                             )
                         }
                     }
-                    IconButton(onClick = {
-                        // channelUrl may already be a full URL, so it must be normalized rather than
-                        // pasted behind /channel/ — that produced a nested, unopenable share link.
-                        val shareUrl = youtubeChannelUrl(uiState.header?.id ?: channelUrl) ?: channelUrl
-                        val shareIntent =
-                            Intent(Intent.ACTION_SEND).apply {
-                                type = "text/plain"
-                                putExtra(Intent.EXTRA_TEXT, shareUrl)
-                            }
-                        context.startActivity(Intent.createChooser(shareIntent, null))
-                    }) {
+                    IconButton(
+                        modifier = Modifier.size(CarLayout.iconButtonSize(40.dp)), // AAOS C5
+                        onClick = {
+                            // channelUrl may already be a full URL, so it must be normalized rather than
+                            // pasted behind /channel/ — that produced a nested, unopenable share link.
+                            val shareUrl = youtubeChannelUrl(uiState.header?.id ?: channelUrl) ?: channelUrl
+                            val shareIntent =
+                                Intent(Intent.ACTION_SEND).apply {
+                                    type = "text/plain"
+                                    putExtra(Intent.EXTRA_TEXT, shareUrl)
+                                }
+                            context.startActivity(Intent.createChooser(shareIntent, null))
+                        },
+                    ) {
                         Icon(
                             imageVector = Icons.Default.Share,
                             contentDescription = stringResource(R.string.share),
+                            modifier = Modifier.size(CarLayout.iconSize(24.dp)), // AAOS C5
                         )
                     }
                 },

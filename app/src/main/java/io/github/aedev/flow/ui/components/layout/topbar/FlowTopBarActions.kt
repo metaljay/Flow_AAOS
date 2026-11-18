@@ -30,6 +30,7 @@ import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.sp
 import androidx.lifecycle.compose.collectAsStateWithLifecycle
 import io.github.aedev.flow.R
+import io.github.aedev.flow.ui.utils.CarLayout
 
 /**
  * The Notifications and Settings actions every root destination gets.
@@ -46,10 +47,14 @@ internal fun FlowGlobalActionsRow() {
         unreadCount = unreadCount,
         onClick = actions.onOpenNotifications,
     )
-    IconButton(onClick = actions.onOpenSettings) {
+    IconButton(
+        onClick = actions.onOpenSettings,
+        modifier = Modifier.size(CarLayout.iconButtonSize(40.dp)), // AAOS C4
+    ) {
         Icon(
             imageVector = Icons.Outlined.Settings,
             contentDescription = stringResource(R.string.settings),
+            modifier = Modifier.size(CarLayout.iconSize(24.dp)), // AAOS C4
         )
     }
 }
@@ -59,11 +64,15 @@ private fun FlowNotificationsAction(
     unreadCount: Int,
     onClick: () -> Unit,
 ) {
-    IconButton(onClick = onClick) {
+    IconButton(
+        onClick = onClick,
+        modifier = Modifier.size(CarLayout.iconButtonSize(40.dp)), // AAOS C4
+    ) {
         Box(contentAlignment = Alignment.TopEnd) {
             Icon(
                 imageVector = Icons.Outlined.Notifications,
                 contentDescription = stringResource(R.string.notifications),
+                modifier = Modifier.size(CarLayout.iconSize(24.dp)), // AAOS C4
             )
             if (unreadCount > 0) {
                 Box(
@@ -120,10 +129,14 @@ fun FlowTopBarOverflow(
     var expanded by remember { mutableStateOf(false) }
 
     Box(modifier = modifier) {
-        IconButton(onClick = { expanded = true }) {
+        IconButton(
+            onClick = { expanded = true },
+            modifier = Modifier.size(CarLayout.iconButtonSize(40.dp)), // AAOS C4
+        ) {
             Icon(
                 imageVector = Icons.Default.MoreVert,
                 contentDescription = contentDescription,
+                modifier = Modifier.size(CarLayout.iconSize(24.dp)), // AAOS C4
             )
         }
         DropdownMenu(

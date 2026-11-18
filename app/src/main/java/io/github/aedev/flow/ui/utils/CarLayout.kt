@@ -31,12 +31,14 @@ object CarLayout {
     private const val TILE_TITLE_LINES = 2
     private val TileDetailsTopPadding = 8.dp
     private val CardInset = 8.dp
-    private val PlayPauseButtonSize = 84.dp
-    private val PlayPauseIconSize = 72.dp
-    private val SkipButtonSize = 64.dp
-    private val SkipIconSize = 48.dp
-    private val OverlayButtonSize = 56.dp
-    private val OverlayIconSize = 32.dp
+    private val PlayPauseButtonSize = 103.dp
+    private val PlayPauseIconSize = 103.dp
+    private val SkipButtonSize = 84.dp
+    private val SkipIconSize = 80.dp
+    private val IconButtonSize = 56.dp
+    private val IconSize = 32.dp
+    private val OverlayButtonSize = IconButtonSize
+    private val OverlayIconSize = IconSize
     private val NavIconSize = 32.dp
     private val SeekTouchStrip = 24.dp
     private val SeekTrackRest = 7.dp
@@ -103,6 +105,11 @@ object CarLayout {
     fun overlayButtonSize(parent: Dp): Dp = if (CarDisplay.isCar) OverlayButtonSize else parent
 
     fun overlayIconSize(parent: Dp): Dp = if (CarDisplay.isCar) OverlayIconSize else parent
+
+    /** Every icon button outside the player (top bars, back arrows): 56 dp touch with a 32 dp icon, the size Nuvio uses. */
+    fun iconButtonSize(parent: Dp): Dp = if (CarDisplay.isCar) IconButtonSize else parent
+
+    fun iconSize(parent: Dp): Dp = if (CarDisplay.isCar) IconSize else parent
 
     /** The strip under the video that grabs the seek bar. */
     fun seekTouchStrip(parent: Dp): Dp = if (CarDisplay.isCar) SeekTouchStrip else parent

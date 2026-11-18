@@ -4,6 +4,7 @@ import androidx.compose.ui.unit.dp
 import com.google.common.truth.Truth.assertThat
 import io.github.aedev.flow.player.BackgroundPlaybackPolicy
 import io.github.aedev.flow.ui.components.feedGridLayoutFor
+import io.github.aedev.flow.utils.CarDisplay
 import org.junit.Test
 
 /** AAOS fork: the car's tile sizing, one minimum width deciding how many fit a row. */
@@ -42,10 +43,41 @@ class CarLayoutTest {
         assertThat(CarLayout.playButtonSize(62.dp)).isEqualTo(62.dp)
         assertThat(CarLayout.skipIconSize(36.dp)).isEqualTo(36.dp)
         assertThat(CarLayout.overlayButtonSize(40.dp)).isEqualTo(40.dp)
+        assertThat(CarLayout.overlayIconSize(24.dp)).isEqualTo(24.dp)
+        assertThat(CarLayout.playIconSize(54.dp)).isEqualTo(54.dp)
+        assertThat(CarLayout.skipButtonSize(48.dp)).isEqualTo(48.dp)
+        assertThat(CarLayout.iconButtonSize(40.dp)).isEqualTo(40.dp)
+        assertThat(CarLayout.iconSize(24.dp)).isEqualTo(24.dp)
         assertThat(CarLayout.feedUsesLargeSpacing).isFalse()
         assertThat(CarLayout.partialRows(setOf(6, 7))).containsExactly(6, 7)
         assertThat(CarLayout.seekTouchStrip(14.dp)).isEqualTo(14.dp)
         assertThat(CarLayout.tileShowsExtras).isTrue()
+    }
+
+    /** [CarDisplay.isCar] has a private setter (a real car sets it from the system), so a test flips its field. */
+    private fun setCar(value: Boolean) {
+        CarDisplay::class.java
+            .getDeclaredField("isCar")
+            .apply { isAccessible = true }
+            .setBoolean(CarDisplay, value)
+    }
+
+    @Test
+    fun `on the car the button sizes follow the shared standard`() {
+        val wasCar = CarDisplay.isCar
+        setCar(true)
+        try {
+            assertThat(CarLayout.playButtonSize(62.dp)).isEqualTo(103.dp)
+            assertThat(CarLayout.playIconSize(54.dp)).isEqualTo(103.dp)
+            assertThat(CarLayout.skipButtonSize(48.dp)).isEqualTo(84.dp)
+            assertThat(CarLayout.skipIconSize(36.dp)).isEqualTo(80.dp)
+            assertThat(CarLayout.overlayButtonSize(40.dp)).isEqualTo(56.dp)
+            assertThat(CarLayout.overlayIconSize(24.dp)).isEqualTo(32.dp)
+            assertThat(CarLayout.iconButtonSize(40.dp)).isEqualTo(56.dp)
+            assertThat(CarLayout.iconSize(24.dp)).isEqualTo(32.dp)
+        } finally {
+            setCar(wasCar)
+        }
     }
 
     private fun keepsPlaying(
