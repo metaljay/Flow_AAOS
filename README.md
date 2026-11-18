@@ -33,7 +33,7 @@ Changes from the original Flow project (the "parent") are brought into this copy
 | | Change | Details |
 | --- | --- | --- |
 | 🧭 | **Navigation stays at the bottom**, with the tabs spread evenly across the car's wide screen. | [More](AAOS_FORK.md#c4-bottom-navigation-at-every-window-size) |
-| 👀 | **A calm, uncluttered layout**: three simple video tiles a row (picture and a short title), bigger player buttons and bottom tabs, and a seek bar that is easy to grab. | [More](AAOS_FORK.md#c5-calm-car-layout) |
+| 👀 | **A calm, uncluttered layout**: three simple video tiles a row (picture, a short title and a small views and age line), bigger player buttons and bottom tabs, and a seek bar that is easy to grab. | [More](AAOS_FORK.md#c5-calm-car-layout) |
 | 🔍 | **The whole app is drawn 1.5 times larger**, so every screen is easy to read and tap. | [More](AAOS_FORK.md#c11-whole-app-size-scale) |
 | 👆 | **Nothing you tap hides under the screen's rounded edges.** | [More](AAOS_FORK.md#c6-display-safe-area) |
 | 🚗 | **Works as a car app**: it appears in the car's app list and the car lets its screens run. | [More](AAOS_FORK.md#c2-aaos-manifest) |

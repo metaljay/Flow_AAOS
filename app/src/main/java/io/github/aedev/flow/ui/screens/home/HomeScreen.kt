@@ -154,7 +154,7 @@ fun HomeScreen(
                 actions = {
                     IconButton(
                         onClick = onSearchClick,
-                        modifier = Modifier.size(CarLayout.iconButtonSize(40.dp)), // AAOS C4
+                        modifier = CarLayout.iconButtonModifier(), // AAOS C4
                     ) {
                         Icon(
                             Icons.Outlined.Search,

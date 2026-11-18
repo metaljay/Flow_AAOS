@@ -49,7 +49,7 @@ internal fun FlowGlobalActionsRow() {
     )
     IconButton(
         onClick = actions.onOpenSettings,
-        modifier = Modifier.size(CarLayout.iconButtonSize(40.dp)), // AAOS C4
+        modifier = CarLayout.iconButtonModifier(), // AAOS C4
     ) {
         Icon(
             imageVector = Icons.Outlined.Settings,
@@ -66,7 +66,7 @@ private fun FlowNotificationsAction(
 ) {
     IconButton(
         onClick = onClick,
-        modifier = Modifier.size(CarLayout.iconButtonSize(40.dp)), // AAOS C4
+        modifier = CarLayout.iconButtonModifier(), // AAOS C4
     ) {
         Box(contentAlignment = Alignment.TopEnd) {
             Icon(
@@ -131,7 +131,7 @@ fun FlowTopBarOverflow(
     Box(modifier = modifier) {
         IconButton(
             onClick = { expanded = true },
-            modifier = Modifier.size(CarLayout.iconButtonSize(40.dp)), // AAOS C4
+            modifier = CarLayout.iconButtonModifier(), // AAOS C4
         ) {
             Icon(
                 imageVector = Icons.Default.MoreVert,

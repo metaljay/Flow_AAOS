@@ -58,7 +58,7 @@ fun SearchTopBar(
     ) {
         IconButton(
             onClick = onBack,
-            modifier = Modifier.size(CarLayout.iconButtonSize(40.dp)), // AAOS C4
+            modifier = CarLayout.iconButtonModifier(), // AAOS C4
         ) {
             Icon(
                 imageVector = Icons.AutoMirrored.Rounded.ArrowBack,
@@ -78,7 +78,7 @@ fun SearchTopBar(
 
         IconButton(
             onClick = onVoiceSearch,
-            modifier = Modifier.size(CarLayout.iconButtonSize(40.dp)), // AAOS C4
+            modifier = CarLayout.iconButtonModifier(), // AAOS C4
         ) {
             Icon(
                 imageVector = Icons.Rounded.Mic,
@@ -104,7 +104,7 @@ fun SearchTopBarActions(
     ) {
         IconButton(
             onClick = onOpenFilters,
-            modifier = Modifier.size(CarLayout.iconButtonSize(40.dp)), // AAOS C4
+            modifier = CarLayout.iconButtonModifier(), // AAOS C4
         ) {
             Icon(
                 imageVector = Icons.Rounded.Tune,
@@ -115,7 +115,7 @@ fun SearchTopBarActions(
     }
     IconButton(
         onClick = onToggleGridMode,
-        modifier = Modifier.size(CarLayout.iconButtonSize(40.dp)), // AAOS C4
+        modifier = CarLayout.iconButtonModifier(), // AAOS C4
     ) {
         Icon(
             imageVector = if (isGridMode) Icons.Rounded.ViewList else Icons.Rounded.GridView,

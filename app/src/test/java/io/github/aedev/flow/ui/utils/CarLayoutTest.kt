@@ -1,5 +1,6 @@
 package io.github.aedev.flow.ui.utils
 
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.unit.dp
 import com.google.common.truth.Truth.assertThat
 import io.github.aedev.flow.player.BackgroundPlaybackPolicy
@@ -47,7 +48,7 @@ class CarLayoutTest {
         assertThat(CarLayout.collapseIconSize(32.dp)).isEqualTo(32.dp)
         assertThat(CarLayout.playIconSize(54.dp)).isEqualTo(54.dp)
         assertThat(CarLayout.skipButtonSize(48.dp)).isEqualTo(48.dp)
-        assertThat(CarLayout.iconButtonSize(40.dp)).isEqualTo(40.dp)
+        assertThat(CarLayout.iconButtonModifier()).isSameInstanceAs(Modifier)
         assertThat(CarLayout.iconSize(24.dp)).isEqualTo(24.dp)
         assertThat(CarLayout.feedUsesLargeSpacing).isFalse()
         assertThat(CarLayout.partialRows(setOf(6, 7))).containsExactly(6, 7)
@@ -75,7 +76,7 @@ class CarLayoutTest {
             assertThat(CarLayout.overlayButtonSize(40.dp)).isEqualTo(56.dp)
             assertThat(CarLayout.overlayIconSize(24.dp)).isEqualTo(32.dp)
             assertThat(CarLayout.collapseIconSize(32.dp)).isEqualTo(48.dp)
-            assertThat(CarLayout.iconButtonSize(40.dp)).isEqualTo(56.dp)
+            assertThat(CarLayout.iconButtonModifier()).isNotSameInstanceAs(Modifier)
             assertThat(CarLayout.iconSize(24.dp)).isEqualTo(32.dp)
         } finally {
             setCar(wasCar)

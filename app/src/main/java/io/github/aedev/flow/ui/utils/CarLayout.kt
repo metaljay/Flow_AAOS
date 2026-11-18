@@ -2,8 +2,10 @@ package io.github.aedev.flow.ui.utils
 
 import androidx.compose.foundation.layout.WindowInsets
 import androidx.compose.foundation.layout.add
+import androidx.compose.foundation.layout.size
 import androidx.compose.material3.MaterialTheme
 import androidx.compose.runtime.Composable
+import androidx.compose.ui.Modifier
 import androidx.compose.ui.text.TextStyle
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
@@ -111,7 +113,7 @@ object CarLayout {
     fun collapseIconSize(parent: Dp): Dp = if (CarDisplay.isCar) CollapseIconSize else parent
 
     /** Every icon button outside the player (top bars, back arrows): 56 dp touch with a 32 dp icon, the size Nuvio uses. */
-    fun iconButtonSize(parent: Dp): Dp = if (CarDisplay.isCar) IconButtonSize else parent
+    fun iconButtonModifier(): Modifier = if (CarDisplay.isCar) Modifier.size(IconButtonSize) else Modifier
 
     fun iconSize(parent: Dp): Dp = if (CarDisplay.isCar) IconSize else parent
 
