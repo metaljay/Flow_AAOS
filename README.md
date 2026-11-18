@@ -33,16 +33,17 @@ Changes from the original Flow project (the "parent") are brought into this copy
 | | Change | Details |
 | --- | --- | --- |
 | 🧭 | **Navigation stays at the bottom**, with the tabs spread evenly across the car's wide screen. | [More](AAOS_FORK.md#c4-bottom-navigation-at-every-window-size) |
-| 👀 | **A calm, uncluttered layout**: up to four simple video tiles a row (picture, one-line title, uploader) and a seek bar that is easy to grab. | [More](AAOS_FORK.md#c5-calm-car-layout) |
+| 👀 | **A calm, uncluttered layout**: three simple video tiles a row (picture and a short title), bigger player buttons and bottom tabs, and a seek bar that is easy to grab. | [More](AAOS_FORK.md#c5-calm-car-layout) |
 | 🔍 | **The whole app is drawn 1.5 times larger**, so every screen is easy to read and tap. | [More](AAOS_FORK.md#c11-whole-app-size-scale) |
 | 👆 | **Nothing you tap hides under the screen's rounded edges.** | [More](AAOS_FORK.md#c6-display-safe-area) |
 | 🚗 | **Works as a car app**: it appears in the car's app list and the car lets its screens run. | [More](AAOS_FORK.md#c2-aaos-manifest) |
-| 🎵 | **The car's home screen media card** shows what Flow is playing. | [More](AAOS_FORK.md#c8-car-media-card) |
+| 🎵 | **The car's home screen media card** shows what Flow is playing, and comes back after a restart or an app update. | [More](AAOS_FORK.md#c8-car-media-card) |
+| ⏸️ | **A video pauses when you leave the app**, so it does not play on behind another screen (music keeps playing). | [More](AAOS_FORK.md#c12-pause-video-on-leaving-the-screen) |
 | 📷 | **Installs without a camera** (the car has none for apps). | [More](AAOS_FORK.md#c3-camera-optional) |
 | ▶️ | **Red YouTube-style play icon** in the car's app list. | [More](AAOS_FORK.md#c7-launcher-icon) |
 | 📦 | **Updates come through your own Play Store listing**, so they reach the car. | [More](AAOS_FORK.md#c1-play-identity) |
 
-**Being tried:** the home screen media card should now refill after a full restart of the car, while the app icon still opens the app. If the car does not cooperate, the icon may open the car's media screen instead until the next release; see the [car notes](AAOS_CAR_NOTES.md).
+**Known limit, being tried:** after the app is force-stopped or updated, the home screen media card used to stay blank until you switched to another media app and back. The app now swaps between two identical media services the first time you play, which should make the car reconnect the card. This is only checked on the emulator so far; if the car does not cooperate, use the old workaround. See the [car notes](AAOS_CAR_NOTES.md).
 
 ## 📲 Getting it on the car
 
