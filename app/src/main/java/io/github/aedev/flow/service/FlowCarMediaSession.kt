@@ -147,10 +147,29 @@ object FlowCarMediaSession {
         appContext = ctx
         return MediaSession(ctx, TAG).apply {
             setFlags(MediaSession.FLAG_HANDLES_MEDIA_BUTTONS or MediaSession.FLAG_HANDLES_TRANSPORT_CONTROLS)
-            setExtras(Bundle().apply { putString(CAR_EXTRA_BROWSE_SERVICE_FOR_SESSION, FlowCarMediaServices.browseServiceClass(ctx)) })
+            setExtras(browseExtras(ctx))
             launchPendingIntent(ctx, 0)?.let(::setSessionActivity)
             setCallback(callback, mainHandler)
             session = this
+        }
+    }
+
+    internal fun browseExtras(context: Context) =
+        Bundle().apply { putString(CAR_EXTRA_BROWSE_SERVICE_FOR_SESSION, FlowCarMediaServices.browseServiceClass(context)) }
+
+    /**
+     * Before this process first publishes an active state: if the car never linked to this process, swap to
+     * the other launchable twin and name it in the session, so the car sees a new media source and rebuilds the card.
+     */
+    internal fun relinkBeforeFirstActive(context: Context) {
+        val existing = session
+        if (!FlowCarMediaServices.relinkIfNeeded(context)) return
+        val mediaSession = get(context)
+        if (existing != null) {
+            // The car reads the extras when a session becomes active, so an already active one is toggled.
+            mediaSession.isActive = false
+            mediaSession.setExtras(browseExtras(context))
+            mediaSession.isActive = true
         }
     }
 
@@ -211,6 +230,8 @@ object FlowCarMediaSession {
         // The car follows whichever player is playing; a paused player only takes over an empty card.
         val takeOver = nextPlayback.isPlaying || current == null || current.kind == nextItem.kind
         if (!takeOver) return
+
+        if (nextPlayback.isPlaying || nextPlayback.isBuffering) relinkBeforeFirstActive(context)
 
         val itemChanged = current != nextItem
         item = nextItem

@@ -24,6 +24,8 @@ open class FlowCarMediaBrowserService : MediaBrowserService() {
         clientUid: Int,
         rootHints: Bundle?,
     ): BrowserRoot {
+        // A client other than Flow itself is the car binding: its link to this service is alive.
+        if (clientPackageName != packageName) FlowCarMediaServices.markCarLinked()
         val wantsRecent = rootHints?.getBoolean(BrowserRoot.EXTRA_RECENT) == true
         val extras = if (wantsRecent) Bundle().apply { putBoolean(BrowserRoot.EXTRA_RECENT, true) } else null
         return BrowserRoot(if (wantsRecent) RECENT_ROOT_ID else ROOT_ID, extras)

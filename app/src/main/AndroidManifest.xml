@@ -242,6 +242,19 @@
             <meta-data android:name="androidx.car.app.media.CalMediaActivityComponent" android:value="${applicationId}/io.github.aedev.flow.MainActivity" />
         </service>
 
+        <!-- AAOS fork: second launchable twin, identical to the one above. After a force-stop the car's link to the first one is dead and only rebuilt when the app names a different enabled media service; at the first play the app swaps between the two (FlowCarMediaServices). Exactly one twin is on, never both after start-up. -->
+        <service
+            android:name=".service.FlowCarLaunchableMediaServiceB"
+            android:enabled="false"
+            android:exported="true"
+            android:label="@string/app_launcher_name">
+            <intent-filter>
+                <action android:name="android.media.browse.MediaBrowserService" />
+            </intent-filter>
+            <meta-data android:name="androidx.car.app.launchable" android:value="true" />
+            <meta-data android:name="androidx.car.app.media.CalMediaActivityComponent" android:value="${applicationId}/io.github.aedev.flow.MainActivity" />
+        </service>
+
         <!-- AAOS fork: the car media card source; declared before Media3MusicService so the car picks it for this package. -->
         <service
             android:name=".service.FlowCarMediaBrowserService"
