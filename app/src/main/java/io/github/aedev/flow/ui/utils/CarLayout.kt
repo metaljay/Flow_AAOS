@@ -39,6 +39,7 @@ object CarLayout {
     private val IconSize = 32.dp
     private val OverlayButtonSize = IconButtonSize
     private val OverlayIconSize = IconSize
+    private val CollapseIconSize = 48.dp
     private val NavIconSize = 32.dp
     private val SeekTouchStrip = 24.dp
     private val SeekTrackRest = 7.dp
@@ -105,6 +106,9 @@ object CarLayout {
     fun overlayButtonSize(parent: Dp): Dp = if (CarDisplay.isCar) OverlayButtonSize else parent
 
     fun overlayIconSize(parent: Dp): Dp = if (CarDisplay.isCar) OverlayIconSize else parent
+
+    /** The player's collapse chevron: a thin glyph that fills little of its box, so its box is drawn larger. */
+    fun collapseIconSize(parent: Dp): Dp = if (CarDisplay.isCar) CollapseIconSize else parent
 
     /** Every icon button outside the player (top bars, back arrows): 56 dp touch with a 32 dp icon, the size Nuvio uses. */
     fun iconButtonSize(parent: Dp): Dp = if (CarDisplay.isCar) IconButtonSize else parent

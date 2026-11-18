@@ -62,6 +62,7 @@ import io.github.aedev.flow.ui.theme.PlayerScrimAffordance
 import io.github.aedev.flow.ui.theme.PlayerScrimContent
 import io.github.aedev.flow.ui.theme.PlayerScrimContentDisabled
 import io.github.aedev.flow.ui.theme.PlayerScrimContentSecondary
+import io.github.aedev.flow.ui.utils.CarLayout
 
 /**
  * The row of actions along the top of the player: minimise, title, and the configurable action
@@ -128,7 +129,7 @@ internal fun VideoPlayerTopBar(
                     icon = Icons.Rounded.KeyboardArrowDown,
                     contentDescription = stringResource(R.string.btn_minimize),
                     buttonSize = actionButtonSize,
-                    iconSize = actionIconSize,
+                    iconSize = CarLayout.collapseIconSize(actionIconSize), // AAOS C5
                     containerColor = Color.Transparent,
                 )
 

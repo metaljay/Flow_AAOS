@@ -44,6 +44,7 @@ class CarLayoutTest {
         assertThat(CarLayout.skipIconSize(36.dp)).isEqualTo(36.dp)
         assertThat(CarLayout.overlayButtonSize(40.dp)).isEqualTo(40.dp)
         assertThat(CarLayout.overlayIconSize(24.dp)).isEqualTo(24.dp)
+        assertThat(CarLayout.collapseIconSize(32.dp)).isEqualTo(32.dp)
         assertThat(CarLayout.playIconSize(54.dp)).isEqualTo(54.dp)
         assertThat(CarLayout.skipButtonSize(48.dp)).isEqualTo(48.dp)
         assertThat(CarLayout.iconButtonSize(40.dp)).isEqualTo(40.dp)
@@ -73,6 +74,7 @@ class CarLayoutTest {
             assertThat(CarLayout.skipIconSize(36.dp)).isEqualTo(80.dp)
             assertThat(CarLayout.overlayButtonSize(40.dp)).isEqualTo(56.dp)
             assertThat(CarLayout.overlayIconSize(24.dp)).isEqualTo(32.dp)
+            assertThat(CarLayout.collapseIconSize(32.dp)).isEqualTo(48.dp)
             assertThat(CarLayout.iconButtonSize(40.dp)).isEqualTo(56.dp)
             assertThat(CarLayout.iconSize(24.dp)).isEqualTo(32.dp)
         } finally {
