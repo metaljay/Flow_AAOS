@@ -66,8 +66,8 @@ android {
         minSdk = 26
         targetSdk = 36
         // Increment versionCode for every Play upload; Play rejects a code already used by a track.
-        versionCode = 47
-        versionName = "2.2.28"
+        versionCode = 48
+        versionName = "2.2.29"
 
         buildConfigField("int", "NIGHTLY_RUN", "0")
         buildConfigField("String", "APP_LANGUAGE_TAGS", "\"${(listOf("en") + translatedLocaleTags()).joinToString(",")}\"")
