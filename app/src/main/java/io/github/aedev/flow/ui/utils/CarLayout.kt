@@ -65,10 +65,15 @@ object CarLayout {
     /** The car keeps every short last run as tiles; the parent turns it into wide list rows. */
     fun partialRows(parent: Set<Int>): Set<Int> = if (CarDisplay.isCar) emptySet() else parent
 
-    /** A car tile is a thumbnail and a title: no channel picture, no menu button, no detail line. */
+    /** A car tile is a thumbnail, a title and one small grey line of views and age: no channel picture, no menu button. */
     val tileShowsExtras: Boolean get() = !CarDisplay.isCar
 
     fun tileTitleLines(parent: Int): Int = if (CarDisplay.isCar) TILE_TITLE_LINES else parent
+
+    /** The car's detail line is views and upload age only, on one line. */
+    fun tileDetailIncludesChannel(parent: Boolean): Boolean = parent && !CarDisplay.isCar
+
+    fun tileDetailLines(parent: Int): Int = if (CarDisplay.isCar) 1 else parent
 
     /** A step smaller than the parent's tile title, so two lines fit under the thumbnail. */
     @Composable

@@ -94,26 +94,24 @@ internal fun VideoCardStacked(
                     overflow = TextOverflow.Ellipsis,
                 )
 
-                if (CarLayout.tileShowsExtras) { // AAOS C5
-                    Text(
-                        text =
-                            videoMetadataLine(
-                                video = video,
-                                isUpcoming = video.isUpcoming,
-                                channelName = state.channelName,
-                                includeChannel = showChannel,
-                            ),
-                        style = MaterialTheme.typography.bodySmall,
-                        color =
-                            if (video.isUpcoming) {
-                                MaterialTheme.colorScheme.primary
-                            } else {
-                                MaterialTheme.colorScheme.onSurfaceVariant
-                            },
-                        maxLines = 2,
-                        overflow = TextOverflow.Ellipsis,
-                    )
-                }
+                Text(
+                    text =
+                        videoMetadataLine(
+                            video = video,
+                            isUpcoming = video.isUpcoming,
+                            channelName = state.channelName,
+                            includeChannel = CarLayout.tileDetailIncludesChannel(showChannel), // AAOS C5
+                        ),
+                    style = MaterialTheme.typography.bodySmall,
+                    color =
+                        if (video.isUpcoming) {
+                            MaterialTheme.colorScheme.primary
+                        } else {
+                            MaterialTheme.colorScheme.onSurfaceVariant
+                        },
+                    maxLines = CarLayout.tileDetailLines(2), // AAOS C5
+                    overflow = TextOverflow.Ellipsis,
+                )
 
                 MembersOnlyLabel(video)
                 reason?.let { CardReasonLabel(it) }
