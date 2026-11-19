@@ -21,6 +21,8 @@ svglogo
 metro*
 release.ps1
 release.sh
+# AAOS C13: the fork's release script is tracked
+!scripts/aaos/release.sh
 release.bat
 releasenote.ps1
 releasenote.sh

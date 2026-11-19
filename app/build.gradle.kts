@@ -458,3 +458,44 @@ ksp {
 hilt {
     enableAggregatingTask = true
 }
+
+// AAOS C13: one-command Play release. Only when scripts/aaos/release.sh sets AAOS_KEYCHAIN_SIGNING=1 does the release
+// build sign with the upload key from the login Keychain (service "flow-release", set once by scripts/aaos/setup-release.sh).
+// Switch off, or any item missing: nothing changes (the parent's unsigned release stays). Values are never logged.
+if (providers.environmentVariable("AAOS_KEYCHAIN_SIGNING").orNull == "1") {
+    fun keychainItem(account: String): String? =
+        runCatching {
+            providers
+                .exec {
+                    commandLine("security", "find-generic-password", "-s", "flow-release", "-a", account, "-w")
+                    isIgnoreExitValue = true
+                }.standardOutput.asText
+                .get()
+                .trim()
+                .ifEmpty { null }
+        }.getOrNull()
+
+    val aaosStoreFile = keychainItem("store-file")
+    val aaosKeyAlias = keychainItem("key-alias")
+    val aaosStorePassword = keychainItem("store-password")
+    val aaosKeyPassword = keychainItem("key-password")
+    if (aaosStoreFile != null && aaosKeyAlias != null && aaosStorePassword != null && aaosKeyPassword != null &&
+        file(aaosStoreFile).isFile
+    ) {
+        android {
+            signingConfigs {
+                create("aaosUpload") {
+                    storeFile = file(aaosStoreFile)
+                    keyAlias = aaosKeyAlias
+                    storePassword = aaosStorePassword
+                    keyPassword = aaosKeyPassword
+                }
+            }
+            buildTypes {
+                getByName("release") {
+                    signingConfig = signingConfigs.getByName("aaosUpload")
+                }
+            }
+        }
+    }
+}
