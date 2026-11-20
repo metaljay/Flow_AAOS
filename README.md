@@ -18,6 +18,8 @@
 
 [Original Flow project](https://github.com/A-EDev/Flow) · [Car customisations](AAOS_FORK.md#part-2-customisation-details) · [License](License)
 
+<a href="https://buymeacoffee.com/metaljay"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="40"></a>
+
 </div>
 
 ---
@@ -109,6 +111,12 @@ You don't need to read these files. They are the instructions that keep any AI a
 | `handover/` (on your Mac only, not on GitHub) | A diary of every chat and what was checked, and the current to-do list |
 | `AGENTS.md`, `CLAUDE.md`, `GEMINI.md` | Where AI assistants start reading |
 | `.github/skills/` | The step-by-step recipes that the prompts above run |
+
+## ☕ Support
+
+If the car version is useful to you, you can [buy me a coffee](https://buymeacoffee.com/metaljay). Thank you! Flow itself is made by the [original Flow project](https://github.com/A-EDev/Flow), so please support them too.
+
+<a href="https://buymeacoffee.com/metaljay"><img src="https://cdn.buymeacoffee.com/buttons/v2/default-yellow.png" alt="Buy Me a Coffee" height="40"></a>
 
 ## 📄 License
 
